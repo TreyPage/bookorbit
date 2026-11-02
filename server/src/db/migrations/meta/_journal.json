@@ -932,6 +932,41 @@
       "when": 1793339549312,
       "tag": "0132_drop_podcasts",
       "breakpoints": true
+    },
+    {
+      "idx": 133,
+      "version": "7",
+      "when": 1793635103442,
+      "tag": "0133_add_hardcover_list_selection",
+      "breakpoints": true
+    },
+    {
+      "idx": 134,
+      "version": "7",
+      "when": 1793638413982,
+      "tag": "0134_drop_hardcover_list_selection",
+      "breakpoints": true
+    },
+    {
+      "idx": 135,
+      "version": "7",
+      "when": 1793638422208,
+      "tag": "0135_add_hardcover_shelf_selection",
+      "breakpoints": true
+    },
+    {
+      "idx": 136,
+      "version": "7",
+      "when": 1793644160212,
+      "tag": "0136_book_merge_sources",
+      "breakpoints": true
+    },
+    {
+      "idx": 137,
+      "version": "7",
+      "when": 1793651984967,
+      "tag": "0137_add_hardcover_list_selection",
+      "breakpoints": true
     }
   ]
 }

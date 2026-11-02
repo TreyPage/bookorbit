@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { boolean, index, integer, pgTable, real, serial, text, timestamp, unique, varchar } from 'drizzle-orm/pg-core';
 
 import { books } from './books';
@@ -12,6 +13,11 @@ export const hardcoverUserSettings = pgTable('hardcover_user_settings', {
   apiToken: varchar('api_token', { length: 2048 }).notNull(),
   enabled: boolean('enabled').notNull().default(true),
   bookSyncMode: varchar('book_sync_mode', { length: 20 }).notNull().default('all_eligible'),
+  hardcoverShelfIds: varchar('hardcover_shelf_ids', { length: 30 }).array().notNull().default([]),
+  hardcoverListIds: integer('hardcover_list_ids')
+    .array()
+    .notNull()
+    .default(sql`'{}'::integer[]`),
   autoSyncOnStatusChange: boolean('auto_sync_on_status_change').notNull().default(true),
   autoSyncOnProgressUpdate: boolean('auto_sync_on_progress_update').notNull().default(true),
   autoSyncOnRatingChange: boolean('auto_sync_on_rating_change').notNull().default(true),
