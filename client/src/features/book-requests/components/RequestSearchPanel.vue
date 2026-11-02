@@ -231,6 +231,33 @@ const isLanguagePinned = computed(() => language.value !== null && defaultLangua
 
 const languageOptions = computed(() => requestLanguageOptions(locale.value))
 
+const seriesBookTitle = computed(() => (typeof route.query.seriesBookTitle === 'string' ? route.query.seriesBookTitle.trim() : ''))
+const seriesBookAuthor = computed(() => (typeof route.query.seriesBookAuthor === 'string' ? route.query.seriesBookAuthor.trim() : ''))
+
+let providersReady = false
+let lastSeriesBookPrefill: string | null = null
+
+async function applySeriesBookPrefill(): Promise<void> {
+  const requestTitle = seriesBookTitle.value
+  const requestAuthor = seriesBookAuthor.value
+  if (!requestTitle && !requestAuthor) return
+  const requestIndex = typeof route.query.seriesBookIndex === 'string' ? route.query.seriesBookIndex : ''
+  const prefillKey = `${requestTitle}\u0000${requestAuthor}\u0000${requestIndex}`
+  if (prefillKey === lastSeriesBookPrefill) return
+
+  lastSeriesBookPrefill = prefillKey
+  title.value = requestTitle
+  author.value = requestAuthor
+  await runSearch()
+}
+
+watch(
+  () => [route.query.seriesBookTitle, route.query.seriesBookAuthor, route.query.seriesBookIndex],
+  () => {
+    if (providersReady) void applySeriesBookPrefill()
+  },
+)
+
 onMounted(async () => {
   await Promise.all([loadProviders(), fetchLibraries(), loadDefaultDestination(), loadLanguageDefault()])
   // Your own interface language, until you pin one. Never the edition's: that is the silent
@@ -239,6 +266,8 @@ onMounted(async () => {
   // One library is only worth preselecting for the requester who is also the approver.
   targetLibraryId.value = resolveDestination(libraries.value, undefined, settlesOnCreate.value).libraryId
   audioTargetLibraryId.value = resolveDestination(libraries.value, undefined, settlesOnCreate.value).libraryId
+  providersReady = true
+  await applySeriesBookPrefill()
 })
 
 // A folder only means anything inside its own library, so it never outlives the library choice.
@@ -258,8 +287,9 @@ watch(filteredResults, (results) => {
 async function runSearch() {
   if (!canSearch.value) return
   activeCoverUrls.value = {}
+  const searchTitle = title.value.trim()
   await search({
-    title: title.value.trim() || undefined,
+    title: searchTitle || undefined,
     author: author.value.trim() || undefined,
     ...(pairMode.value ? { mediaKinds: [...BOOK_REQUEST_MEDIA_KINDS] } : { mediaKind: mediaKind.value }),
     // Looking for something to request is browsing, so an author's search should show their books, not a best match.

@@ -61,6 +61,10 @@ describe('SeriesService', () => {
     findAccessibleLibraryIds: vi.fn(),
   };
 
+  const hardcoverSeriesCatalog = {
+    findMissingBooks: vi.fn(),
+  };
+
   let service: SeriesService;
 
   beforeEach(() => {
@@ -70,7 +74,15 @@ describe('SeriesService', () => {
       bookReadService as any,
       libraryService as any,
       { enrichCardFaces: vi.fn().mockResolvedValue(undefined) } as any,
+      hardcoverSeriesCatalog as any,
     );
+    hardcoverSeriesCatalog.findMissingBooks.mockResolvedValue({
+      books: [],
+      missingPositions: [],
+      expectedBookCount: null,
+      catalogFound: false,
+      status: 'not_configured',
+    });
     libraryService.findAll.mockResolvedValue([{ id: 1 }, { id: 2 }]);
     libraryService.findAccessibleLibraryIds.mockResolvedValue([1, 2]);
   });
@@ -369,6 +381,63 @@ describe('SeriesService', () => {
       expect(result.total).toBe(3);
     });
 
+    it('includes the actual Hardcover title for a missing series position', async () => {
+      seriesRepo.findDetail.mockResolvedValue({
+        id: 42,
+        name: 'Dungeon Crawler Carl',
+        bookCount: 1,
+        readCount: 0,
+        authors: ['Matt Dinniman'],
+        indices: ['1'],
+        expectedBookCount: 7,
+      });
+      seriesRepo.findBookIds.mockResolvedValue({ bookIds: [], total: 1 });
+      hardcoverSeriesCatalog.findMissingBooks.mockResolvedValue({
+        status: 'available',
+        catalogFound: true,
+        expectedBookCount: 7,
+        missingPositions: [2, 3, 4, 5, 6, 7],
+        books: [{ index: 2, title: "Carl's Doomsday Scenario", authors: ['Matt Dinniman'] }],
+      });
+
+      const result = await service.findBooks(reqUser(), 42, {});
+
+      expect(hardcoverSeriesCatalog.findMissingBooks).toHaveBeenCalledWith(7, 'Dungeon Crawler Carl', ['1']);
+      expect(result.seriesInfo.missingBooks).toEqual([{ index: 2, title: "Carl's Doomsday Scenario", authors: ['Matt Dinniman'] }]);
+      expect(result.seriesInfo.possibleGaps).toEqual([2, 3, 4, 5, 6, 7]);
+      expect(result.seriesInfo.expectedBookCount).toBe(7);
+      expect(result.seriesInfo.missingBooksStatus).toBe('available');
+    });
+
+    it('discovers missing catalog entries for one owned book even when local metadata has no total', async () => {
+      seriesRepo.findDetail.mockResolvedValue({
+        id: 42,
+        name: 'Dungeon Crawler Carl',
+        bookCount: 1,
+        readCount: 0,
+        authors: ['Matt Dinniman'],
+        indices: ['1'],
+        expectedBookCount: null,
+      });
+      seriesRepo.findBookIds.mockResolvedValue({ bookIds: [], total: 1 });
+      hardcoverSeriesCatalog.findMissingBooks.mockResolvedValue({
+        status: 'available',
+        catalogFound: true,
+        expectedBookCount: 7,
+        missingPositions: [2, 3, 4, 5, 6, 7],
+        books: [
+          { index: 2, title: "Carl's Doomsday Scenario", authors: ['Matt Dinniman'] },
+          { index: 3, title: "The Dungeon Anarchist's Cookbook", authors: ['Matt Dinniman'] },
+        ],
+      });
+
+      const result = await service.findBooks(reqUser(), 42, {});
+
+      expect(hardcoverSeriesCatalog.findMissingBooks).toHaveBeenCalledWith(7, 'Dungeon Crawler Carl', ['1']);
+      expect(result.seriesInfo.possibleGaps).toEqual([2, 3, 4, 5, 6, 7]);
+      expect(result.seriesInfo.expectedBookCount).toBe(7);
+      expect(result.seriesInfo.missingBooks).toHaveLength(2);
+    });
     it('reports logical volume counts without changing raw book counts', async () => {
       seriesRepo.findDetail.mockResolvedValue({
         id: 42,

@@ -6,7 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ChevronLeft, Pencil } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 
-import type { BookCard, BookDetail } from '@bookorbit/types'
+import type { BookCard, BookDetail, MissingSeriesBook } from '@bookorbit/types'
 import VirtualBookGrid from '@/features/book/components/VirtualBookGrid.vue'
 import BookCoverArtwork from '@/features/book/components/BookCoverArtwork.vue'
 import { bookCoverStyle } from '@/features/book/lib/book-cover'
@@ -14,6 +14,9 @@ import { useCoverVersions } from '@/features/book/composables/useCoverVersions'
 import { useScrollRestoreOnActivate } from '@/features/book/composables/useScrollRestoreOnActivate'
 import { useDisplaySettings } from '@/composables/useDisplaySettings'
 import { useBookNavigation } from '@/features/book/composables/useBookNavigation'
+import { Permission } from '@bookorbit/types'
+import { usePermissions } from '@/features/auth/composables/usePermissions'
+import { useBookRequestVisibility } from '@/features/book-requests/composables/useBookRequestVisibility'
 import { useLibraries } from '@/features/library/composables/useLibraries'
 import { useLibraryPermissions } from '@/features/library/composables/useLibraryPermissions'
 import { usePageTitle } from '@/composables/usePageTitle'
@@ -50,6 +53,8 @@ const mainRef = ref<HTMLElement | null>(null)
 useScrollRestoreOnActivate(mainRef)
 const { setBookContext } = useBookNavigation()
 const { coverUrl } = useCoverVersions()
+const { hasPermission } = usePermissions()
+const { showBookRequests } = useBookRequestVisibility()
 
 const { portraitCoverSize, gridGap } = useDisplaySettings()
 const { libraries, fetchLibraries } = useLibraries()
@@ -110,6 +115,7 @@ function canEditBookMetadata(book: BookCard): boolean {
   return hasLibraryPermission('library_edit_metadata', book.libraryId, 'editor')
 }
 const canEditMetadata = computed(() => hasPermissionInAnyLibrary('library_edit_metadata', 'editor'))
+const canRequestMissingBooks = computed(() => hasPermission(Permission.BookRequestAccess) && showBookRequests.value)
 const safeLeadDescription = useSafeHtml(() => leadBook.value?.description)
 const visibleSeriesAuthors = computed(() => (seriesInfo.value?.authors ?? []).slice(0, 5))
 const hiddenSeriesAuthorsCount = computed(() => Math.max(0, (seriesInfo.value?.authors.length ?? 0) - visibleSeriesAuthors.value.length))
@@ -144,6 +150,40 @@ const leadMetaItems = computed(() => {
   if (leadBook.value.rating != null) items.push(`${leadBook.value.rating.toFixed(1)}★`)
   return items
 })
+
+function navigateToMissingBookRequest(index: number): void {
+  const series = seriesInfo.value
+  if (!series || !canRequestMissingBooks.value) return
+  const book = series.missingBooks?.find((candidate) => candidate.index === index)
+  const author = book?.authors[0] ?? series.authors[0]
+  void router.push({
+    name: 'book-requests',
+    query: {
+      tab: 'search',
+      seriesBookName: series.name,
+      seriesBookIndex: String(index),
+      ...(book ? { seriesBookTitle: book.title } : {}),
+      ...(author ? { seriesBookAuthor: author } : {}),
+    },
+  })
+}
+
+function handleRequestMissingBook(book: MissingSeriesBook): void {
+  navigateToMissingBookRequest(book.index)
+}
+
+function handleDiscoverMissingBook(index: number): void {
+  navigateToMissingBookRequest(index)
+}
+
+function handleRequestSeriesBook(): void {
+  const firstGap = seriesInfo.value?.possibleGaps[0]
+  if (firstGap !== undefined) navigateToMissingBookRequest(firstGap)
+}
+
+function handleRetryMissingBookTitles(): void {
+  void loadBooks(true)
+}
 
 // 'move-to-library' is part of the shared card contract; this view does not
 // opt in, so it never fires here.
@@ -565,6 +605,14 @@ defineOptions({ name: 'SeriesDetailView' })
                   <Pencil :size="14" />
                   {{ openingSeriesEditor ? t('series.detail.preparingEditor') : t('series.detail.editMetadata') }}
                 </button>
+                <button
+                  v-if="canRequestMissingBooks && seriesInfo.possibleGaps.length > 0"
+                  type="button"
+                  class="flex h-8 w-full items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:w-auto"
+                  @click="handleRequestSeriesBook"
+                >
+                  {{ t('series.gaps.requestBook') }}
+                </button>
               </div>
 
               <div class="mt-3 grid max-w-md gap-3 sm:grid-cols-2">
@@ -575,7 +623,18 @@ defineOptions({ name: 'SeriesDetailView' })
                   :expected-count="seriesInfo.expectedBookCount"
                 />
               </div>
-              <SeriesGapBanner v-if="seriesInfo.possibleGaps.length > 0" :gaps="seriesInfo.possibleGaps" class="mt-3" />
+              <SeriesGapBanner
+                v-if="seriesInfo.possibleGaps.length > 0"
+                :gaps="seriesInfo.possibleGaps"
+                :missing-books="seriesInfo.missingBooks"
+                :authors="seriesInfo.authors"
+                :lookup-status="seriesInfo.missingBooksStatus"
+                :can-request="canRequestMissingBooks"
+                class="mt-3"
+                @request="handleRequestMissingBook"
+                @discover="handleDiscoverMissingBook"
+                @retry="handleRetryMissingBookTitles"
+              />
 
               <div class="mt-4 border-t border-border/60 pt-4">
                 <div class="mb-2">

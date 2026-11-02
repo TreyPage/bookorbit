@@ -89,7 +89,19 @@ export type SeriesDetail = {
   possibleGaps: number[];
   /** Total books a metadata provider reports for the series, or null when no provider has told us. */
   expectedBookCount: number | null;
+  /** Catalog titles matched to missing positions, when a provider can identify them. */
+  missingBooks?: MissingSeriesBook[];
+  /** Whether Hardcover could identify the series catalog and titles for missing positions. */
+  missingBooksStatus?: MissingSeriesBooksStatus;
 };
+
+export type MissingSeriesBook = {
+  index: number;
+  title: string;
+  authors: string[];
+};
+
+export type MissingSeriesBooksStatus = "no_missing" | "available" | "not_configured" | "not_found" | "failed" | "insufficient_scope" | "not_loaded";
 
 export type SeriesBooksPage = BooksPage & {
   seriesInfo: SeriesDetail;

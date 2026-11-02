@@ -122,21 +122,42 @@ describe('useSeriesDetail', () => {
         total: 2,
         page: 0,
         size: 50,
-        seriesInfo: { id: 42, name: 'Test', bookCount: 2, readCount: 0, authors: [], possibleGaps: [], expectedBookCount: null },
+        seriesInfo: {
+          id: 42,
+          name: 'Test',
+          bookCount: 2,
+          readCount: 0,
+          authors: [],
+          possibleGaps: [3],
+          expectedBookCount: 4,
+          missingBooks: [{ index: 3, title: 'The Missing Book', authors: ['Author'] }],
+          missingBooksStatus: 'available',
+        },
       })
       .mockResolvedValueOnce({
         items: [{ id: 2 } as BookCard],
         total: 2,
         page: 1,
         size: 50,
-        seriesInfo: { id: 42, name: 'Test', bookCount: 2, readCount: 0, authors: [], possibleGaps: [], expectedBookCount: null },
+        seriesInfo: {
+          id: 42,
+          name: 'Test',
+          bookCount: 2,
+          readCount: 0,
+          authors: [],
+          possibleGaps: [3],
+          expectedBookCount: 4,
+          missingBooks: [],
+          missingBooksStatus: 'not_loaded',
+        },
       })
 
-    const { items, load } = useSeriesDetail(seriesId)
+    const { items, seriesInfo, load } = useSeriesDetail(seriesId)
     await load(true)
     await load()
 
     expect(items.value).toHaveLength(2)
+    expect(seriesInfo.value?.missingBooks).toEqual([{ index: 3, title: 'The Missing Book', authors: ['Author'] }])
   })
 
   it('resets notFound on fresh load', async () => {

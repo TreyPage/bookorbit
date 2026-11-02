@@ -4,6 +4,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import type { BookCard, SeriesDetail } from '@bookorbit/types'
 import SeriesDetailView from './SeriesDetailView.vue'
 import SeriesCompletionBar from '../components/SeriesCompletionBar.vue'
+import SeriesGapBanner from '../components/SeriesGapBanner.vue'
 
 const GROUP_BY_MEDIA_STORAGE_KEY = 'bookorbit:series-detail:group-by-media'
 
@@ -50,6 +51,10 @@ vi.mock('vue-router', async (importOriginal) => {
 
 vi.mock('@/features/auth/composables/usePermissions', () => ({
   usePermissions: () => ({ hasPermission: () => true }),
+}))
+
+vi.mock('@/features/book-requests/composables/useBookRequestVisibility', () => ({
+  useBookRequestVisibility: () => ({ showBookRequests: ref(true) }),
 }))
 
 vi.mock('@/features/library/composables/useLibraryPermissions', () => ({
@@ -162,6 +167,8 @@ function makeSeriesInfo(overrides: Partial<SeriesDetail> = {}): SeriesDetail {
     authors: ['Author'],
     possibleGaps: [],
     expectedBookCount: null,
+    missingBooks: [],
+    missingBooksStatus: 'not_configured',
     ...overrides,
   }
 }
@@ -262,7 +269,7 @@ function mountView() {
         BookQuickView: BookQuickViewStub,
         EntityNotFound: true,
         SeriesCompletionBar: true,
-        SeriesGapBanner: true,
+        SeriesGapBanner,
       },
     },
   })
@@ -372,6 +379,117 @@ describe('SeriesDetailView', () => {
     await nextTick()
 
     expect(wrapper.find('[role="progressbar"]').exists()).toBe(false)
+  })
+
+  it('opens request search with the actual missing volume title prefilled', async () => {
+    mocks.seriesInfo = ref(
+      makeSeriesInfo({
+        possibleGaps: [2],
+        missingBooks: [{ index: 2, title: "Carl's Doomsday Scenario", authors: ['Matt Dinniman'] }],
+        missingBooksStatus: 'available',
+      }),
+    )
+
+    const wrapper = mountView()
+    await nextTick()
+    const gapBanner = wrapper.getComponent(SeriesGapBanner)
+    expect(gapBanner.find('[id="series-gap-details"]').exists()).toBe(true)
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes("Request Carl's Doomsday Scenario"))!
+      .trigger('click')
+
+    expect(wrapper.text()).toContain('Missing #2')
+    expect(mocks.routerPush).toHaveBeenCalledWith({
+      name: 'book-requests',
+      query: {
+        tab: 'search',
+        seriesBookTitle: "Carl's Doomsday Scenario",
+        seriesBookName: 'The Series',
+        seriesBookIndex: '2',
+        seriesBookAuthor: 'Matt Dinniman',
+      },
+    })
+  })
+
+  it('keeps each gap actionable when Hardcover has not returned a title', async () => {
+    mocks.seriesInfo = ref(makeSeriesInfo({ possibleGaps: [2], missingBooksStatus: 'not_configured' }))
+
+    const wrapper = mountView()
+    await nextTick()
+    const banner = wrapper.getComponent(SeriesGapBanner)
+
+    expect(banner.text()).toContain('Connect Hardcover to load titles for the missing books.')
+    const findButton = wrapper.findAll('button').find((button) => button.text() === 'Find book #2')
+    expect(findButton).toBeDefined()
+    await findButton!.trigger('click')
+    expect(mocks.routerPush).toHaveBeenCalledWith({
+      name: 'book-requests',
+      query: {
+        tab: 'search',
+        seriesBookName: 'The Series',
+        seriesBookIndex: '2',
+        seriesBookAuthor: 'Author',
+      },
+    })
+  })
+
+  it('collapses the missing-book details while keeping the gap summary visible', async () => {
+    mocks.seriesInfo = ref(makeSeriesInfo({ possibleGaps: [2, 3], missingBooksStatus: 'not_configured' }))
+
+    const wrapper = mountView()
+    await nextTick()
+    const banner = wrapper.getComponent(SeriesGapBanner)
+    const toggle = banner.get('button[aria-controls="series-gap-details"]')
+
+    expect(toggle.attributes('aria-expanded')).toBe('true')
+    expect(banner.text()).toContain('Missing #2, #3')
+    expect(banner.find('[id="series-gap-details"]').exists()).toBe(true)
+
+    await toggle.trigger('click')
+
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    expect(banner.text()).toContain('Missing #2, #3')
+    expect(banner.find('[id="series-gap-details"]').exists()).toBe(false)
+  })
+
+  it('explains when Hardcover access is missing the catalog permission', async () => {
+    mocks.seriesInfo = ref(makeSeriesInfo({ possibleGaps: [2], missingBooksStatus: 'insufficient_scope' }))
+
+    const wrapper = mountView()
+    await nextTick()
+    const banner = wrapper.getComponent(SeriesGapBanner)
+
+    expect(banner.text()).toContain(
+      'Your Hardcover API key needs the read:catalog permission. Create a key with that permission in Hardcover and update it in your Hardcover settings.',
+    )
+  })
+
+  it('restores the series-header request action and targets the first missing title', async () => {
+    mocks.seriesInfo = ref(
+      makeSeriesInfo({
+        possibleGaps: [2, 3],
+        missingBooks: [{ index: 2, title: 'The Missing Book', authors: ['Author'] }],
+        missingBooksStatus: 'available',
+      }),
+    )
+
+    const wrapper = mountView()
+    await nextTick()
+    const requestButton = wrapper.findAll('button').find((button) => button.text() === 'Request a missing book')
+    expect(requestButton).toBeDefined()
+    await requestButton!.trigger('click')
+    expect(mocks.routerPush).toHaveBeenCalledWith({
+      name: 'book-requests',
+      query: {
+        tab: 'search',
+        seriesBookName: 'The Series',
+        seriesBookIndex: '2',
+        seriesBookTitle: 'The Missing Book',
+        seriesBookAuthor: 'Author',
+      },
+    })
   })
 
   it('shows grouped media sections with labels and counts by default', async () => {
