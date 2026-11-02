@@ -7,7 +7,9 @@ import type {
   HardcoverEditionsResult,
   HardcoverImportApplyResult,
   HardcoverImportPreview,
+  HardcoverListsResult,
   HardcoverLinkedBooksResult,
+  HardcoverShelvesResult,
   HardcoverSyncPendingSummary,
   HardcoverSettings,
   HardcoverTokenValidationResult,
@@ -49,6 +51,25 @@ export async function validateHardcoverToken(token?: string): Promise<HardcoverT
     body: JSON.stringify(token ? { token } : {}),
   })
   if (!res.ok) throw new Error('Failed to validate token')
+  return res.json()
+}
+
+export async function fetchHardcoverShelves(): Promise<HardcoverShelvesResult> {
+  const res = await api(`${BASE}/shelves`)
+  if (!res.ok) throw new Error('Failed to fetch Hardcover shelves')
+  return res.json()
+}
+
+export async function fetchHardcoverLists(token?: string): Promise<HardcoverListsResult> {
+  const res = await api(`${BASE}/lists`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(token ? { token } : {}),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { message?: string }).message ?? 'Failed to fetch Hardcover lists')
+  }
   return res.json()
 }
 

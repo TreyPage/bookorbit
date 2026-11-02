@@ -2,11 +2,16 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 
 import type {
   HardcoverBookSyncMode,
+  HardcoverList,
+  HardcoverListsResult,
+  HardcoverShelf,
+  HardcoverShelvesResult,
   HardcoverSettings,
   HardcoverSyncDisabledReason,
   HardcoverTokenValidationResult,
   UpsertHardcoverSettingsPayload,
 } from '@bookorbit/types';
+import { HARDCOVER_SHELF_IDS } from '@bookorbit/types';
 
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { HARDCOVER_PRIVACY } from './hardcover.constants';
@@ -15,6 +20,15 @@ import { HardcoverRepository } from './hardcover.repository';
 
 const VALID_PRIVACY_IDS = [HARDCOVER_PRIVACY.PUBLIC, HARDCOVER_PRIVACY.FOLLOWS, HARDCOVER_PRIVACY.PRIVATE];
 const VALID_BOOK_SYNC_MODES = ['all_eligible', 'selected_only'] as const;
+const isHardcoverShelfId = (id: string): id is (typeof HARDCOVER_SHELF_IDS)[number] => (HARDCOVER_SHELF_IDS as readonly string[]).includes(id);
+const HARDCOVER_SHELVES: HardcoverShelf[] = [
+  { id: 'want_to_read', name: 'Want to Read' },
+  { id: 'currently_reading', name: 'Currently Reading' },
+  { id: 'read', name: 'Read' },
+  { id: 'paused', name: 'Paused' },
+  { id: 'did_not_finish', name: 'Did Not Finish' },
+  { id: 'ignored', name: 'Ignored' },
+];
 
 @Injectable()
 export class HardcoverSettingsService {
@@ -36,6 +50,8 @@ export class HardcoverSettingsService {
       effectiveEnabled: hasSyncPermission && tokenConfigured && enabled,
       disabledReason: this.resolveDisabledReason({ hasSyncPermission, tokenConfigured, enabled }),
       bookSyncMode: (row?.bookSyncMode ?? 'all_eligible') as HardcoverBookSyncMode,
+      hardcoverShelfIds: (row?.hardcoverShelfIds ?? []).filter(isHardcoverShelfId),
+      hardcoverListIds: row?.hardcoverListIds ?? [],
       autoSyncOnStatusChange: row?.autoSyncOnStatusChange ?? true,
       autoSyncOnProgressUpdate: row?.autoSyncOnProgressUpdate ?? true,
       autoSyncOnRatingChange: row?.autoSyncOnRatingChange ?? true,
@@ -50,6 +66,22 @@ export class HardcoverSettingsService {
     }
     if (payload.bookSyncMode !== undefined && !VALID_BOOK_SYNC_MODES.includes(payload.bookSyncMode)) {
       throw new BadRequestException(`Invalid bookSyncMode: ${payload.bookSyncMode}`);
+    }
+    if (
+      payload.hardcoverShelfIds !== undefined &&
+      (!Array.isArray(payload.hardcoverShelfIds) ||
+        payload.hardcoverShelfIds.some((id) => !HARDCOVER_SHELF_IDS.includes(id)) ||
+        new Set(payload.hardcoverShelfIds).size !== payload.hardcoverShelfIds.length)
+    ) {
+      throw new BadRequestException('Invalid Hardcover shelf IDs');
+    }
+    if (
+      payload.hardcoverListIds !== undefined &&
+      (!Array.isArray(payload.hardcoverListIds) ||
+        payload.hardcoverListIds.some((id) => !Number.isInteger(id) || id < 1) ||
+        new Set(payload.hardcoverListIds).size !== payload.hardcoverListIds.length)
+    ) {
+      throw new BadRequestException('Invalid Hardcover list IDs');
     }
 
     const existing = await this.repo.findSettings(userId);
@@ -67,6 +99,8 @@ export class HardcoverSettingsService {
     data.apiToken = rawToken ?? existing!.apiToken;
     if (payload.enabled !== undefined) data.enabled = payload.enabled;
     if (payload.bookSyncMode !== undefined) data.bookSyncMode = payload.bookSyncMode;
+    if (payload.hardcoverShelfIds !== undefined) data.hardcoverShelfIds = payload.hardcoverShelfIds;
+    if (payload.hardcoverListIds !== undefined) data.hardcoverListIds = payload.hardcoverListIds;
     if (payload.autoSyncOnStatusChange !== undefined) data.autoSyncOnStatusChange = payload.autoSyncOnStatusChange;
     if (payload.autoSyncOnProgressUpdate !== undefined) data.autoSyncOnProgressUpdate = payload.autoSyncOnProgressUpdate;
     if (payload.autoSyncOnRatingChange !== undefined) data.autoSyncOnRatingChange = payload.autoSyncOnRatingChange;
@@ -103,11 +137,63 @@ export class HardcoverSettingsService {
     }
   }
 
+  getUserShelves(): HardcoverShelvesResult {
+    return { shelves: HARDCOVER_SHELVES };
+  }
+
+  async getUserLists(userId: number, token?: string): Promise<HardcoverListsResult> {
+    const resolvedToken = this.stripBearerPrefix(token?.trim()) || (await this.repo.findSettings(userId))?.apiToken;
+    if (!resolvedToken) throw new BadRequestException('Hardcover API token is required to fetch lists');
+
+    try {
+      const currentUser = await this.client.query<{ me?: Array<{ id?: number | null }> }>(
+        userId,
+        resolvedToken,
+        'query CurrentHardcoverUser { me { id } }',
+      );
+      const hardcoverUserId = currentUser.me?.[0]?.id;
+      if (hardcoverUserId == null || !Number.isInteger(hardcoverUserId) || hardcoverUserId < 1) {
+        throw new Error('Hardcover current user ID was missing');
+      }
+
+      const result = await this.client.query<{ lists?: Array<{ id: number; name: string; books_count: number | null }> }>(
+        userId,
+        resolvedToken,
+        `query GetUserLists($userId: Int!) {
+          lists(where: { user_id: { _eq: $userId } }, order_by: { updated_at: desc }) {
+            id
+            name
+            books_count
+          }
+        }`,
+        { userId: hardcoverUserId },
+      );
+      return {
+        lists: (result.lists ?? []).map((list): HardcoverList => ({
+          id: list.id,
+          name: list.name,
+          booksCount: list.books_count ?? 0,
+        })),
+      };
+    } catch (err) {
+      const error = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+      this.logger.warn(`[hardcover.lists] [fail] userId=${userId} error="${error}" - Hardcover lists fetch failed`);
+      throw new BadRequestException('Failed to fetch Hardcover lists. Verify the token has read:lists access.');
+    }
+  }
+
   async getTokenForUser(userId: number): Promise<string | null> {
     const [settings, hasSyncPermission] = await Promise.all([this.repo.findSettings(userId), this.repo.userHasHardcoverSyncPermission(userId)]);
     if (!hasSyncPermission) return null;
     if (!settings || !settings.enabled) return null;
     return settings.apiToken;
+  }
+
+  async getMetadataToken(userId?: number, libraryId?: number): Promise<string | null> {
+    const resolvedUserId = userId ?? (libraryId !== undefined ? await this.repo.findUniqueLibraryOwnerUserId(libraryId) : null);
+    if (resolvedUserId === null || resolvedUserId === undefined) return null;
+    const settings = await this.repo.findSettings(resolvedUserId);
+    return settings?.apiToken ?? null;
   }
 
   private stripBearerPrefix(token: string | undefined): string | undefined {

@@ -8,6 +8,7 @@ import {
   type HardcoverImportPreviewOutcome,
   type HardcoverImportPreviewRow,
   type HardcoverImportSummary,
+  type HardcoverShelfId,
 } from '@bookorbit/types';
 import { BadRequestException, Injectable, Logger, Optional } from '@nestjs/common';
 
@@ -38,9 +39,9 @@ const HARDCOVER_STATUS_LABELS: Record<number, string> = {
 };
 
 const IMPORT_USER_BOOKS_QUERY = `
-query PullReadStatus($limit: Int!, $offset: Int!) {
+query PullReadStatus($limit: Int!, $offset: Int!, $statusIds: [Int!]!) {
   me {
-    user_books(limit: $limit, offset: $offset, order_by: { updated_at: desc }) {
+    user_books(where: { status_id: { _in: $statusIds } }, limit: $limit, offset: $offset, order_by: { updated_at: desc }) {
       id
       book_id
       edition_id
@@ -75,17 +76,64 @@ query PullReadStatus($limit: Int!, $offset: Int!) {
   }
 }`;
 
+const IMPORT_HARDCOVER_USER_ID_QUERY = `query CurrentHardcoverUser { me { id } }`;
+
+const IMPORT_HARDCOVER_LISTS_QUERY = `
+query PullListBooks($userId: Int!, $listId: Int!, $limit: Int!, $offset: Int!) {
+  lists(where: { id: { _eq: $listId }, user_id: { _eq: $userId } }) {
+    id
+    name
+    list_books(limit: $limit, offset: $offset, order_by: { position: asc }) {
+      id
+      book_id
+      book {
+        id
+        title
+        slug
+        cached_contributors
+      }
+    }
+  }
+}`;
+
 interface HardcoverImportGraphQLResult {
   me?: Array<{
     user_books?: HardcoverUserBook[];
   }>;
 }
 
+interface HardcoverCurrentUserGraphQLResult {
+  me?: Array<{ id?: number | null }>;
+}
+
+interface HardcoverListBook {
+  id: number;
+  book_id: number;
+  book?: { id: number; title?: string | null; slug?: string | null; cached_contributors?: unknown } | null;
+}
+
+interface HardcoverListBooksGraphQLResult {
+  lists?: Array<{
+    id: number;
+    name: string;
+    list_books?: HardcoverListBook[] | null;
+  }>;
+}
+
+const HARDCOVER_STATUS_ID_BY_SHELF: Partial<Record<HardcoverShelfId, number>> = {
+  want_to_read: HARDCOVER_STATUS.WANT_TO_READ,
+  currently_reading: HARDCOVER_STATUS.CURRENTLY_READING,
+  read: HARDCOVER_STATUS.READ,
+  paused: HARDCOVER_STATUS.PAUSED,
+  did_not_finish: HARDCOVER_STATUS.DNF,
+  ignored: HARDCOVER_STATUS.IGNORED,
+};
+
 interface HardcoverUserBook {
   id: number;
   book_id: number;
   edition_id: number | null;
-  status_id: number;
+  status_id: number | null;
   first_started_reading_date: string | null;
   last_read_date: string | null;
   user_book_status?: {
@@ -259,13 +307,17 @@ export class HardcoverImportService {
   }
 
   private async buildPreview(user: RequestUser): Promise<{ preview: HardcoverImportPreview; matchBasisByBookId: Map<number, string> }> {
-    const token = await this.settingsService.getTokenForUser(user.id);
+    const [token, settings] = await Promise.all([this.settingsService.getTokenForUser(user.id), this.settingsService.getSettings(user.id)]);
     if (!token) {
       throw new BadRequestException('Hardcover sync is not available right now');
     }
+    if (settings.hardcoverShelfIds.length === 0 && settings.hardcoverListIds.length === 0) {
+      throw new BadRequestException('Select at least one Hardcover shelf or list to preview');
+    }
 
-    const [hardcoverBooks, accessibleLibraryIds] = await Promise.all([
-      this.fetchAllUserBooks(user.id, token),
+    const [hardcoverBooks, listBooks, accessibleLibraryIds] = await Promise.all([
+      this.fetchAllUserBooks(user.id, token, settings.hardcoverShelfIds),
+      this.fetchSelectedListBooks(user.id, token, settings.hardcoverListIds),
       this.libraryService.findAccessibleLibraryIds(user),
     ]);
     const localBooks = await this.repo.findImportCandidateBooks(user.id, accessibleLibraryIds, user.isSuperuser ? undefined : user.contentFilters);
@@ -277,38 +329,131 @@ export class HardcoverImportService {
 
     const rows: HardcoverImportPreviewRow[] = [];
     for (const book of hardcoverBooks) rows.push(await this.buildPreviewRow(book, indexes));
+    const statusBookIds = new Set(hardcoverBooks.map((book) => book.book_id));
+    for (const listBook of listBooks) {
+      if (statusBookIds.has(listBook.book_id)) continue;
+      const syntheticBook: HardcoverUserBook = {
+        id: -listBook.id,
+        book_id: listBook.book_id,
+        edition_id: null,
+        status_id: null,
+        first_started_reading_date: null,
+        last_read_date: null,
+        user_book_status: null,
+        book: listBook.book,
+        edition: null,
+        user_book_reads: [],
+      };
+      const row = await this.buildPreviewRow(syntheticBook, indexes);
+      row.hardcoverListBookId = listBook.id;
+      row.hardcoverListName = listBook.listName;
+      rows.push(row);
+    }
     return {
-      preview: { summary: summarize(rows), rows },
+      preview: {
+        summary: summarize(rows),
+        rows,
+        hardcoverShelfIds: settings.hardcoverShelfIds,
+        hardcoverListIds: settings.hardcoverListIds,
+      },
       matchBasisByBookId: new Map(localBooks.map((book) => [book.bookId, buildHardcoverMatchBasis(book)])),
     };
   }
 
-  private async fetchAllUserBooks(userId: number, token: string): Promise<HardcoverUserBook[]> {
-    const rows: HardcoverUserBook[] = [];
-    let offset = 0;
+  private async fetchAllUserBooks(userId: number, token: string, shelfIds: HardcoverShelfId[]): Promise<HardcoverUserBook[]> {
+    const statusIds = shelfIds.map((shelfId) => HARDCOVER_STATUS_ID_BY_SHELF[shelfId]).filter((id): id is number => id !== undefined);
+    const rowsByUserBookId = new Map<number, HardcoverUserBook>();
+    let statusBookCount = 0;
 
-    while (true) {
-      let data: HardcoverImportGraphQLResult;
-      try {
-        data = await this.client.query<HardcoverImportGraphQLResult>(userId, token, IMPORT_USER_BOOKS_QUERY, {
-          limit: IMPORT_PAGE_SIZE,
-          offset,
-        });
-      } catch (err) {
-        const error = sanitizeLogValue(err instanceof Error ? err.message : String(err));
-        this.logger.warn(
-          `[hardcover.import_status] [fail] userId=${userId} errorClass=HardcoverApiError error="${error}" - Hardcover library fetch failed`,
+    try {
+      if (statusIds.length > 0) {
+        this.logger.log(
+          `[hardcover.import_status] [start] userId=${userId} source=reading_status shelfIds=${shelfIds.join(',')} - Hardcover status books fetch started`,
         );
-        throw new BadRequestException('Failed to fetch Hardcover library');
+        let offset = 0;
+        while (true) {
+          const data = await this.client.query<HardcoverImportGraphQLResult>(userId, token, IMPORT_USER_BOOKS_QUERY, {
+            limit: IMPORT_PAGE_SIZE,
+            offset,
+            statusIds,
+          });
+          const page = data.me?.[0]?.user_books ?? [];
+          statusBookCount += page.length;
+          for (const book of page) rowsByUserBookId.set(book.id, book);
+          if (page.length < IMPORT_PAGE_SIZE) break;
+          offset += IMPORT_PAGE_SIZE;
+        }
       }
-
-      const page = data.me?.[0]?.user_books ?? [];
-      rows.push(...page);
-      if (page.length < IMPORT_PAGE_SIZE) break;
-      offset += IMPORT_PAGE_SIZE;
+    } catch (err) {
+      const error = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+      this.logger.warn(
+        `[hardcover.import_status] [fail] userId=${userId} errorClass=HardcoverApiError error="${error}" - Hardcover library fetch failed`,
+      );
+      throw new BadRequestException('Failed to fetch Hardcover library');
     }
 
-    return rows;
+    if (statusIds.length > 0)
+      this.logger.log(`[hardcover.import_status] [end] userId=${userId} statusBooks=${statusBookCount} - Hardcover status books fetch completed`);
+    return [...rowsByUserBookId.values()];
+  }
+
+  private async fetchSelectedListBooks(userId: number, token: string, listIds: number[]): Promise<Array<HardcoverListBook & { listName: string }>> {
+    if (listIds.length === 0) return [];
+
+    let userResult: HardcoverCurrentUserGraphQLResult;
+    try {
+      userResult = await this.client.query<HardcoverCurrentUserGraphQLResult>(userId, token, IMPORT_HARDCOVER_USER_ID_QUERY);
+    } catch (err) {
+      const error = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+      this.logger.warn(
+        `[hardcover.import_status] [fail] userId=${userId} errorClass=HardcoverApiError error="${error}" - Hardcover account lookup failed`,
+      );
+      throw new BadRequestException('Failed to identify the Hardcover account for the selected lists');
+    }
+    const hardcoverUserId = userResult.me?.[0]?.id;
+    if (hardcoverUserId == null || !Number.isInteger(hardcoverUserId) || hardcoverUserId < 1) {
+      throw new BadRequestException('Could not identify the Hardcover account for the selected lists');
+    }
+
+    const listBooks: Array<HardcoverListBook & { listName: string }> = [];
+    for (const listId of listIds) {
+      let offset = 0;
+      while (true) {
+        let data: HardcoverListBooksGraphQLResult;
+        try {
+          data = await this.client.query<HardcoverListBooksGraphQLResult>(userId, token, IMPORT_HARDCOVER_LISTS_QUERY, {
+            userId: hardcoverUserId,
+            listId,
+            limit: IMPORT_PAGE_SIZE,
+            offset,
+          });
+        } catch (err) {
+          const error = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+          this.logger.warn(
+            `[hardcover.import_status] [fail] userId=${userId} listId=${listId} errorClass=HardcoverApiError error="${error}" - Hardcover list fetch failed`,
+          );
+          throw new BadRequestException('Failed to fetch books from the selected Hardcover list');
+        }
+
+        const list = data.lists?.[0];
+        if (!list) throw new BadRequestException('A selected Hardcover list is no longer available');
+        if (!Array.isArray(list.list_books)) {
+          throw new BadRequestException('Hardcover did not return books for a selected list');
+        }
+        const page = list.list_books;
+        const listName = list.name;
+        for (const book of page) listBooks.push({ ...book, listName });
+        if (page.length < IMPORT_PAGE_SIZE) break;
+        offset += IMPORT_PAGE_SIZE;
+      }
+    }
+
+    const uniqueBooks = new Map<number, (typeof listBooks)[number]>();
+    for (const book of listBooks) uniqueBooks.set(book.book_id, book);
+    this.logger.log(
+      `[hardcover.import_status] [end] userId=${userId} selectedListCount=${listIds.length} listBooks=${uniqueBooks.size} - Hardcover list books fetch completed`,
+    );
+    return [...uniqueBooks.values()];
   }
 
   private buildIndexes(books: HardcoverImportLocalBook[], states: Array<Awaited<ReturnType<HardcoverRepository['findBookState']>>>): LocalIndexes {
@@ -346,7 +491,7 @@ export class HardcoverImportService {
   }
 
   private async buildPreviewRow(hardcoverBook: HardcoverUserBook, indexes: LocalIndexes): Promise<HardcoverImportPreviewRow> {
-    const statusMapping = IMPORTABLE_STATUS_MAP[hardcoverBook.status_id] ?? null;
+    const statusMapping = hardcoverBook.status_id == null ? null : (IMPORTABLE_STATUS_MAP[hardcoverBook.status_id] ?? null);
     const hardcoverAuthors = extractHardcoverAuthors(hardcoverBook.book?.cached_contributors);
     const latestRead = hardcoverBook.user_book_reads?.find(hasReadSignal) ?? null;
     const importedStartedAt = latestRead?.started_at ?? hardcoverBook.first_started_reading_date ?? null;
@@ -358,8 +503,13 @@ export class HardcoverImportService {
       hardcoverReadId: latestRead?.id ?? null,
       hardcoverTitle: hardcoverBook.book?.title ?? null,
       hardcoverAuthors,
+      hardcoverIsbn10: hardcoverBook.edition?.isbn_10 ?? null,
+      hardcoverIsbn13: hardcoverBook.edition?.isbn_13 ?? null,
       hardcoverStatusId: hardcoverBook.status_id,
-      hardcoverStatusLabel: HARDCOVER_STATUS_LABELS[hardcoverBook.status_id] ?? hardcoverBook.user_book_status?.status ?? 'Unknown',
+      hardcoverStatusLabel:
+        (hardcoverBook.status_id == null ? null : HARDCOVER_STATUS_LABELS[hardcoverBook.status_id]) ??
+        hardcoverBook.user_book_status?.status ??
+        'Unknown',
       importedStatus: statusMapping?.status ?? null,
       importedStartedAt,
       importedFinishedAt,
@@ -401,6 +551,8 @@ export class HardcoverImportService {
       | 'hardcoverReadId'
       | 'hardcoverTitle'
       | 'hardcoverAuthors'
+      | 'hardcoverIsbn10'
+      | 'hardcoverIsbn13'
       | 'hardcoverStatusId'
       | 'hardcoverStatusLabel'
       | 'importedStatus'

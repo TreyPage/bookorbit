@@ -8,6 +8,8 @@ const mockSettingsService = {
   upsertSettings: vi.fn(),
   disconnectUser: vi.fn(),
   validateToken: vi.fn(),
+  getUserShelves: vi.fn(),
+  getUserLists: vi.fn(),
 };
 
 const mockSyncService = {
@@ -68,6 +70,21 @@ describe('HardcoverController', () => {
     mockSettingsService.validateToken.mockResolvedValue({ valid: true, hardcoverUsername: 'neon' });
     const result = await makeController().validateToken(mockUser as any, {});
     expect(result).toEqual({ valid: true, hardcoverUsername: 'neon' });
+  });
+
+  it('getUserShelves delegates to service', () => {
+    mockSettingsService.getUserShelves.mockReturnValue({ shelves: [{ id: 'read', name: 'Read' }] });
+    const result = makeController().getUserShelves();
+    expect(result).toEqual({ shelves: [{ id: 'read', name: 'Read' }] });
+    expect(mockSettingsService.getUserShelves).toHaveBeenCalled();
+  });
+
+  it('getUserLists delegates token and user to service', async () => {
+    mockSettingsService.getUserLists.mockResolvedValue({ lists: [{ id: 4, name: 'Owned', booksCount: 10 }] });
+    await expect(makeController().getUserLists(mockUser as any, { token: 'new-token' })).resolves.toEqual({
+      lists: [{ id: 4, name: 'Owned', booksCount: 10 }],
+    });
+    expect(mockSettingsService.getUserLists).toHaveBeenCalledWith(1, 'new-token');
   });
 
   it('startSync returns runId', async () => {

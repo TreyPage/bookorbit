@@ -1,15 +1,32 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { HardcoverSettings, HardcoverTokenValidationResult, UpsertHardcoverSettingsPayload } from '@bookorbit/types'
+import type {
+  HardcoverListsResult,
+  HardcoverSettings,
+  HardcoverShelvesResult,
+  HardcoverTokenValidationResult,
+  UpsertHardcoverSettingsPayload,
+} from '@bookorbit/types'
 
 vi.mock('../../api/hardcover.api', () => ({
   fetchHardcoverSettings: vi.fn<() => Promise<HardcoverSettings>>(),
+  fetchHardcoverShelves: vi.fn<() => Promise<HardcoverShelvesResult>>(),
+  fetchHardcoverLists: vi.fn<(token?: string) => Promise<HardcoverListsResult>>(),
   upsertHardcoverSettings: vi.fn<(payload: UpsertHardcoverSettingsPayload) => Promise<HardcoverSettings>>(),
   disconnectHardcover: vi.fn<() => Promise<void>>(),
   validateHardcoverToken: vi.fn<(token?: string) => Promise<HardcoverTokenValidationResult>>(),
 }))
 
-import { disconnectHardcover, fetchHardcoverSettings, upsertHardcoverSettings, validateHardcoverToken } from '../../api/hardcover.api'
+import {
+  disconnectHardcover,
+  fetchHardcoverShelves,
+  fetchHardcoverLists,
+  fetchHardcoverSettings,
+  upsertHardcoverSettings,
+  validateHardcoverToken,
+} from '../../api/hardcover.api'
 
+const mockFetchShelves = vi.mocked(fetchHardcoverShelves)
+const mockFetchLists = vi.mocked(fetchHardcoverLists)
 const mockFetchSettings = vi.mocked(fetchHardcoverSettings)
 const mockUpsert = vi.mocked(upsertHardcoverSettings)
 const mockDisconnect = vi.mocked(disconnectHardcover)
@@ -21,6 +38,8 @@ const SETTINGS: HardcoverSettings = {
   effectiveEnabled: true,
   disabledReason: null,
   bookSyncMode: 'all_eligible',
+  hardcoverShelfIds: [],
+  hardcoverListIds: [],
   autoSyncOnStatusChange: true,
   autoSyncOnProgressUpdate: true,
   autoSyncOnRatingChange: true,
@@ -37,6 +56,25 @@ describe('useHardcoverSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.resetModules()
+  })
+
+  it('fetchLists loads custom lists using a supplied token', async () => {
+    mockFetchLists.mockResolvedValue({ lists: [{ id: 19, name: 'Owned', booksCount: 63 }] })
+    const c = await loadComposable()
+
+    await expect(c.fetchLists('new-token')).resolves.toBe(true)
+    expect(mockFetchLists).toHaveBeenCalledWith('new-token')
+    expect(c.lists.value).toEqual([{ id: 19, name: 'Owned', booksCount: 63 }])
+    expect(c.listsError.value).toBeNull()
+  })
+
+  it('fetchLists surfaces errors', async () => {
+    mockFetchLists.mockRejectedValue(new Error('Missing list scope'))
+    const c = await loadComposable()
+
+    await expect(c.fetchLists()).resolves.toBe(false)
+    expect(c.lists.value).toEqual([])
+    expect(c.listsError.value).toBe('Missing list scope')
   })
 
   afterEach(() => {
@@ -89,10 +127,33 @@ describe('useHardcoverSettings', () => {
   it('disconnect clears settings', async () => {
     mockDisconnect.mockResolvedValue(undefined)
     mockFetchSettings.mockResolvedValue(SETTINGS)
+    mockFetchShelves.mockResolvedValue({ shelves: [{ id: 'read', name: 'Read' }] })
+    mockFetchLists.mockResolvedValue({ lists: [{ id: 19, name: 'Owned', booksCount: 63 }] })
     const c = await loadComposable()
     await c.fetchSettings()
+    await c.fetchShelves()
     await c.disconnect()
     expect(c.settings.value).toBeNull()
+    expect(c.shelves.value).toEqual([])
+    expect(c.lists.value).toEqual([])
+  })
+
+  it('fetchShelves populates shelves on success', async () => {
+    mockFetchShelves.mockResolvedValue({ shelves: [{ id: 'read', name: 'Read' }] })
+    const c = await loadComposable()
+
+    await expect(c.fetchShelves()).resolves.toBe(true)
+    expect(c.shelves.value).toEqual([{ id: 'read', name: 'Read' }])
+    expect(c.shelvesError.value).toBeNull()
+  })
+
+  it('fetchShelves surfaces errors', async () => {
+    mockFetchShelves.mockRejectedValue(new Error('Failed to fetch'))
+    const c = await loadComposable()
+
+    await expect(c.fetchShelves()).resolves.toBe(false)
+    expect(c.shelves.value).toEqual([])
+    expect(c.shelvesError.value).toBe('Failed to fetch')
   })
 
   it('validateToken returns valid true on success', async () => {

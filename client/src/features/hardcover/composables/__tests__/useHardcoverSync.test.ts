@@ -39,6 +39,8 @@ const SETTINGS: HardcoverSettings = {
   effectiveEnabled: true,
   disabledReason: null,
   bookSyncMode: 'all_eligible',
+  hardcoverShelfIds: [],
+  hardcoverListIds: [],
   autoSyncOnStatusChange: true,
   autoSyncOnProgressUpdate: true,
   autoSyncOnRatingChange: true,

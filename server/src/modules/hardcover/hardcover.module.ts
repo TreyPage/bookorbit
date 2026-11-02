@@ -6,29 +6,16 @@ import { LibraryModule } from '../library/library.module';
 import { UserBookStatusModule } from '../user-book-status/user-book-status.module';
 import { HardcoverAutoSyncSchedulerService } from './hardcover-auto-sync-scheduler.service';
 import { HardcoverBookMatchService } from './hardcover-book-match.service';
-import { HardcoverClientService } from './hardcover-client.service';
 import { HardcoverController } from './hardcover.controller';
 import { HardcoverEventListener } from './hardcover-event-listener.service';
 import { HardcoverImportService } from './hardcover-import.service';
-import { HardcoverQueueService } from './hardcover-queue.service';
-import { HardcoverRepository } from './hardcover.repository';
-import { HardcoverSettingsService } from './hardcover-settings.service';
+import { HardcoverSettingsModule } from './hardcover-settings.module';
 import { HardcoverSyncService } from './hardcover-sync.service';
 
 @Module({
-  imports: [AchievementModule, BookModule, LibraryModule, UserBookStatusModule],
+  imports: [AchievementModule, BookModule, LibraryModule, UserBookStatusModule, HardcoverSettingsModule],
   controllers: [HardcoverController],
-  providers: [
-    HardcoverQueueService,
-    HardcoverClientService,
-    HardcoverRepository,
-    HardcoverSettingsService,
-    HardcoverBookMatchService,
-    HardcoverSyncService,
-    HardcoverImportService,
-    HardcoverAutoSyncSchedulerService,
-    HardcoverEventListener,
-  ],
-  exports: [HardcoverSyncService, HardcoverSettingsService],
+  providers: [HardcoverBookMatchService, HardcoverSyncService, HardcoverImportService, HardcoverAutoSyncSchedulerService, HardcoverEventListener],
+  exports: [HardcoverSyncService, HardcoverSettingsModule],
 })
 export class HardcoverModule {}

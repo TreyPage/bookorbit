@@ -40,6 +40,8 @@ function makeSettings(overrides: Partial<HardcoverSettings> = {}): HardcoverSett
     effectiveEnabled: true,
     disabledReason: null,
     bookSyncMode: 'all_eligible',
+    hardcoverShelfIds: [],
+    hardcoverListIds: [],
     autoSyncOnStatusChange: true,
     autoSyncOnProgressUpdate: true,
     autoSyncOnRatingChange: true,

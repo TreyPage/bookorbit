@@ -1,18 +1,32 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CheckCircle2, ChevronLeft, ChevronRight, Download, Search, X, XCircle } from '@lucide/vue'
-import type { HardcoverImportMatchMethod, HardcoverImportPreview, HardcoverImportPreviewOutcome, HardcoverImportPreviewRow } from '@bookorbit/types'
+import type {
+  BookRequestMediaKind,
+  HardcoverImportMatchMethod,
+  HardcoverImportPreview,
+  HardcoverImportPreviewOutcome,
+  HardcoverImportPreviewRow,
+} from '@bookorbit/types'
 import { useModal } from '@/composables/useModal'
+import { useLibraries } from '@/features/library/composables/useLibraries'
+import { useRequestDestinationDefault } from '@/features/book-requests/composables/useRequestDestinationDefault'
+import { useHardcoverRequestImport } from '../composables/useHardcoverRequestImport'
 
 const { t } = useI18n()
 
-const props = defineProps<{
-  preview: HardcoverImportPreview
-  applying: boolean
-  importProgress: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    preview: HardcoverImportPreview
+    applying: boolean
+    importProgress: boolean
+    canRequestBooks?: boolean
+    requiresRequestDestination?: boolean
+  }>(),
+  { canRequestBooks: false, requiresRequestDestination: false },
+)
 
 const emit = defineEmits<{
   close: []
@@ -24,6 +38,10 @@ type OutcomeTab = HardcoverImportPreviewOutcome | 'all'
 type MatchFilter = HardcoverImportMatchMethod | 'all'
 
 const PAGE_SIZE = 50
+const MAX_SELECTED_REQUESTS = 50
+const REQUEST_MEDIA_KINDS: readonly BookRequestMediaKind[] = ['ebook', 'audiobook']
+
+type RequestDestination = { libraryId: number | null; folderId: number | null }
 
 const dialogRef = ref<HTMLElement | null>(null)
 const closeButtonRef = ref<HTMLElement | null>(null)
@@ -32,6 +50,47 @@ const matchFilter = ref<MatchFilter>('all')
 const search = ref('')
 const page = ref(1)
 const selectedIds = ref<Set<number>>(new Set())
+const requestImport = useHardcoverRequestImport()
+const { libraries, fetchLibraries, error: libraryError } = useLibraries()
+const { load: loadDestinationDefaults, defaultFor: instanceDefaultFor, resolveDestination } = useRequestDestinationDefault()
+const requestDestinations = ref<Record<BookRequestMediaKind, RequestDestination>>({
+  ebook: { libraryId: null, folderId: null },
+  audiobook: { libraryId: null, folderId: null },
+})
+const destinationSetupLoading = ref(props.canRequestBooks)
+const destinationSetupAttempted = ref(false)
+const destinationDefaultsLoaded = ref(false)
+const {
+  selectedKeys: selectedRequestKeys,
+  checking: requestAvailabilityLoading,
+  availabilityError: requestAvailabilityError,
+  submitting: requestSubmitting,
+  result: requestResult,
+  error: requestError,
+  retryVersion: availabilityRetry,
+  selectedCount: selectedRequestCount,
+  keyFor: requestKey,
+  isRequestable,
+  availabilityStatus,
+  loadAvailability: loadRequestAvailability,
+  retryAvailability,
+  toggleSelection: handleRequestToggle,
+  selectMissing,
+  clearSelection,
+  submit: submitRequests,
+  reset: resetRequestImport,
+} = requestImport
+const requestResultLabel = computed(() => (requestResult.value ? t('hardcover.review.requestResult', requestResult.value) : null))
+const requestAvailabilityErrorLabel = computed(() =>
+  requestAvailabilityError.value && requestAvailabilityError.value !== 'availability'
+    ? requestAvailabilityError.value
+    : t('hardcover.review.requestAvailabilityFailed'),
+)
+const requestErrorLabel = computed(() =>
+  requestError.value && requestError.value !== 'submit' && requestError.value !== 'availability'
+    ? requestError.value
+    : t(requestError.value === 'availability' ? 'hardcover.review.requestAvailabilityFailed' : 'hardcover.review.requestSubmitFailed'),
+)
 const importProgressModel = computed({
   get: () => props.importProgress,
   set: (value: boolean) => emit('update:importProgress', value),
@@ -41,7 +100,7 @@ useModal({
   container: dialogRef,
   initialFocus: closeButtonRef,
   onClose: handleClose,
-  disabled: () => props.applying,
+  disabled: () => props.applying || requestSubmitting.value,
 })
 
 const tabs = computed<Array<{ id: OutcomeTab; label: string; count: number }>>(() => [
@@ -93,16 +152,54 @@ const selectedProgressCount = computed(
 )
 const selectedProgressLabel = computed(() => t('hardcover.review.selectedProgress', { count: selectedProgressCount.value }))
 const visibleImportableRows = computed(() => pagedRows.value.filter(isImportableRow))
+const requestRows = computed(() => pagedRows.value.filter((row) => row.hardcoverTitle?.trim()))
 const allVisibleSelected = computed(
   () => visibleImportableRows.value.length > 0 && visibleImportableRows.value.every((row) => selectedIds.value.has(row.hardcoverUserBookId)),
 )
+const visibleRequestableCount = computed(() =>
+  requestRows.value.reduce((count, row) => count + REQUEST_MEDIA_KINDS.filter((mediaKind) => isRequestable(row, mediaKind)).length, 0),
+)
+const requestDestinationMissing = computed(
+  () =>
+    props.requiresRequestDestination &&
+    [...selectedRequestKeys.value].some((key) => {
+      const mediaKind = key.slice(key.lastIndexOf(':') + 1) as BookRequestMediaKind
+      return requestDestinations.value[mediaKind].libraryId === null && instanceDefaultFor(mediaKind).libraryId === null
+    }),
+)
+const destinationSetupError = computed(() => {
+  if (!destinationSetupAttempted.value) return null
+  if (libraryError.value !== null) return t('hardcover.review.requestDestinationSetupFailed')
+  if (!destinationSetupLoading.value && !destinationDefaultsLoaded.value) return t('hardcover.review.requestDestinationSetupFailed')
+  return null
+})
 
 watch(
   () => props.preview,
   () => {
     selectedIds.value = new Set(props.preview.rows.filter((row) => row.outcome === 'will_update').map((row) => row.hardcoverUserBookId))
-    activeTab.value = props.preview.summary.willUpdate > 0 ? 'will_update' : props.preview.summary.needsReview > 0 ? 'needs_review' : 'all'
+    resetRequestImport()
+    activeTab.value =
+      props.preview.hardcoverListIds.length > 0
+        ? 'all'
+        : props.preview.summary.willUpdate > 0
+          ? 'will_update'
+          : props.preview.summary.needsReview > 0
+            ? 'needs_review'
+            : 'all'
     page.value = 1
+  },
+  { immediate: true },
+)
+
+onMounted(() => {
+  if (props.canRequestBooks) void loadRequestDestinations()
+})
+
+watch(
+  [() => props.preview, () => props.canRequestBooks, () => requestRows.value.map(requestRowKey).join(','), () => availabilityRetry.value],
+  () => {
+    if (props.canRequestBooks) void loadRequestAvailability(requestRows.value)
   },
   { immediate: true },
 )
@@ -112,7 +209,7 @@ watch([activeTab, matchFilter, search], () => {
 })
 
 function handleClose(): void {
-  if (!props.applying) emit('close')
+  if (!props.applying && !requestSubmitting.value) emit('close')
 }
 
 function setActiveTab(tab: OutcomeTab): void {
@@ -157,6 +254,83 @@ function handleClearSelection(): void {
 
 function handleApply(): void {
   emit('apply', [...selectedIds.value])
+}
+
+function availabilityLabel(row: HardcoverImportPreviewRow, mediaKind: BookRequestMediaKind): string | null {
+  const status = availabilityStatus(row, mediaKind)
+  const medium = t(`hardcover.review.media.${mediaKind}`)
+  if (status === 'owned') return t('hardcover.review.requestOwned', { medium })
+  if (status === 'requested') return t('hardcover.review.requestExists', { medium })
+  return null
+}
+
+function handleRetryAvailability(): void {
+  retryAvailability()
+}
+
+function handleSelectMissingPage(): void {
+  selectMissing(requestRows.value)
+}
+
+function handleClearRequestsPage(): void {
+  clearSelection(requestRows.value)
+}
+
+function handleSubmitRequests(): void {
+  void submitRequests(props.preview.rows, requestDestinationFor)
+}
+
+async function loadRequestDestinations(): Promise<void> {
+  destinationSetupLoading.value = true
+  const [, defaultsLoaded] = await Promise.all([fetchLibraries(), loadDestinationDefaults()])
+  destinationSetupAttempted.value = true
+  destinationDefaultsLoaded.value = defaultsLoaded
+  if (defaultsLoaded && libraryError.value === null) {
+    const destination = resolveDestination(libraries.value, undefined, props.requiresRequestDestination)
+    requestDestinations.value = { ebook: destination, audiobook: destination }
+  }
+  destinationSetupLoading.value = false
+}
+
+function handleRetryRequestDestination(): void {
+  void loadRequestDestinations()
+}
+
+function requestDestinationFor(mediaKind: BookRequestMediaKind): RequestDestination {
+  return requestDestinations.value[mediaKind]
+}
+
+function requestDestinationLabel(mediaKind: BookRequestMediaKind): string {
+  const fallback = instanceDefaultFor(mediaKind)
+  if (fallback.libraryName !== null) return t('bookRequests.search.libraryDefault', { library: fallback.libraryName })
+  return props.requiresRequestDestination ? t('bookRequests.search.libraryChoose') : t('bookRequests.search.libraryAny')
+}
+
+function handleEbookDestinationChange(event: Event): void {
+  updateRequestDestination('ebook', event)
+}
+
+function handleAudiobookDestinationChange(event: Event): void {
+  updateRequestDestination('audiobook', event)
+}
+
+function updateRequestDestination(mediaKind: BookRequestMediaKind, event: Event): void {
+  const target = event.target
+  if (!(target instanceof HTMLSelectElement)) return
+  const libraryId = target.value === '' ? null : Number(target.value)
+  const selectedLibrary = libraries.value.find((library) => library.id === libraryId)
+  requestDestinations.value = {
+    ...requestDestinations.value,
+    [mediaKind]: { libraryId, folderId: selectedLibrary?.folders[0]?.id ?? null },
+  }
+}
+
+function requestRowKey(row: HardcoverImportPreviewRow): string {
+  return row.hardcoverListBookId != null ? `list:${row.hardcoverListBookId}` : `user:${row.hardcoverUserBookId}`
+}
+
+function previewRowKey(row: HardcoverImportPreviewRow): string {
+  return requestRowKey(row)
 }
 
 function isImportableRow(row: HardcoverImportPreviewRow): boolean {
@@ -381,6 +555,107 @@ function normalizeSearch(value: string): string {
               </Button>
             </div>
           </div>
+
+          <div v-if="canRequestBooks" class="space-y-2 rounded-md border border-border bg-muted/30 p-3">
+            <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p class="text-xs font-medium">{{ t('hardcover.review.requestsTitle') }}</p>
+                <p class="text-xs text-muted-foreground">{{ t('hardcover.review.requestsDescription') }}</p>
+              </div>
+              <div v-if="destinationSetupLoading" class="text-xs text-muted-foreground">
+                {{ t('hardcover.review.loadingRequestDestinations') }}
+              </div>
+              <div v-else-if="destinationSetupError" class="flex flex-wrap items-center gap-2 text-xs text-destructive">
+                <span>{{ destinationSetupError }}</span>
+                <Button variant="outline" size="sm" type="button" @click="handleRetryRequestDestination">
+                  {{ t('hardcover.review.retryAvailability') }}
+                </Button>
+              </div>
+              <div v-else-if="libraries.length > 0" class="flex flex-wrap gap-2">
+                <label class="flex min-w-0 items-center gap-2 text-xs">
+                  <span>{{ t('hardcover.review.requestDestination', { medium: t('hardcover.review.media.ebook') }) }}</span>
+                  <select
+                    :value="requestDestinations.ebook.libraryId ?? ''"
+                    class="h-8 min-w-0 max-w-48 rounded-md border border-input bg-card px-2 text-xs text-foreground"
+                    @change="handleEbookDestinationChange"
+                  >
+                    <option value="">{{ requestDestinationLabel('ebook') }}</option>
+                    <option v-for="library in libraries" :key="library.id" :value="library.id">{{ library.name }}</option>
+                  </select>
+                </label>
+                <label class="flex min-w-0 items-center gap-2 text-xs">
+                  <span>{{ t('hardcover.review.requestDestination', { medium: t('hardcover.review.media.audiobook') }) }}</span>
+                  <select
+                    :value="requestDestinations.audiobook.libraryId ?? ''"
+                    class="h-8 min-w-0 max-w-48 rounded-md border border-input bg-card px-2 text-xs text-foreground"
+                    @change="handleAudiobookDestinationChange"
+                  >
+                    <option value="">{{ requestDestinationLabel('audiobook') }}</option>
+                    <option v-for="library in libraries" :key="library.id" :value="library.id">{{ library.name }}</option>
+                  </select>
+                </label>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  :disabled="
+                    requestAvailabilityLoading ||
+                    requestAvailabilityError !== null ||
+                    visibleRequestableCount === 0 ||
+                    selectedRequestCount >= MAX_SELECTED_REQUESTS
+                  "
+                  @click="handleSelectMissingPage"
+                >
+                  {{ t('hardcover.review.selectMissing') }}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  :disabled="requestRows.length === 0 || requestSubmitting"
+                  @click="handleClearRequestsPage"
+                >
+                  {{ t('hardcover.review.clearRequestsPage') }}
+                </Button>
+                <Button
+                  size="sm"
+                  type="button"
+                  :disabled="
+                    selectedRequestCount === 0 ||
+                    requestAvailabilityLoading ||
+                    requestAvailabilityError !== null ||
+                    requestSubmitting ||
+                    applying ||
+                    destinationSetupLoading ||
+                    destinationSetupError !== null ||
+                    requestDestinationMissing
+                  "
+                  @click="handleSubmitRequests"
+                >
+                  {{
+                    requestSubmitting ? t('hardcover.review.submittingRequests') : t('hardcover.review.addRequests', { count: selectedRequestCount })
+                  }}
+                </Button>
+              </div>
+            </div>
+            <p v-if="requestAvailabilityLoading" class="text-xs text-muted-foreground">{{ t('hardcover.review.checkingAvailability') }}</p>
+            <p v-if="requestDestinationMissing" class="text-xs text-destructive">
+              {{ t('bookRequests.search.libraryRequired') }}
+            </p>
+            <div v-if="requestAvailabilityError" class="flex flex-wrap items-center justify-between gap-2 text-xs text-destructive">
+              <span>{{ requestAvailabilityErrorLabel }}</span>
+              <Button variant="outline" size="sm" type="button" @click="handleRetryAvailability">{{
+                t('hardcover.review.retryAvailability')
+              }}</Button>
+            </div>
+            <p v-if="requestResult" class="text-xs text-primary">{{ requestResultLabel }}</p>
+            <p v-if="requestError" class="text-xs text-destructive">{{ requestErrorLabel }}</p>
+            <p v-if="selectedRequestCount >= MAX_SELECTED_REQUESTS" class="text-xs text-muted-foreground">
+              {{ t('hardcover.review.requestLimit', { count: MAX_SELECTED_REQUESTS }) }}
+            </p>
+          </div>
         </div>
 
         <div class="min-h-0 flex-1 overflow-y-auto">
@@ -389,7 +664,7 @@ function normalizeSearch(value: string): string {
           <div v-else class="divide-y divide-border">
             <article
               v-for="row in pagedRows"
-              :key="row.hardcoverUserBookId"
+              :key="previewRowKey(row)"
               class="grid gap-3 px-4 py-3 md:grid-cols-[2rem_minmax(0,1.4fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_auto] md:px-5"
             >
               <div class="flex items-start">
@@ -407,6 +682,29 @@ function normalizeSearch(value: string): string {
                 <p class="truncate text-sm font-medium">{{ rowTitle(row) }}</p>
                 <p class="truncate text-xs text-muted-foreground">{{ rowSubtitle(row) }}</p>
                 <p class="mt-1 text-xs text-muted-foreground md:hidden">{{ row.reason }}</p>
+                <div v-if="canRequestBooks && row.hardcoverTitle?.trim()" class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <label v-for="mediaKind in REQUEST_MEDIA_KINDS" :key="mediaKind" class="flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      class="size-3.5 rounded-xs border-border text-primary focus:ring-primary/40 disabled:opacity-40"
+                      :value="requestKey(row, mediaKind)"
+                      :checked="selectedRequestKeys.has(requestKey(row, mediaKind))"
+                      :disabled="
+                        requestAvailabilityLoading ||
+                        requestAvailabilityError !== null ||
+                        requestSubmitting ||
+                        !isRequestable(row, mediaKind) ||
+                        (selectedRequestCount >= MAX_SELECTED_REQUESTS && !selectedRequestKeys.has(requestKey(row, mediaKind)))
+                      "
+                      @change="handleRequestToggle"
+                    />
+                    <span v-if="isRequestable(row, mediaKind)">{{
+                      t('hardcover.review.requestFormat', { medium: t(`hardcover.review.media.${mediaKind}`) })
+                    }}</span>
+                    <span v-else-if="availabilityLabel(row, mediaKind)">{{ availabilityLabel(row, mediaKind) }}</span>
+                    <span v-else>{{ t('hardcover.review.checkingAvailability') }}</span>
+                  </label>
+                </div>
               </div>
 
               <div class="min-w-0 text-xs">

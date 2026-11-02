@@ -6,6 +6,7 @@ import type {
   HardcoverSettings,
   HardcoverTokenValidationResult,
   ApplyHardcoverImportPayload,
+  Permission,
   UpsertHardcoverSettingsPayload,
 } from '@bookorbit/types'
 import HardcoverImportStatus from '../HardcoverImportStatus.vue'
@@ -15,6 +16,10 @@ vi.mock('vue-sonner', () => ({
     success: vi.fn<(message: string) => void>(),
     error: vi.fn<(message: string) => void>(),
   },
+}))
+
+vi.mock('@/features/auth/composables/usePermissions', () => ({
+  usePermissions: () => ({ hasPermission: vi.fn<(permission: Permission) => boolean>(() => false) }),
 }))
 
 vi.mock('../../api/hardcover.api', () => ({
@@ -35,6 +40,8 @@ const mockApply = vi.mocked(applyHardcoverImport)
 const mockToast = vi.mocked(toast)
 
 const PREVIEW: HardcoverImportPreview = {
+  hardcoverShelfIds: ['read'],
+  hardcoverListIds: [],
   summary: {
     totalHardcoverBooks: 2,
     matchedBooks: 1,
@@ -55,6 +62,8 @@ const PREVIEW: HardcoverImportPreview = {
       hardcoverReadId: 30,
       hardcoverTitle: 'Dune',
       hardcoverAuthors: ['Frank Herbert'],
+      hardcoverIsbn10: '0441172717',
+      hardcoverIsbn13: '9780441172719',
       hardcoverStatusId: 3,
       hardcoverStatusLabel: 'Read',
       importedStatus: 'read',
@@ -80,7 +89,20 @@ const PREVIEW: HardcoverImportPreview = {
 describe('HardcoverImportStatus', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useHardcoverSettings().settings.value = null
+    useHardcoverSettings().settings.value = {
+      tokenConfigured: true,
+      enabled: true,
+      effectiveEnabled: true,
+      disabledReason: null,
+      bookSyncMode: 'all_eligible',
+      hardcoverShelfIds: ['read'],
+      hardcoverListIds: [],
+      autoSyncOnStatusChange: true,
+      autoSyncOnProgressUpdate: true,
+      autoSyncOnRatingChange: true,
+      privacySettingId: 3,
+      lastSyncedAt: null,
+    }
     mockPreview.mockResolvedValue(PREVIEW)
     mockApply.mockResolvedValue({
       ...PREVIEW.summary,
@@ -233,6 +255,8 @@ describe('HardcoverImportStatus', () => {
       effectiveEnabled: false,
       disabledReason: 'missing_token',
       bookSyncMode: 'all_eligible',
+      hardcoverShelfIds: [],
+      hardcoverListIds: [],
       autoSyncOnStatusChange: false,
       autoSyncOnProgressUpdate: false,
       autoSyncOnRatingChange: false,

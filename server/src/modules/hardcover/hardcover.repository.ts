@@ -120,6 +120,16 @@ export class HardcoverRepository {
     return row?.isSuperuser === true || row?.permissionName === Permission.HardcoverSync;
   }
 
+  async findUniqueLibraryOwnerUserId(libraryId: number): Promise<number | null> {
+    const owners = await this.db
+      .select({ userId: schema.userLibraryAccess.userId })
+      .from(schema.userLibraryAccess)
+      .innerJoin(schema.users, eq(schema.users.id, schema.userLibraryAccess.userId))
+      .where(and(eq(schema.userLibraryAccess.libraryId, libraryId), eq(schema.userLibraryAccess.accessLevel, 'owner'), eq(schema.users.active, true)))
+      .limit(2);
+    return owners.length === 1 ? owners[0].userId : null;
+  }
+
   // ---- Book State ----
 
   async findBookState(userId: number, bookId: number): Promise<HardcoverBookState | undefined> {

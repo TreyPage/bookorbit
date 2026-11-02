@@ -12,6 +12,8 @@ const mockPreview = vi.mocked(previewHardcoverImport)
 const mockApply = vi.mocked(applyHardcoverImport)
 
 const PREVIEW: HardcoverImportPreview = {
+  hardcoverShelfIds: ['read'],
+  hardcoverListIds: [],
   summary: {
     totalHardcoverBooks: 2,
     matchedBooks: 1,

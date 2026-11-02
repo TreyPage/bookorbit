@@ -47,6 +47,16 @@ export class HardcoverController {
     return this.settingsService.validateToken(user.id, dto.token);
   }
 
+  @Get('shelves')
+  getUserShelves() {
+    return this.settingsService.getUserShelves();
+  }
+
+  @Post('lists')
+  getUserLists(@CurrentUser() user: RequestUser, @Body() dto: ValidateHardcoverTokenDto) {
+    return this.settingsService.getUserLists(user.id, dto.token);
+  }
+
   @Post('sync')
   startSync(@CurrentUser() user: RequestUser) {
     return this.syncService.syncAll(user.id).then((runId) => ({ runId }));
