@@ -90,9 +90,22 @@ describe('SelectionActionBar demo restriction', () => {
       props: { visible: true, count: 5000, inCollection: false, inFlight: null, queryScoped: true },
       global: globalStubs,
     })
-
     expect(wrapper.find('[data-testid="action-edit-individually"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="action-bulk-edit-metadata"]').exists()).toBe(true)
+  })
+
+  it('shows and emits merge only when enabled for a concrete selection', async () => {
+    const wrapper = mount(SelectionActionBar, {
+      props: { visible: true, count: 3, inCollection: false, inFlight: null, mergeEnabled: true },
+      global: globalStubs,
+    })
+
+    expect(wrapper.find('[data-testid="action-merge-books"]').exists()).toBe(true)
+    await wrapper.find('[data-testid="action-merge-books"]').trigger('click')
+    expect(wrapper.emitted('merge')).toHaveLength(1)
+
+    await wrapper.setProps({ queryScoped: true })
+    expect(wrapper.find('[data-testid="action-merge-books"]').exists()).toBe(false)
   })
 
   it('keeps metadata export available in the more menu with download-only permission', () => {

@@ -672,6 +672,12 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: () => t('titles.duplicateBooks') },
           },
           {
+            path: 'book-merge',
+            name: 'tools-book-merge',
+            component: () => import('@/features/tools/book-merge/views/BookMergeView.vue'),
+            meta: { title: () => t('titles.bookMerge') },
+          },
+          {
             path: 'missing-resources',
             name: 'tools-missing-resources',
             component: () => import('@/features/tools/missing-resources/views/MissingResourcesView.vue'),

@@ -1671,6 +1671,15 @@ export class ScannerService implements OnApplicationBootstrap {
       const coverBookIds = new Set<number>();
       const importedBookIds: number[] = [];
       const candidateFolderPaths = new Set(candidates.map((candidate) => candidate.folderPath));
+      const mergedSources = await this.scannerRepo.findMergedBookSources(libraryFolderId, libraryId, [...candidateFolderPaths]);
+      for (const source of mergedSources) {
+        maps.bookByFolderPath.set(source.folderPath, {
+          id: source.id,
+          status: source.status,
+          folderPath: source.folderPath,
+          primaryFileId: source.primaryFileId,
+        });
+      }
 
       for (const candidate of candidates) {
         const result = await this.processCandidate(

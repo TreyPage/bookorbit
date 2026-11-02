@@ -16,6 +16,7 @@ export * from "./identifier-input";
 export * from "./dashboard";
 export * from "./book";
 export * from "./book-duplicates";
+export * from "./book-merge";
 export * from "./book-move";
 export * from "./book-selection";
 export * from "./audiobook";

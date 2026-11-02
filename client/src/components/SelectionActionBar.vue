@@ -12,6 +12,7 @@ import {
   Lock,
   Loader2,
   Mail,
+  Merge,
   MoreHorizontal,
   Pencil,
   RefreshCw,
@@ -73,6 +74,7 @@ const props = withDefaults(
     // Selection is query-scoped (all matching across pages), so individual ids aren't enumerable.
     queryScoped?: boolean
     metadataEditable?: boolean
+    mergeEnabled?: boolean
   }>(),
   { metadataEditable: true },
 )
@@ -92,6 +94,7 @@ const emit = defineEmits<{
   'set-field': [field: BulkEditableField, value: BulkEditableValue]
   'lock-metadata': [locked: boolean]
   'move-to-library': []
+  merge: []
   delete: []
   exit: []
 }>()
@@ -118,6 +121,15 @@ const canDownload = computed(() => hasPermission('library_download') && canBulkA
 const canSetRating = computed(() => hasPermission('library_edit_metadata') && canBulkActions.value)
 const canEditMetadata = computed(() => hasPermission('library_edit_metadata') && canBulkActions.value && props.metadataEditable !== false)
 const canMoveToLibrary = computed(() => hasPermission('library_edit_metadata') && canBulkActions.value && props.metadataEditable !== false)
+const canMerge = computed(
+  () =>
+    props.mergeEnabled &&
+    !props.queryScoped &&
+    hasPermission('library_delete_books') &&
+    canBulkActions.value &&
+    props.count >= 2 &&
+    props.count <= 101,
+)
 const canShowMoreMenu = computed(() => canDownload.value || canEditMetadata.value || canMoveToLibrary.value)
 const canShare = computed(() => hasPermission('email_send') || canDownload.value)
 const numericFieldSelected = computed(() => bulkField.value === 'publishedYear')
@@ -389,6 +401,22 @@ watch(
             </Tooltip>
 
             <div v-if="canShare" :class="DIVIDER" />
+
+            <Tooltip v-if="canMerge">
+              <TooltipTrigger as-child>
+                <button
+                  type="button"
+                  data-testid="action-merge-books"
+                  :disabled="count === 0"
+                  :class="[BTN_ICON, count > 0 ? BTN_PRIMARY : BTN_DISABLED]"
+                  :aria-label="t('components.selectionActionBar.mergeSelected')"
+                  @click="emit('merge')"
+                >
+                  <Merge :size="ICON_SIZE" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">{{ t('components.selectionActionBar.mergeSelected') }}</TooltipContent>
+            </Tooltip>
 
             <Tooltip v-if="hasPermission('email_send')">
               <TooltipTrigger as-child>

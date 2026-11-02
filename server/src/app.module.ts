@@ -92,6 +92,7 @@ import { CustomIconModule } from './modules/custom-icon/custom-icon.module';
 import { AccountActivityModule } from './modules/account-activity/account-activity.module';
 import { SharedReadingInsightsModule } from './modules/shared-reading-insights/shared-reading-insights.module';
 import { BookDuplicatesModule } from './modules/book-duplicates/book-duplicates.module';
+import { BookMergeModule } from './modules/book-merge/book-merge.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { BookMoveModule } from './modules/book-move/book-move.module';
 import { AudiobookModule } from './modules/audiobook/audiobook.module';
@@ -205,6 +206,7 @@ import { ReadAloudModule } from './modules/read-aloud/read-aloud.module';
     AccountActivityModule,
     SharedReadingInsightsModule,
     BookDuplicatesModule,
+    BookMergeModule,
     MaintenanceModule,
     BookMoveModule,
     BrowseCountsModule,

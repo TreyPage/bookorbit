@@ -82,6 +82,7 @@ describe('FileRenameService', () => {
       findBookRenameData: vi.fn(),
       checkPathTakenByOtherBook: vi.fn().mockResolvedValue(false),
       applyFolderRename: vi.fn().mockResolvedValue(undefined),
+      finalizeFolderRename: vi.fn().mockResolvedValue(undefined),
       findFolderOwners: vi.fn().mockResolvedValue(new Map()),
       applyExistingFolderMerge: vi.fn().mockResolvedValue(undefined),
       findAllBookFiles: vi.fn().mockImplementation(async () => {
@@ -259,6 +260,8 @@ describe('FileRenameService', () => {
       '/library/Frank Herbert/Dune.epub',
     );
     expect(renameRepo.applyFolderRename.mock.invocationCallOrder[0]).toBeLessThan(mockRename.mock.invocationCallOrder[0]);
+    expect(renameRepo.finalizeFolderRename).toHaveBeenCalledWith(5);
+    expect(renameRepo.finalizeFolderRename.mock.invocationCallOrder[0]).toBeGreaterThan(mockRename.mock.invocationCallOrder[0]);
     expect(mockMkdir).toHaveBeenCalledWith('/library/Frank Herbert', { recursive: true });
     expect(lockService.withLock).toHaveBeenNthCalledWith(1, bookOperationLockKey(5), expect.any(Function));
     expect(lockService.withLock).toHaveBeenCalledWith('/library/Old Title.epub', expect.any(Function));
@@ -273,6 +276,26 @@ describe('FileRenameService', () => {
         },
       }),
     );
+  });
+
+  it('finalizes merged folder ownership after moving files during bulk rename', async () => {
+    const { service, renameRepo } = makeService();
+    renameRepo.findBookRenameData.mockResolvedValue(
+      makeRenameData({
+        file: {
+          absolutePath: 'C:\\Library\\Old Title.epub',
+          relPath: 'Old Title.epub',
+        },
+        libraryFolderPath: 'C:\\Library',
+        bookFolderPath: 'C:\\Library\\Old Title.epub',
+      }),
+    );
+
+    const result = await service.performRename(5, 12);
+
+    expect(result.status).toBe('success');
+    expect(renameRepo.finalizeFolderRename).toHaveBeenCalledWith(5);
+    expect(mockRename).toHaveBeenCalledWith('C:\\Library\\Old Title.epub', 'C:\\Library\\Frank Herbert\\Dune.epub');
   });
 
   it('renames every colliding audio track with PartNN suffixes including the primary track', async () => {
