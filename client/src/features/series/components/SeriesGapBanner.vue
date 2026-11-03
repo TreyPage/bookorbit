@@ -41,6 +41,7 @@ const lookupMessage = computed(() => {
       return t('series.gaps.titleLookupLoading')
     case 'available':
     case 'no_missing':
+    default:
       return null
   }
 })
