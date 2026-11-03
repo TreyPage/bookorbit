@@ -216,6 +216,8 @@ describe('MetadataFetchController', () => {
     expect(pipeline.getEffectiveProviderKeys).not.toHaveBeenCalled();
     expect(service.search).toHaveBeenCalledWith(
       {
+        userId: 7,
+        libraryId: 5,
         title: 'Dune',
         author: 'Frank Herbert',
         isbn: '9780441172719',
@@ -225,7 +227,9 @@ describe('MetadataFetchController', () => {
         titleIsExplicitQuery: true,
         isAudiobook: false,
         includeAudiobookProviders: false,
+        mediaKind: undefined,
         validateCoverPlaceholders: true,
+        resultsPerProvider: undefined,
       },
       [MetadataProviderKey.GOOGLE, MetadataProviderKey.OPEN_LIBRARY],
       DEFAULT_SEARCH_OPTIONS,
@@ -283,6 +287,8 @@ describe('MetadataFetchController', () => {
     expect(service.getStoredProviderContext).not.toHaveBeenCalled();
     expect(service.search).toHaveBeenCalledWith(
       {
+        userId: 7,
+        libraryId: undefined,
         title: 'Dune',
         author: undefined,
         isbn: undefined,
@@ -292,7 +298,9 @@ describe('MetadataFetchController', () => {
         titleIsExplicitQuery: true,
         isAudiobook: false,
         includeAudiobookProviders: true,
+        mediaKind: undefined,
         validateCoverPlaceholders: true,
+        resultsPerProvider: undefined,
       },
       [
         MetadataProviderKey.GOOGLE,
@@ -765,9 +773,12 @@ describe('MetadataFetchController', () => {
     });
 
     const dto: LookupMetadataDto = { provider: MetadataProviderKey.AMAZON, id: 'B123' };
-    const result = await controller.lookup(dto);
+    const result = await controller.lookup(dto, user);
 
-    expect(service.lookupById).toHaveBeenCalledWith(MetadataProviderKey.AMAZON, 'B123', DEFAULT_SEARCH_OPTIONS);
+    expect(service.lookupById).toHaveBeenCalledWith(MetadataProviderKey.AMAZON, 'B123', {
+      ...DEFAULT_SEARCH_OPTIONS,
+      params: { userId: user.id },
+    });
     expect(result).toEqual({ provider: MetadataProviderKey.AMAZON, providerId: 'B123', title: 'Amazon Title', genres: ['Mystery'] });
   });
 
@@ -778,7 +789,7 @@ describe('MetadataFetchController', () => {
       }),
     );
 
-    const result = await controller.lookup({ provider: MetadataProviderKey.AMAZON, id: 'B123' });
+    const result = await controller.lookup({ provider: MetadataProviderKey.AMAZON, id: 'B123' }, user);
 
     expect(result).toBeNull();
     expect(service.lookupById).not.toHaveBeenCalled();

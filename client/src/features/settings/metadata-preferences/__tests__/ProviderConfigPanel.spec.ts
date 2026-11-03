@@ -17,7 +17,7 @@ function makeConfig(overrides: Partial<ProviderConfigurations> = {}): ProviderCo
     google: { enabled: true, apiKey: 'google-secret-key' },
     amazon: { enabled: true, domain: 'amazon.com', cookie: 'amazon-session-cookie' },
     goodreads: { enabled: false },
-    hardcover: { enabled: true, apiKey: 'hardcover-secret-key' },
+    hardcover: { enabled: true, apiKey: '' },
     openLibrary: { enabled: false },
     itunes: { enabled: false, coverResolution: 'high' },
     audible: { enabled: false, domain: 'audible.com' },
@@ -89,11 +89,12 @@ describe('ProviderConfigPanel secret fields', () => {
     )
   })
 
-  it('still populates each secret from the saved configuration', () => {
+  it('does not expose the saved Hardcover key in metadata provider settings', () => {
     const wrapper = mountPanel()
 
     expect((secretField(wrapper, 'metadata-google-apiKey').element as HTMLInputElement).value).toBe('google-secret-key')
     expect((secretField(wrapper, 'metadata-amazon-cookie').element as HTMLInputElement).value).toBe('amazon-session-cookie')
+    expect((secretField(wrapper, 'metadata-hardcover-apiKey').element as HTMLInputElement).value).toBe('')
   })
 
   it('leaves non-secret fields unmasked', () => {
@@ -112,11 +113,12 @@ describe('ProviderConfigPanel secret fields', () => {
     const wrapper = mountPanel()
 
     await secretField(wrapper, 'metadata-google-apiKey').setValue('rotated-google-key')
+    await secretField(wrapper, 'metadata-hardcover-apiKey').setValue('new-personal-key')
     await wrapper.get('form').trigger('submit')
 
     const saved = wrapper.emitted('save')?.[0]?.[0] as ProviderConfigurations
     expect(saved.google.apiKey).toBe('rotated-google-key')
-    expect(saved.hardcover.apiKey).toBe('hardcover-secret-key')
+    expect(saved.hardcover.apiKey).toBe('new-personal-key')
   })
 
   it('reflects a configuration reload back into the masked field', async () => {

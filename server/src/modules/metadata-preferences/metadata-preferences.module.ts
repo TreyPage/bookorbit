@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { HardcoverSettingsModule } from '../hardcover/hardcover-settings.module';
 import { MetadataHttpProviderModule } from '../metadata-http-provider/metadata-http-provider.module';
 import { MetadataPreferenceResolver } from './metadata-preference-resolver';
 import { MetadataPreferencesController } from './metadata-preferences.controller';
@@ -9,7 +10,7 @@ import { ProviderConfigService } from './provider-config.service';
 import { ProviderLinkSettingsController } from './provider-link-settings.controller';
 
 @Module({
-  imports: [MetadataHttpProviderModule],
+  imports: [HardcoverSettingsModule, MetadataHttpProviderModule],
   controllers: [MetadataPreferencesController, ProviderConfigController, ProviderLinkSettingsController],
   providers: [MetadataPreferencesService, MetadataPreferenceResolver, ProviderConfigService],
   exports: [MetadataPreferencesService, MetadataPreferenceResolver, ProviderConfigService],

@@ -1,6 +1,7 @@
 import { MODULE_METADATA } from '@nestjs/common/constants';
 
 import { MetadataPreferencesModule } from '../metadata-preferences/metadata-preferences.module';
+import { HardcoverSettingsModule } from '../hardcover/hardcover-settings.module';
 import { METADATA_PROVIDERS } from './constants';
 import { MetadataFetchController } from './metadata-fetch.controller';
 import { MetadataFetchModule } from './metadata-fetch.module';
@@ -78,6 +79,7 @@ describe('MetadataFetchModule', () => {
     const exportsList = Reflect.getMetadata(MODULE_METADATA.EXPORTS, MetadataFetchModule) as unknown[];
 
     expect(imports).toContain(MetadataPreferencesModule);
+    expect(imports).toContain(HardcoverSettingsModule);
     expect(controllers).toContain(MetadataFetchController);
     expect(exportsList).toEqual(expect.arrayContaining([MetadataFetchService, MetadataFetchPipeline, ProviderRegistry]));
   });

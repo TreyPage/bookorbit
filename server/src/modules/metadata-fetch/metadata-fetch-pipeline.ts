@@ -207,6 +207,7 @@ export class MetadataFetchPipeline {
     diagnostics: MetadataFetchDiagnostics;
     cache: MetadataFetchCacheUsage;
   }> {
+    params = { ...params, libraryId: params.libraryId ?? libraryId };
     const { preferences, registeredKeys, providerConfig } = await this.resolveProviderPreferenceContext(libraryId);
     const scope = this.fetchScope(params, options);
     const existingProviderIdsOnly = preferences.options?.providerIdMode === 'existingOnly' && params.existingProviderIds !== undefined;

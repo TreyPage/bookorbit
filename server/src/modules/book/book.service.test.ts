@@ -1050,6 +1050,7 @@ describe('BookService', () => {
       expect(libraryService.verifyUserAccessLevel).toHaveBeenCalledWith(user.id, 7, false, 'editor');
       expect(pipeline.runWithSources).toHaveBeenCalledWith(
         {
+          userId: user.id,
           title: 'Old Title',
           author: 'Author One',
           isbn: '978123',

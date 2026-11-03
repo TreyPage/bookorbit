@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { MetadataCandidate, MetadataProviderKey, type CoverMedium } from '@bookorbit/types';
 
 import { ProviderConfigService } from '../../../metadata-preferences/provider-config.service';
+import { HardcoverSettingsService } from '../../../hardcover/hardcover-settings.service';
 import { markProviderFailed } from '../../../../common/provider-cache/provider-call-context';
 import type { ProviderCacheSpec } from '../../../../common/provider-cache/provider-cache-spec';
 import { candidateHasNormalizedIsbn, normalizeMetadataIsbn } from '../../isbn-match';
@@ -46,15 +47,17 @@ export class HardcoverProvider implements IdentifiableProvider {
   private readonly logger = new Logger(HardcoverProvider.name);
 
   readonly cache: ProviderCacheSpec<MetadataSearchParams> = {
-    version: 2,
+    version: 3,
     trustEmpty: true,
     context: async () => {
-      const { enabled, apiKey } = (await this.providerConfig.getConfig()).hardcover;
-      return providerCacheContext(enabled && Boolean(apiKey));
+      const { enabled } = (await this.providerConfig.getConfig()).hardcover;
+      return providerCacheContext(enabled);
     },
     // An ISBN search that finds nothing falls back to title and author, so every field is part of the key.
     describeSearch: (params) => ({
       inputs: {
+        userId: params.userId,
+        libraryId: params.libraryId,
         ...pickSearchInputs(params, ['title', 'author', 'isbn', 'hardcoverEditionId']),
         isAudiobook: editionMedium(params) === 'audio',
         pageSize: widenedPageSize(params, PROVIDER_LIMITS.DEFAULT_SEARCH_RESULTS),
@@ -63,6 +66,8 @@ export class HardcoverProvider implements IdentifiableProvider {
     describeLookup: (providerId, params) => ({
       inputs: {
         id: providerId,
+        userId: params?.userId,
+        libraryId: params?.libraryId,
         isAudiobook: editionMedium(params) === 'audio',
         hardcoverEditionId: params?.hardcoverEditionId,
         isbn: params?.isbn,
@@ -73,11 +78,14 @@ export class HardcoverProvider implements IdentifiableProvider {
   constructor(
     private readonly client: HardcoverClient,
     private readonly providerConfig: ProviderConfigService,
+    private readonly hardcoverSettings: HardcoverSettingsService,
   ) {}
 
   async search(params: MetadataSearchParams): Promise<MetadataCandidate[]> {
-    const { enabled, apiKey } = await this.providerConfig.getConfig().then((c) => c.hardcover);
-    if (!enabled || !apiKey) return [];
+    const { enabled } = await this.providerConfig.getConfig().then((c) => c.hardcover);
+    if (!enabled) return [];
+    const apiKey = await this.hardcoverSettings.getMetadataToken(params.userId, params.libraryId);
+    if (!apiKey) return [];
     const signal = params.signal;
 
     if (params.isbn) {
@@ -112,8 +120,10 @@ export class HardcoverProvider implements IdentifiableProvider {
   }
 
   async lookupById(providerId: string, signal?: AbortSignal, params?: MetadataSearchParams): Promise<MetadataCandidate | null> {
-    const { enabled, apiKey } = await this.providerConfig.getConfig().then((c) => c.hardcover);
-    if (!enabled || !apiKey) return null;
+    const { enabled } = await this.providerConfig.getConfig().then((c) => c.hardcover);
+    if (!enabled) return null;
+    const apiKey = await this.hardcoverSettings.getMetadataToken(params?.userId, params?.libraryId);
+    if (!apiKey) return null;
 
     const book = signal ? await this.client.lookupBySlug(providerId, apiKey, signal) : await this.client.lookupBySlug(providerId, apiKey);
     if (!book) return null;

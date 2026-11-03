@@ -1,6 +1,8 @@
 import { MetadataProviderKey, type ConcreteBookMediaKind } from '@bookorbit/types';
 
 export interface MetadataSearchParams {
+  userId?: number;
+  libraryId?: number;
   title?: string;
   author?: string;
   isbn?: string;

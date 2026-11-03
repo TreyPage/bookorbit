@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ProviderCallRecord, runWithProviderCallRecord } from '../../../common/provider-cache/provider-call-context';
 import type { appConfig } from '../../../config/config';
 import type { ProviderConfigService } from '../../metadata-preferences/provider-config.service';
+import type { HardcoverSettingsService } from '../../hardcover/hardcover-settings.service';
 import { ProviderThrottleError } from '../provider-throttle.error';
 import { ProviderThrottleTracker } from '../provider-throttle.tracker';
 import { AmazonProvider } from './amazon/amazon.provider';
@@ -48,6 +49,7 @@ const CONFIG: ProviderConfigurations = {
 };
 
 const providerConfig = { getConfig: () => Promise.resolve(CONFIG) } as unknown as ProviderConfigService;
+const hardcoverSettings = { getMetadataToken: () => Promise.resolve('hardcover-key') } as unknown as HardcoverSettingsService;
 
 type Handler = (url: URL) => Response | Promise<Response>;
 
@@ -262,7 +264,9 @@ describe('api provider markers', () => {
   it('marks a Hardcover hit without its document as degraded', async () => {
     routeEgress(() => json({ data: { search: { results: { hits: [{}], found: 1 } } } }));
 
-    const { record, value } = await runRecorded(() => new HardcoverProvider(new HardcoverClient(), providerConfig).search({ title: 'Dune' }));
+    const { record, value } = await runRecorded(() =>
+      new HardcoverProvider(new HardcoverClient(), providerConfig, hardcoverSettings).search({ userId: 1, title: 'Dune' }),
+    );
 
     expect(value).toEqual([]);
     expect(record.degradationReasons.length).toBeGreaterThan(0);
@@ -271,7 +275,9 @@ describe('api provider markers', () => {
   it('marks Hardcover GraphQL errors as failed even alongside data', async () => {
     routeEgress(() => json({ data: { books: [] }, errors: [{ message: 'permission denied' }] }));
 
-    const { record } = await runRecorded(() => new HardcoverProvider(new HardcoverClient(), providerConfig).lookupById('dune'));
+    const { record } = await runRecorded(() =>
+      new HardcoverProvider(new HardcoverClient(), providerConfig, hardcoverSettings).lookupById('dune', undefined, { userId: 1 }),
+    );
 
     expect(record.failureReasons.length).toBeGreaterThan(0);
   });

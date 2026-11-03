@@ -135,7 +135,8 @@ function hasPassingTestForCurrentInput(key: BuiltInMetadataProviderKey): boolean
 function enableBlockedMessage(row: ProviderRowDef): string | null {
   if (!draft.value || !row.enableRequirement) return null
   const requirement = row.enableRequirement
-  if (!requirement.isConfigured(draft.value)) return requirement.blockedMessage
+  const configured = row.key === MetadataProviderKey.HARDCOVER ? isConfigured(row) : requirement.isConfigured(draft.value)
+  if (!configured) return requirement.blockedMessage
   if (requirement.requiresPassingTest && !hasPassingTestForCurrentInput(row.key)) {
     return requirement.missingTestMessage ?? t('settings.metadata.providers.runTestBeforeEnabling')
   }
@@ -146,8 +147,7 @@ function isConfigured(row: ProviderRowDef): boolean {
   const status = statusFor(row.key)
   if (!status) return false
   if (row.key !== 'hardcover') return status.configured
-  if (draft.value?.hardcover.enabled) return true
-  return hasPassingTestForCurrentInput(MetadataProviderKey.HARDCOVER)
+  return status.configured || Boolean(draft.value?.hardcover.apiKey.trim())
 }
 
 function needsSetup(row: ProviderRowDef): boolean {
