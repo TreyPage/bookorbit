@@ -54,6 +54,7 @@ describe('FileRenameService narrator-specific editions', () => {
       applyFolderRename: vi.fn().mockResolvedValue(undefined),
       findFolderOwners: vi.fn().mockResolvedValue(new Map()),
       applyExistingFolderMerge: vi.fn().mockResolvedValue(undefined),
+      finalizeFolderRename: vi.fn().mockResolvedValue(undefined),
     };
     const lockService = {
       withLock: vi.fn().mockImplementation(async (_key: string, operation: () => Promise<unknown>) => operation()),
