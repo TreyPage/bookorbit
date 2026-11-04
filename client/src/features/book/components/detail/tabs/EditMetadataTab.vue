@@ -501,6 +501,8 @@ function applySeriesMembershipPatch(formPatch: MetadataPatch, skippedFields: Boo
       })),
     ),
   )
+  handleLockToggle('seriesName')
+  handleLockToggle('seriesIndex')
   return 1
 }
 
@@ -546,6 +548,7 @@ function applyDirectPatchField(field: (typeof DIRECT_PATCH_FIELDS)[number], valu
     return false
   }
   form[field] = value as never
+  handleLockToggle(field)
   return true
 }
 
@@ -556,7 +559,10 @@ function applyPublishedPatch(formPatch: MetadataPatch, skippedFields: BookMetada
     return 0
   }
   if (formPatch.publishedDate !== undefined) form.publishedDate = formPatch.publishedDate
-  if (formPatch.publishedYear !== undefined) form.publishedYear = formPatch.publishedYear
+  if (formPatch.publishedYear !== undefined) {
+    form.publishedYear = formPatch.publishedYear
+    handleLockToggle('publishedYear')
+  }
   return 1
 }
 
@@ -586,6 +592,7 @@ function applyAudioPatch(formPatch: MetadataPatch, skippedFields: BookMetadataLo
       trackLockedField('narrators', skippedFields)
     } else {
       form.narrators = formPatch.narrators
+      handleLockToggle('narrators')
       updated++
     }
   }
@@ -594,6 +601,7 @@ function applyAudioPatch(formPatch: MetadataPatch, skippedFields: BookMetadataLo
       trackLockedField('durationSeconds', skippedFields)
     } else {
       form.durationSeconds = formPatch.durationSeconds
+      handleLockToggle('durationSeconds')
       updated++
     }
   }
@@ -602,6 +610,7 @@ function applyAudioPatch(formPatch: MetadataPatch, skippedFields: BookMetadataLo
       trackLockedField('abridged', skippedFields)
     } else {
       form.abridged = formPatch.abridged
+      handleLockToggle('abridged')
       updated++
     }
   }
@@ -664,6 +673,7 @@ function applyPatchToForm(formPatch: MetadataPatch, covers: FetchedCovers): { sk
       trackLockedField(coverField, skippedFields)
     } else {
       coverPanel.value?.setUrl(url, target ?? undefined)
+      handleLockToggle(coverField)
       updatedCount++
     }
   }

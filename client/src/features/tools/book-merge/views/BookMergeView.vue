@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { AlertCircle, ArrowRightLeft, Loader2, Merge, Search } from '@lucide/vue'
+import { AlertCircle, ArrowRightLeft, Loader2, Merge, Search, FolderTree } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import type { BookMergeCandidatePair } from '@bookorbit/types'
 
@@ -8,10 +8,9 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import { Button } from '@/components/ui/button'
 import { usePermissions } from '@/features/auth/composables/usePermissions'
 import { useLibraries } from '@/features/library/composables/useLibraries'
-import DuplicateThresholdMenu from '@/features/tools/entity-manager/components/DuplicateThresholdMenu.vue'
 import { useBookMerge } from '../../composables/useBookMerge'
-
-const MERGE_SIMILARITY_OPTIONS = [0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1] as const
+import { Select } from '@/components/ui/select'
+import { formatNumber } from '@/i18n/formatters'
 
 const { t } = useI18n()
 const { hasPermission, isDemoRestrictedAccount } = usePermissions()
@@ -64,8 +63,10 @@ function handleLibraryChange(event: Event): void {
   if (event.currentTarget instanceof HTMLSelectElement) selectedLibraryId.value = event.currentTarget.value
 }
 
-function handleSimilaritySelect(value: number): void {
-  similarityPercent.value = Math.round(value * 100)
+function handleSimilaritySelect(event: Event): void {
+  if (!(event.currentTarget instanceof HTMLSelectElement)) return
+
+  similarityPercent.value = Number(event.currentTarget.value)
 }
 
 function handleChooseTarget(event: Event): void {
@@ -112,34 +113,46 @@ async function handleConfirmMerge(): Promise<void> {
   </div>
 
   <div v-else class="flex h-full min-h-0 w-full flex-col gap-4 overflow-y-auto pr-1">
-    <section class="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4">
-      <label class="flex min-w-52 flex-1 flex-col gap-1.5 text-sm font-medium text-foreground">
-        {{ t('tools.bookMerge.library') }}
-        <select
-          :value="selectedLibraryId"
-          class="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground"
-          @change="handleLibraryChange"
-        >
-          <option value="">{{ t('tools.bookMerge.allLibraries') }}</option>
-          <option v-for="library in libraries" :key="library.id" :value="library.id">{{ library.name }}</option>
-        </select>
-      </label>
+    <section class="flex shrink-0 flex-col gap-2 rounded-xl border border-border bg-card px-2.5 py-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="flex min-w-0 flex-1 basis-40 items-center gap-1.5 sm:flex-none">
+          <span class="sr-only">{{ t('tools.bookMerge.library') }}</span>
+          <FolderTree class="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <Select
+            class="h-8 w-full min-w-0 text-[12.5px] sm:w-auto sm:min-w-[10rem]"
+            :model-value="selectedLibraryId"
+            :disabled="mergeTool.loading.value || mergeTool.merging.value"
+            @change="handleLibraryChange"
+          >
+            <option value="">{{ t('tools.bookMerge.allLibraries') }}</option>
+            <option v-for="library in libraries" :key="library.id" :value="String(library.id)">
+              {{ library.name }}
+            </option>
+          </Select>
+        </label>
 
-      <div class="flex flex-col gap-1.5 text-sm font-medium text-foreground">
-        {{ t('tools.bookMerge.similarity') }}
-        <DuplicateThresholdMenu
-          :min-similarity="similarityPercent / 100"
-          :disabled="mergeTool.loading.value || mergeTool.merging.value"
-          :options="MERGE_SIMILARITY_OPTIONS"
-          :aria-label="t('tools.bookMerge.similarity')"
-          @update:min-similarity="handleSimilaritySelect"
-        />
+        <label class="flex shrink-0 items-center gap-1.5">
+          <span class="hidden text-[12.5px] whitespace-nowrap text-muted-foreground sm:inline">
+            {{ t('tools.bookMerge.similarity') }}
+          </span>
+          <Select
+            class="h-8 w-auto min-w-[6.5rem] text-[12.5px]"
+            :model-value="similarityPercent"
+            :disabled="mergeTool.loading.value || mergeTool.merging.value"
+            @change="handleSimilaritySelect"
+          >
+            <option v-for="value in [70, 75, 80, 85, 90, 95, 100]" :key="value" :value="value">
+              {{ t('tools.bookMerge.similarityOption', { percent: formatNumber(value / 100, { style: 'percent' }) }) }}
+            </option>
+          </Select>
+        </label>
+
+        <Button class="ms-auto h-8 shrink-0" size="sm" :disabled="mergeTool.loading.value || mergeTool.merging.value" @click="handleFindMatches">
+          <Loader2 v-if="mergeTool.loading.value" class="animate-spin" aria-hidden="true" />
+          <Search v-else aria-hidden="true" />
+          {{ t('tools.bookMerge.findMatches') }}
+        </Button>
       </div>
-
-      <Button :disabled="mergeTool.loading.value || mergeTool.merging.value" @click="handleFindMatches">
-        <Search aria-hidden="true" />
-        {{ t('tools.bookMerge.findMatches') }}
-      </Button>
     </section>
 
     <p v-if="librariesError" role="alert" class="text-sm text-destructive">{{ librariesError }}</p>

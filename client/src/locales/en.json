@@ -14171,6 +14171,7 @@
       "accessDenied": "You do not have permission to use the book merge tool.",
       "library": "Library scope",
       "allLibraries": "All accessible libraries",
+      "similarityOption": "{percent} and up",
       "similarity": "Minimum title similarity (%)",
       "findMatches": "Find matches",
       "matchCount": "Showing {count, plural, one {# possible match} other {# possible matches}}",
