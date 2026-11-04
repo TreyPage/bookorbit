@@ -19,7 +19,10 @@ const mockClient = {
 
 const mockSettingsService = {
   getTokenForUser: vi.fn(),
+  getSettings: vi.fn(),
 };
+
+const DEFAULT_SHELVES = ['want_to_read', 'currently_reading', 'read', 'paused', 'did_not_finish', 'ignored'] as const;
 
 const mockLibraryService = {
   findAccessibleLibraryIds: vi.fn(),
@@ -97,6 +100,7 @@ describe('HardcoverImportService', () => {
     vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
     vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     mockSettingsService.getTokenForUser.mockResolvedValue('tok');
+    mockSettingsService.getSettings.mockResolvedValue({ hardcoverShelfIds: [...DEFAULT_SHELVES], hardcoverListIds: [] });
     mockLibraryService.findAccessibleLibraryIds.mockResolvedValue([1]);
     mockRepo.findImportCandidateBooks.mockResolvedValue([localBook()]);
     mockRepo.findBookStatesByBookIds.mockResolvedValue([]);
@@ -174,6 +178,128 @@ describe('HardcoverImportService', () => {
     expect(preview.summary.totalHardcoverBooks).toBe(0);
   });
 
+  it('filters preview to the saved shelf selection', async () => {
+    mockSettingsService.getSettings.mockResolvedValue({ hardcoverShelfIds: ['read'], hardcoverListIds: [] });
+
+    const preview = await makeService().previewImport(user as never);
+
+    expect(preview.hardcoverShelfIds).toEqual(['read']);
+    expect(mockClient.query).toHaveBeenCalledWith(7, 'tok', expect.stringContaining('status_id: { _in: $statusIds }'), {
+      limit: 100,
+      offset: 0,
+      statusIds: [3],
+    });
+  });
+
+  it('includes custom Hardcover list books alongside reading-status books', async () => {
+    mockSettingsService.getSettings.mockResolvedValue({ hardcoverShelfIds: ['read'], hardcoverListIds: [44] });
+    mockClient.query
+      .mockResolvedValueOnce({ me: [{ user_books: [hardcoverBook()] }] })
+      .mockResolvedValueOnce({ me: [{ id: 700 }] })
+      .mockResolvedValueOnce({
+        lists: [
+          {
+            id: 44,
+            name: 'Owned',
+            list_books: [
+              {
+                id: 9001,
+                book_id: 11,
+                book: { id: 11, title: 'List-only title', slug: 'list-only-title', cached_contributors: [] },
+              },
+            ],
+          },
+        ],
+      });
+
+    const preview = await makeService().previewImport(user as never);
+
+    expect(preview.summary.totalHardcoverBooks).toBe(2);
+    expect(preview.hardcoverListIds).toEqual([44]);
+    expect(preview.rows[1]).toMatchObject({
+      hardcoverListBookId: 9001,
+      hardcoverListName: 'Owned',
+      hardcoverBookId: 11,
+      hardcoverTitle: 'List-only title',
+      outcome: 'skipped',
+    });
+    expect(mockClient.query).toHaveBeenNthCalledWith(2, 7, 'tok', expect.stringContaining('me { id }'));
+    expect(mockClient.query).toHaveBeenNthCalledWith(3, 7, 'tok', expect.stringContaining('list_books(limit: $limit, offset: $offset'), {
+      userId: 700,
+      listId: 44,
+      limit: 100,
+      offset: 0,
+    });
+  });
+
+  it('paginates through the selected Hardcover list', async () => {
+    mockSettingsService.getSettings.mockResolvedValue({ hardcoverShelfIds: [], hardcoverListIds: [44] });
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      id: 9000 + index,
+      book_id: 2000 + index,
+      book: { id: 2000 + index, title: `List book ${index}`, slug: null, cached_contributors: [] },
+    }));
+    mockClient.query
+      .mockResolvedValueOnce({ me: [{ id: 700 }] })
+      .mockResolvedValueOnce({ lists: [{ id: 44, name: 'Owned', list_books: firstPage }] })
+      .mockResolvedValueOnce({
+        lists: [
+          {
+            id: 44,
+            name: 'Owned',
+            list_books: [{ id: 9999, book_id: 3000, book: { id: 3000, title: 'Last list book', slug: null, cached_contributors: [] } }],
+          },
+        ],
+      });
+    mockRepo.findImportCandidateBooks.mockResolvedValue([]);
+
+    const preview = await makeService().previewImport(user as never);
+
+    expect(preview.summary.totalHardcoverBooks).toBe(101);
+    expect(mockClient.query).toHaveBeenNthCalledWith(3, 7, 'tok', expect.stringContaining('list_books(limit: $limit, offset: $offset'), {
+      userId: 700,
+      listId: 44,
+      limit: 100,
+      offset: 100,
+    });
+  });
+
+  it('requires at least one selected shelf before previewing', async () => {
+    mockSettingsService.getSettings.mockResolvedValue({ hardcoverShelfIds: [], hardcoverListIds: [] });
+
+    await expect(makeService().previewImport(user as never)).rejects.toThrow('Select at least one Hardcover shelf or list to preview');
+    expect(mockClient.query).not.toHaveBeenCalled();
+  });
+
+  it('fails explicitly when a selected list is no longer available', async () => {
+    mockSettingsService.getSettings.mockResolvedValue({ hardcoverShelfIds: [], hardcoverListIds: [44] });
+    mockClient.query.mockResolvedValueOnce({ me: [{ id: 700 }] }).mockResolvedValueOnce({ lists: [] });
+
+    await expect(makeService().previewImport(user as never)).rejects.toThrow('A selected Hardcover list is no longer available');
+  });
+
+  it('fails explicitly when the Hardcover account cannot be identified for selected lists', async () => {
+    mockSettingsService.getSettings.mockResolvedValue({ hardcoverShelfIds: [], hardcoverListIds: [44] });
+    mockClient.query.mockResolvedValueOnce({ me: [{ id: null }] });
+
+    await expect(makeService().previewImport(user as never)).rejects.toThrow('Could not identify the Hardcover account for the selected lists');
+    expect(mockClient.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('wraps errors looking up the Hardcover account for selected lists', async () => {
+    mockSettingsService.getSettings.mockResolvedValue({ hardcoverShelfIds: [], hardcoverListIds: [44] });
+    mockClient.query.mockRejectedValueOnce(new Error('Missing read:lists scope'));
+
+    await expect(makeService().previewImport(user as never)).rejects.toThrow('Failed to identify the Hardcover account for the selected lists');
+  });
+
+  it('surfaces errors fetching books from a selected list', async () => {
+    mockSettingsService.getSettings.mockResolvedValue({ hardcoverShelfIds: [], hardcoverListIds: [44] });
+    mockClient.query.mockResolvedValueOnce({ me: [{ id: 700 }] }).mockRejectedValueOnce(new Error('Missing read:lists scope'));
+
+    await expect(makeService().previewImport(user as never)).rejects.toThrow('Failed to fetch books from the selected Hardcover list');
+  });
+
   it('fetches all Hardcover pages until the page is shorter than the import page size', async () => {
     const firstPage = Array.from({ length: 100 }, (_, index) =>
       hardcoverBook({
@@ -192,8 +318,8 @@ describe('HardcoverImportService', () => {
     const preview = await makeService().previewImport(user as never);
 
     expect(preview.summary.totalHardcoverBooks).toBe(101);
-    expect(mockClient.query).toHaveBeenNthCalledWith(1, 7, 'tok', expect.any(String), { limit: 100, offset: 0 });
-    expect(mockClient.query).toHaveBeenNthCalledWith(2, 7, 'tok', expect.any(String), { limit: 100, offset: 100 });
+    expect(mockClient.query).toHaveBeenNthCalledWith(1, 7, 'tok', expect.any(String), { limit: 100, offset: 0, statusIds: [1, 2, 3, 4, 5, 6] });
+    expect(mockClient.query).toHaveBeenNthCalledWith(2, 7, 'tok', expect.any(String), { limit: 100, offset: 100, statusIds: [1, 2, 3, 4, 5, 6] });
   });
 
   it('skips Hardcover ignored status', async () => {

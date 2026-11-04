@@ -5,6 +5,7 @@ import { HardcoverSettingsService } from './hardcover-settings.service';
 
 const mockRepo = {
   findSettings: vi.fn(),
+  findUniqueLibraryOwnerUserId: vi.fn(),
   userHasHardcoverSyncPermission: vi.fn(),
   upsertSettings: vi.fn(),
   deleteSettings: vi.fn(),
@@ -33,6 +34,8 @@ describe('HardcoverSettingsService', () => {
       expect(result.effectiveEnabled).toBe(false);
       expect(result.disabledReason).toBe('missing_token');
       expect(result.bookSyncMode).toBe('all_eligible');
+      expect(result.hardcoverShelfIds).toEqual([]);
+      expect(result.hardcoverListIds).toEqual([]);
       expect(result.privacySettingId).toBe(3);
     });
 
@@ -41,6 +44,8 @@ describe('HardcoverSettingsService', () => {
         apiToken: 'secret',
         enabled: true,
         bookSyncMode: 'selected_only',
+        hardcoverShelfIds: ['read'],
+        hardcoverListIds: [17],
         autoSyncOnStatusChange: true,
         autoSyncOnProgressUpdate: false,
         autoSyncOnRatingChange: true,
@@ -53,6 +58,8 @@ describe('HardcoverSettingsService', () => {
       expect(result.effectiveEnabled).toBe(true);
       expect(result.disabledReason).toBeNull();
       expect(result.bookSyncMode).toBe('selected_only');
+      expect(result.hardcoverShelfIds).toEqual(['read']);
+      expect(result.hardcoverListIds).toEqual([17]);
       expect(result.autoSyncOnProgressUpdate).toBe(false);
       expect((result as any).apiToken).toBeUndefined();
       expect(result.lastSyncedAt).toBeNull();
@@ -120,6 +127,33 @@ describe('HardcoverSettingsService', () => {
     });
   });
 
+  describe('getMetadataToken', () => {
+    it('returns the current user token independent of sync enablement or permission', async () => {
+      mockRepo.findSettings.mockResolvedValue({ apiToken: 'personal-token', enabled: false });
+      mockRepo.userHasHardcoverSyncPermission.mockResolvedValue(false);
+
+      await expect(makeService().getMetadataToken(7)).resolves.toBe('personal-token');
+      expect(mockRepo.findSettings).toHaveBeenCalledWith(7);
+      expect(mockRepo.userHasHardcoverSyncPermission).not.toHaveBeenCalled();
+    });
+
+    it('uses the unique library owner token for background metadata jobs', async () => {
+      mockRepo.findUniqueLibraryOwnerUserId.mockResolvedValue(12);
+      mockRepo.findSettings.mockResolvedValue({ apiToken: 'owner-token' });
+
+      await expect(makeService().getMetadataToken(undefined, 4)).resolves.toBe('owner-token');
+      expect(mockRepo.findUniqueLibraryOwnerUserId).toHaveBeenCalledWith(4);
+      expect(mockRepo.findSettings).toHaveBeenCalledWith(12);
+    });
+
+    it('does not choose a token when the library has no unique owner', async () => {
+      mockRepo.findUniqueLibraryOwnerUserId.mockResolvedValue(null);
+
+      await expect(makeService().getMetadataToken(undefined, 4)).resolves.toBeNull();
+      expect(mockRepo.findSettings).not.toHaveBeenCalled();
+    });
+  });
+
   describe('upsertSettings', () => {
     it('throws BadRequestException for invalid privacySettingId', async () => {
       await expect(makeService().upsertSettings(1, { privacySettingId: 99 })).rejects.toThrow(BadRequestException);
@@ -143,6 +177,17 @@ describe('HardcoverSettingsService', () => {
       });
 
       await expect(makeService().upsertSettings(1, { bookSyncMode: 'invalid' as never })).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws BadRequestException for invalid selected Hardcover shelf IDs', async () => {
+      await expect(makeService().upsertSettings(1, { hardcoverShelfIds: ['read', 'read'] })).rejects.toThrow(BadRequestException);
+      expect(mockRepo.findSettings).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException for invalid selected Hardcover list IDs', async () => {
+      await expect(makeService().upsertSettings(1, { hardcoverListIds: [17, 17] })).rejects.toThrow(BadRequestException);
+      await expect(makeService().upsertSettings(1, { hardcoverListIds: [0] })).rejects.toThrow(BadRequestException);
+      expect(mockRepo.findSettings).not.toHaveBeenCalled();
     });
 
     it('upserts and returns settings', async () => {
@@ -177,6 +222,34 @@ describe('HardcoverSettingsService', () => {
       expect(mockRepo.upsertSettings).toHaveBeenCalledWith(1, {
         apiToken: 'saved-token',
         enabled: false,
+      });
+    });
+
+    it('saves selected Hardcover shelf IDs', async () => {
+      mockRepo.findSettings.mockResolvedValue({
+        apiToken: 'saved-token',
+        enabled: true,
+        bookSyncMode: 'all_eligible',
+      });
+      mockRepo.upsertSettings.mockResolvedValue({});
+
+      await makeService().upsertSettings(1, { hardcoverShelfIds: ['read'] });
+
+      expect(mockRepo.upsertSettings).toHaveBeenCalledWith(1, {
+        apiToken: 'saved-token',
+        hardcoverShelfIds: ['read'],
+      });
+    });
+
+    it('saves selected Hardcover custom list IDs', async () => {
+      mockRepo.findSettings.mockResolvedValue({ apiToken: 'saved-token', enabled: true });
+      mockRepo.upsertSettings.mockResolvedValue({});
+
+      await makeService().upsertSettings(1, { hardcoverListIds: [12, 34] });
+
+      expect(mockRepo.upsertSettings).toHaveBeenCalledWith(1, {
+        apiToken: 'saved-token',
+        hardcoverListIds: [12, 34],
       });
     });
   });
@@ -233,6 +306,45 @@ describe('HardcoverSettingsService', () => {
       mockClient.query.mockResolvedValue({ me: [] });
       const result = await makeService().validateToken(1);
       expect(result).toEqual({ valid: false });
+    });
+  });
+
+  describe('getUserShelves', () => {
+    it('returns Hardcover reading-status shelves without custom lists', () => {
+      expect(makeService().getUserShelves()).toEqual({
+        shelves: [
+          { id: 'want_to_read', name: 'Want to Read' },
+          { id: 'currently_reading', name: 'Currently Reading' },
+          { id: 'read', name: 'Read' },
+          { id: 'paused', name: 'Paused' },
+          { id: 'did_not_finish', name: 'Did Not Finish' },
+          { id: 'ignored', name: 'Ignored' },
+        ],
+      });
+    });
+
+    it('loads the authenticated user’s custom lists using a supplied token', async () => {
+      mockClient.query.mockResolvedValueOnce({ me: [{ id: 700 }] }).mockResolvedValueOnce({ lists: [{ id: 19, name: 'Owned', books_count: 63 }] });
+
+      await expect(makeService().getUserLists(1, 'Bearer new-token')).resolves.toEqual({
+        lists: [{ id: 19, name: 'Owned', booksCount: 63 }],
+      });
+      expect(mockClient.query).toHaveBeenNthCalledWith(1, 1, 'new-token', expect.stringContaining('me { id }'));
+      expect(mockClient.query).toHaveBeenNthCalledWith(2, 1, 'new-token', expect.stringContaining('lists(where'), { userId: 700 });
+    });
+
+    it('loads custom lists using the saved token when no token is supplied', async () => {
+      mockRepo.findSettings.mockResolvedValue({ apiToken: 'saved-token' });
+      mockClient.query.mockResolvedValueOnce({ me: [{ id: 700 }] }).mockResolvedValueOnce({ lists: [] });
+
+      await expect(makeService().getUserLists(1)).resolves.toEqual({ lists: [] });
+      expect(mockClient.query).toHaveBeenCalledWith(1, 'saved-token', expect.any(String), expect.anything());
+    });
+
+    it('reports list-scope failures instead of returning an empty list', async () => {
+      mockClient.query.mockRejectedValue(new Error('missing read:lists scope'));
+
+      await expect(makeService().getUserLists(1, 'token')).rejects.toThrow('Failed to fetch Hardcover lists');
     });
   });
 

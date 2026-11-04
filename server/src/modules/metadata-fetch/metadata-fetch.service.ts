@@ -115,7 +115,11 @@ export class MetadataFetchService {
     );
   }
 
-  async lookupById(key: MetadataProviderKey, providerId: string, options?: { directive?: CacheDirective }): Promise<MetadataLookupResult | null> {
+  async lookupById(
+    key: MetadataProviderKey,
+    providerId: string,
+    options?: { directive?: CacheDirective; params?: MetadataSearchParams },
+  ): Promise<MetadataLookupResult | null> {
     const provider = this.registry.find(key);
     const id = canonicalId(providerId);
     if (!provider || !isIdentifiable(provider) || !id) return null;
@@ -123,9 +127,10 @@ export class MetadataFetchService {
     const timeoutMs = this.timeoutFor(provider);
     const context = await this.executor.resolveContext(provider.cache);
     const deadline = createDeadline(timeoutMs);
-    const run = new ProviderRun(provider, {}, options?.directive ?? DEFAULT_CACHE_DIRECTIVE, context, deadline.signal, this.executor);
+    const params = options?.params;
+    const run = new ProviderRun(provider, params ?? {}, options?.directive ?? DEFAULT_CACHE_DIRECTIVE, context, deadline.signal, this.executor);
     try {
-      const lookup = await withHardGuard(run.lookup(id, undefined), timeoutMs + HARD_GUARD_MARGIN_MS);
+      const lookup = await withHardGuard(run.lookup(id, params), timeoutMs + HARD_GUARD_MARGIN_MS);
       if (lookup === HARD_GUARD_HIT) return null;
       this.recordThrottleOutcome(provider.key, run);
       if (!lookup.value) return null;

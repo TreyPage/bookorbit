@@ -1,0 +1,1 @@
+ALTER TABLE "hardcover_user_settings" ADD COLUMN "hardcover_shelf_ids" varchar(30)[] DEFAULT '{}' NOT NULL;

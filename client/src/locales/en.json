@@ -5547,7 +5547,8 @@
       "EmailRecipientGroupMemberRemove": "Remove recipient from group",
       "MaintenanceMissingBooksClean": "Cleaned missing books",
       "MaintenanceBrokenCoversClean": "Cleaned broken covers",
-      "MaintenanceOrphanedCoversClean": "Cleaned orphaned cover folders"
+      "MaintenanceOrphanedCoversClean": "Cleaned orphaned cover folders",
+      "BookMerge": "Merge books"
     },
     "views": {
       "label": "Show",
@@ -8926,7 +8927,7 @@
     }
   },
   "bookRequests": {
-    "title": "Requests (Beta)",
+    "title": "Requests",
     "subtitle": "Ask for books the library does not have yet. This feature is experimental, expect minor bugs.",
     "tabs": {
       "search": "Request a book",
@@ -9973,6 +9974,12 @@
       "lockAll": "Lock all",
       "unlockAll": "Unlock all",
       "exportMetadata": "Export metadata",
+      "mergeSelected": "Merge selected books",
+      "mergeDialogTitle": "Merge selected books?",
+      "mergeDialogDescription": "Choose the book to keep. The other {count, plural, one {record will be merged into it and removed} other {records will be merged into it and removed}}.",
+      "mergeTargetLabel": "Keep this book",
+      "mergeSuccess": "{count, plural, one {# book merged successfully.} other {# books merged successfully.}}",
+      "mergeFailed": "Could not merge the selected books.",
       "deleteSelected": "Delete selected",
       "exitSelection": "Exit selection",
       "downloadFilesZipLabel": "Download files as ZIP:",
@@ -10967,6 +10974,19 @@
       "validateToken": "Validate token",
       "valid": "Valid ({username})",
       "invalidToken": "Invalid token",
+      "shelves": {
+        "title": "Hardcover shelves",
+        "description": "Choose reading-status shelves to include in read-status previews.",
+        "loading": "Loading Hardcover shelves...",
+        "loadFailed": "Could not load Hardcover shelves."
+      },
+      "lists": {
+        "title": "Hardcover lists",
+        "description": "Choose custom lists to include in previews and book requests.",
+        "loading": "Loading your Hardcover lists...",
+        "loadFailed": "Could not load Hardcover lists. Your token may need read:lists access.",
+        "empty": "No custom lists were found on this Hardcover account."
+      },
       "syncOptions": "Sync options",
       "syncInfo": "Sync runs only for books that are not unread. This applies to status, progress, and rating triggers. These switches control when a sync runs.",
       "syncScope": {
@@ -11047,6 +11067,7 @@
       "description": "Preview Hardcover matches before filling blank BookOrbit statuses.",
       "clear": "Clear",
       "preview": "Preview",
+      "selectedShelves": "Previewing selected shelves and lists: {shelves}",
       "importProgress": "Import progress",
       "reviewMatches": "Review matches",
       "importReady": "Import ready",
@@ -11056,7 +11077,8 @@
       "unavailable": {
         "permissionDenied": "You do not have permission to use Hardcover sync.",
         "missingToken": "Connect Hardcover before importing.",
-        "userDisabled": "Sync is paused in your Hardcover settings."
+        "userDisabled": "Sync is paused in your Hardcover settings.",
+        "noShelves": "Select at least one Hardcover shelf or custom list in your connection settings before previewing."
       },
       "summary": {
         "ready": "Ready",
@@ -11085,6 +11107,28 @@
       "blank": "blank",
       "noRows": "No rows match the current filters.",
       "selectRowAriaLabel": "Select {title}",
+      "requestsTitle": "Add missing formats to Book Requests",
+      "requestsDescription": "Availability is checked against your libraries and active requests. Select only the ebook or audiobook formats you still need.",
+      "requestDestination": "{medium} destination",
+      "loadingRequestDestinations": "Loading request destinations...",
+      "requestDestinationSetupFailed": "Could not load request destinations.",
+      "checkingAvailability": "Checking library and request availability...",
+      "requestAvailabilityFailed": "Could not check Book Requests availability.",
+      "retryAvailability": "Retry check",
+      "requestFormat": "Request {medium}",
+      "requestOwned": "{medium} already in your library",
+      "requestExists": "{medium} already requested",
+      "selectMissing": "Select missing formats on this page",
+      "clearRequestsPage": "Clear page",
+      "addRequests": "Add {count} to requests",
+      "submittingRequests": "Adding requests...",
+      "requestLimit": "Select up to {count} requests at a time.",
+      "requestSubmitFailed": "Failed to add this book request.",
+      "requestResult": "{created} added, {joined} joined existing requests, {skipped} skipped because availability changed.",
+      "media": {
+        "ebook": "ebook",
+        "audiobook": "audiobook"
+      },
       "selectionSummary": "{count} selected: {ready} ready, {reviewed} reviewed.",
       "selectedProgress": "{count, plural, =0 {no progress updates} one {# progress update} other {# progress updates}}",
       "selectReady": "Select ready",
@@ -13197,9 +13241,24 @@
       "ownedOfExpected": "{owned} of {expected} in library"
     },
     "gaps": {
-      "label": "Possible gaps:",
+      "label": "Missing books in this series",
       "missingCount": "{count, plural, one {# missing} other {# missing}}",
       "missingList": "Missing {list}",
+      "orderHint": "Missing titles are shown in Hardcover series order.",
+      "connectHardcover": "Connect Hardcover to load titles for the missing books.",
+      "titlesNotFound": "Hardcover did not return titles for these missing positions. Check the series details in Hardcover.",
+      "titleLookupFailed": "Could not load missing book titles from Hardcover. Check your Hardcover connection.",
+      "catalogScopeRequired": "Your Hardcover API key needs the read:catalog permission. Create a key with that permission in Hardcover and update it in your Hardcover settings.",
+      "titleLookupLoading": "Missing book titles have not been loaded yet.",
+      "partialTitles": "{count, plural, one {The title for # book could not be found in Hardcover.} other {The titles for # books could not be found in Hardcover.}}",
+      "volume": "Volume #{number}",
+      "requestTitle": "Request {title}",
+      "titleUnavailable": "Hardcover title unavailable",
+      "findTitle": "Find book #{number}",
+      "requestBook": "Request a missing book",
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "retryTitleLookup": "Retry loading titles",
       "previewMore": "{shown} +{count}"
     },
     "filters": {
@@ -13577,6 +13636,7 @@
       "entityManager": "Entity Manager",
       "bulkRename": "Bulk Rename",
       "duplicateBooks": "Duplicate Books",
+      "bookMerge": "Merge Books",
       "missingResources": "Missing Resources",
       "chapterHealth": "Chapter Health"
     },
@@ -14107,6 +14167,42 @@
         "clean": "Cleanup failed."
       }
     },
+    "bookMerge": {
+      "accessDenied": "You do not have permission to use the book merge tool.",
+      "library": "Library scope",
+      "allLibraries": "All accessible libraries",
+      "similarityOption": "{percent} and up",
+      "similarity": "Minimum title similarity (%)",
+      "findMatches": "Find matches",
+      "matchCount": "Showing {count, plural, one {# possible match} other {# possible matches}}",
+      "similarTitle": "Title similarity: {percent}",
+      "keepThisBook": "Keep this book",
+      "keepBook": "Keep {title}",
+      "mergeIntoSelected": "Merge into selected book",
+      "loadMore": "Load more matches",
+      "filtersChanged": "The search settings changed. Find matches again before loading more.",
+      "unknownTitle": "Unknown title",
+      "unknownAuthor": "Unknown author",
+      "success": "Books merged successfully.",
+      "demoRestricted": "Book merging is disabled for demo accounts.",
+      "initial": {
+        "description": "Choose a library scope and similarity threshold, then find ebook and audiobook records with similar titles and authors."
+      },
+      "empty": {
+        "title": "No possible matches found",
+        "description": "Try a lower title similarity threshold or select a different library."
+      },
+      "confirm": {
+        "title": "Merge these books?",
+        "description": "The source record \"{source}\" and its associated data will be merged into \"{target}\". The source record will be removed.",
+        "action": "Merge books",
+        "phrase": "MERGE"
+      },
+      "errors": {
+        "candidates": "Could not load possible book matches.",
+        "merge": "Could not merge these books."
+      }
+    },
     "chapterHealth": {
       "accessDenied": "You need permission to edit metadata to use this tool.",
       "untitled": "Untitled book",
@@ -14378,6 +14474,7 @@
     "entityManager": "Entity Manager",
     "bulkRename": "Bulk Rename",
     "duplicateBooks": "Duplicate Books",
+    "bookMerge": "Merge Books",
     "notFound": "Not Found",
     "signIn": "Sign In",
     "initialSetup": "Initial Setup",

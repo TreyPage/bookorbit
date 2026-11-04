@@ -1,6 +1,12 @@
 import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
-import type { ApplyHardcoverImportPayload, SetHardcoverEditionPayload, UpdateHardcoverBookSyncPayload } from '@bookorbit/types';
+import {
+  HARDCOVER_SHELF_IDS,
+  type ApplyHardcoverImportPayload,
+  type HardcoverShelfId,
+  type SetHardcoverEditionPayload,
+  type UpdateHardcoverBookSyncPayload,
+} from '@bookorbit/types';
 
 export class UpsertHardcoverSettingsDto {
   @IsOptional()
@@ -15,6 +21,22 @@ export class UpsertHardcoverSettingsDto {
   @IsOptional()
   @IsIn(['all_eligible', 'selected_only'])
   bookSyncMode?: 'all_eligible' | 'selected_only';
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(HARDCOVER_SHELF_IDS.length)
+  @IsString({ each: true })
+  @IsIn([...HARDCOVER_SHELF_IDS], { each: true })
+  hardcoverShelfIds?: HardcoverShelfId[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(1000)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  hardcoverListIds?: number[];
 
   @IsOptional()
   @IsBoolean()

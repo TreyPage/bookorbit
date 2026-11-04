@@ -57,6 +57,22 @@ describe('HardcoverClientService', () => {
     await expect(service.query(1, 'token', '{ me { id } }')).rejects.toThrow('Hardcover API error: 500');
   });
 
+  it('preserves the missing scope from a forbidden response', async () => {
+    fetchSpy.mockResolvedValueOnce(
+      makeFetchResponse(403, {
+        error: 'insufficient_scope',
+        error_description: 'The token does not have the required scope',
+        scope: 'read:catalog',
+      }),
+    );
+
+    await expect(service.query(1, 'token', '{ series { name } }')).rejects.toMatchObject({
+      status: 403,
+      errorCode: 'insufficient_scope',
+      requiredScope: 'read:catalog',
+    });
+  });
+
   it('should retry on 429 with backoff', async () => {
     fetchSpy.mockResolvedValueOnce(makeFetchResponse(429, {})).mockResolvedValueOnce(makeFetchResponse(200, { data: { me: [] } }));
 

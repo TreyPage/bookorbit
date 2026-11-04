@@ -96,7 +96,7 @@ function mergeHardcoverConfig(base: ProviderConfigurations['hardcover'], value: 
   const next = asObject(value);
   return {
     enabled: asBoolean(next.enabled, base.enabled),
-    apiKey: asString(next.apiKey, base.apiKey),
+    apiKey: '',
   };
 }
 
@@ -139,11 +139,6 @@ const PROVIDER_ENABLE_RULES = {
     blockedMessage: 'Google Books requires an API key before it can be enabled',
     setupHint: 'API key required',
   },
-  hardcover: {
-    canEnable: (config) => !!config.hardcover.apiKey.trim(),
-    blockedMessage: 'Hardcover requires an API key before it can be enabled',
-    setupHint: 'API key required. Run Test and save before enabling.',
-  },
   comicvine: {
     canEnable: (config) => !!config.comicvine.apiKey.trim(),
     blockedMessage: 'ComicVine requires an API key before it can be enabled',
@@ -166,30 +161,39 @@ export class ProviderConfigService implements OnModuleInit {
    * among them, are deleted rather than left in the database.
    */
   async onModuleInit(): Promise<void> {
-    const removed = await this.db.transaction(async (tx) => {
+    const cleanup = await this.db.transaction(async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${PROVIDER_CONFIG_KEY})::bigint)`);
       const row = await tx.query.appSettings.findFirst({ where: eq(schema.appSettings.key, PROVIDER_CONFIG_KEY) });
       let stored: unknown;
       try {
         stored = row ? JSON.parse(row.value) : null;
       } catch {
-        return [];
+        return { moved: [], legacyHardcoverKey: false };
       }
-      if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return [];
+      if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return { moved: [], legacyHardcoverKey: false };
       const settings = stored as Record<string, unknown>;
       const moved = Object.keys(MOVED_METADATA_PROVIDERS).filter((key) => key in settings);
-      if (moved.length === 0) return [];
+      const hardcover = asObject(settings.hardcover);
+      const legacyHardcoverKey = Object.prototype.hasOwnProperty.call(hardcover, 'apiKey');
+      if (moved.length === 0 && !legacyHardcoverKey) return { moved, legacyHardcoverKey };
       for (const key of moved) delete settings[key];
+      if (legacyHardcoverKey) {
+        delete hardcover.apiKey;
+        settings.hardcover = hardcover;
+      }
       await tx
         .update(schema.appSettings)
         .set({ value: JSON.stringify(settings) })
         .where(eq(schema.appSettings.key, PROVIDER_CONFIG_KEY));
-      return moved;
+      return { moved, legacyHardcoverKey };
     });
-    if (removed.length > 0) {
+    if (cleanup.moved.length > 0) {
       this.logger.log(
-        `[metadata_provider_config.moved_out] [end] providers=${removed.join(',')} - removed settings of providers that are no longer built in`,
+        `[metadata_provider_config.moved_out] [end] providers=${cleanup.moved.join(',')} - removed settings of providers that are no longer built in`,
       );
+    }
+    if (cleanup.legacyHardcoverKey) {
+      this.logger.log('[metadata_provider_config.legacy_hardcover_key] [end] - removed legacy global Hardcover key');
     }
   }
 
@@ -247,27 +251,6 @@ export class ProviderConfigService implements OnModuleInit {
     }
   }
 
-  private shouldValidateHardcoverConnection(current: ProviderConfigurations, next: ProviderConfigurations): boolean {
-    if (!next.hardcover.enabled) return false;
-    return !current.hardcover.enabled || current.hardcover.apiKey !== next.hardcover.apiKey;
-  }
-
-  private async validateExternalEnableChecks(current: ProviderConfigurations, next: ProviderConfigurations): Promise<void> {
-    if (!this.shouldValidateHardcoverConnection(current, next)) return;
-    let result: ProviderConnectionTestResult;
-    try {
-      result = await this.testHardcoverProvider(next.hardcover.apiKey);
-    } catch (error) {
-      const message =
-        error instanceof Error && error.name === 'TimeoutError'
-          ? 'Hardcover validation timed out. Please try again.'
-          : 'Could not reach Hardcover to validate the token.';
-      throw new BadRequestException(message);
-    }
-    if (result.status === 'success' && result.ok) return;
-    throw new BadRequestException(result.message);
-  }
-
   private normalizeConfig(config: ProviderConfigurations): ProviderConfigurations {
     const googleApiKey = config.google.apiKey.trim();
     const normalized: ProviderConfigurations = {
@@ -280,7 +263,7 @@ export class ProviderConfigService implements OnModuleInit {
       },
       hardcover: {
         ...config.hardcover,
-        apiKey: stripBearerPrefix(config.hardcover.apiKey),
+        apiKey: '',
       },
       audible: {
         ...config.audible,
@@ -375,7 +358,6 @@ export class ProviderConfigService implements OnModuleInit {
       const current = row ? this.normalizeConfig(this.parsePersistedConfig(row.value, defaults, 'update', startedAt)) : defaults;
       const next = this.normalizeConfig(this.mergeConfig(current, patch));
       this.validateConfig(next);
-      await this.validateExternalEnableChecks(current, next);
       const value = JSON.stringify(next);
       await tx
         .insert(schema.appSettings)
@@ -412,8 +394,7 @@ export class ProviderConfigService implements OnModuleInit {
         key: MetadataProviderKey.HARDCOVER,
         label: PROVIDER_LABELS[MetadataProviderKey.HARDCOVER],
         enabled: cfg.hardcover.enabled,
-        configured: !!this.getEnableRule('hardcover')?.canEnable(cfg),
-        hint: !this.getEnableRule('hardcover')?.canEnable(cfg) ? this.getEnableRule('hardcover')?.setupHint : undefined,
+        configured: true,
       },
       {
         key: MetadataProviderKey.OPEN_LIBRARY,
@@ -547,7 +528,10 @@ export class ProviderConfigService implements OnModuleInit {
     try {
       const current = await this.getConfig();
       const effective = patch ? this.normalizeConfig(this.mergeConfig(current, patch)) : current;
-      const result = await this.runProviderTest(key, effective);
+      const result =
+        key === MetadataProviderKey.HARDCOVER
+          ? await this.testHardcoverProvider(patch?.hardcover?.apiKey ?? '')
+          : await this.runProviderTest(key, effective);
       this.logger.log(
         `[${PROVIDER_TEST_EVENT}] [end] provider=${key} durationMs=${Date.now() - startedAt} ok=${result.ok} status=${result.status} - provider connection test completed`,
       );
@@ -569,8 +553,6 @@ export class ProviderConfigService implements OnModuleInit {
     switch (key) {
       case MetadataProviderKey.AMAZON:
         return this.testAmazonProvider(config.amazon);
-      case MetadataProviderKey.HARDCOVER:
-        return this.testHardcoverProvider(config.hardcover.apiKey);
       default:
         throw new BadRequestException(`Provider test not supported for ${key}`);
     }

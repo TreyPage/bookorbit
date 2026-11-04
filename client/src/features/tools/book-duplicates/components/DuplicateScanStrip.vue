@@ -92,7 +92,7 @@ function handleScan(): void {
             <Info class="size-4" aria-hidden="true" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom" class="max-w-sm leading-relaxed">{{ t('tools.bookDuplicates.similarityHelp') }}</TooltipContent>
+        <TooltipContent side="bottom" class="max-w-sm leading-relaxed">{{ t('tools.bookDuplicates.similarityHelp') }} </TooltipContent>
       </Tooltip>
 
       <span v-if="lastRun" class="hidden text-[12px] text-muted-foreground sm:inline">{{ lastRun }}</span>

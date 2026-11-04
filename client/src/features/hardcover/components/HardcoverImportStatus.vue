@@ -3,14 +3,17 @@ import { Button } from '@/components/ui/button'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { AlertCircle, CheckCircle2, Download, FileSearch, Loader2, Table2, XCircle } from '@lucide/vue'
+import { Permission } from '@bookorbit/types'
 import { toast } from 'vue-sonner'
+import { usePermissions } from '@/features/auth/composables/usePermissions'
 import HardcoverImportReviewModal from './HardcoverImportReviewModal.vue'
 import { useHardcoverImport } from '../composables/useHardcoverImport'
 import { useHardcoverSettings } from '../composables/useHardcoverSettings'
 
 const { t } = useI18n()
+const { hasPermission } = usePermissions()
 
-const { settings } = useHardcoverSettings()
+const { settings, shelves, lists } = useHardcoverSettings()
 const { preview, result, previewing, applying, error, loadPreview, applyPreview, clearImport } = useHardcoverImport()
 
 const reviewOpen = ref(false)
@@ -25,11 +28,23 @@ const importUnavailableReason = computed(() => {
     case 'user_disabled':
       return t('hardcover.import.unavailable.userDisabled')
     default:
-      return null
+      return settings.value?.hardcoverShelfIds.length === 0 && settings.value.hardcoverListIds.length === 0
+        ? t('hardcover.import.unavailable.noShelves')
+        : null
   }
 })
 
-const previewButtonDisabled = computed(() => previewing.value || applying.value || importUnavailableReason.value !== null)
+const previewButtonDisabled = computed(() => previewing.value || applying.value || settings.value === null || importUnavailableReason.value !== null)
+const canRequestBooks = computed(() => hasPermission(Permission.BookRequestAccess))
+const requiresRequestDestination = computed(
+  () => hasPermission(Permission.BookRequestAutoApprove) || hasPermission(Permission.BookRequestSelfFulfill),
+)
+const selectedShelvesLabel = computed(() =>
+  [
+    ...(preview.value?.hardcoverShelfIds ?? []).map((id) => shelves.value.find((shelf) => shelf.id === id)?.name ?? id),
+    ...(preview.value?.hardcoverListIds ?? []).map((id) => lists.value.find((list) => list.id === id)?.name ?? String(id)),
+  ].join(', '),
+)
 const readyRows = computed(() => preview.value?.rows.filter((row) => row.outcome === 'will_update') ?? [])
 const canImportReady = computed(() => readyRows.value.length > 0 && !previewing.value && !applying.value)
 const summaryItems = computed(() => {
@@ -127,6 +142,8 @@ async function applyRows(hardcoverUserBookIds?: number[]): Promise<void> {
     </div>
 
     <div v-if="preview" class="space-y-4 border-t border-border pt-4">
+      <p class="text-xs text-muted-foreground">{{ t('hardcover.import.selectedShelves', { shelves: selectedShelvesLabel }) }}</p>
+
       <div class="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-5">
         <div v-for="item in summaryItems" :key="item.label" class="min-w-0">
           <p class="text-[10px] uppercase tracking-wider text-muted-foreground">{{ item.label }}</p>
@@ -166,6 +183,8 @@ async function applyRows(hardcoverUserBookIds?: number[]): Promise<void> {
       v-if="preview && reviewOpen"
       :preview="preview"
       :applying="applying"
+      :can-request-books="canRequestBooks"
+      :requires-request-destination="requiresRequestDestination"
       v-model:import-progress="importProgress"
       @close="handleCloseReview"
       @apply="handleApplySelected"

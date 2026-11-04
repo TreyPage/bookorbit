@@ -11,6 +11,7 @@ import {
   authors,
   bookAuthors,
   bookFiles,
+  bookMergeSources,
   bookmarks,
   bookGenres,
   bookMetadata,
@@ -163,6 +164,33 @@ export class ScannerRepository {
       })
       .from(books)
       .where(eq(books.libraryFolderId, libraryFolderId));
+  }
+
+  async findMergedBookSources(libraryFolderId: number, libraryId: number, folderPaths: string[]) {
+    const rows: {
+      folderPath: string;
+      id: number;
+      status: string;
+      primaryFileId: number | null;
+    }[] = [];
+    for (let offset = 0; offset < folderPaths.length; offset += 500) {
+      const batch = folderPaths.slice(offset, offset + 500);
+      if (batch.length === 0) continue;
+      const found = await this.db
+        .select({
+          folderPath: bookMergeSources.folderPath,
+          id: books.id,
+          status: books.status,
+          primaryFileId: books.primaryFileId,
+        })
+        .from(bookMergeSources)
+        .innerJoin(books, eq(books.id, bookMergeSources.targetBookId))
+        .where(
+          and(eq(bookMergeSources.libraryFolderId, libraryFolderId), eq(books.libraryId, libraryId), inArray(bookMergeSources.folderPath, batch)),
+        );
+      rows.push(...found);
+    }
+    return rows;
   }
 
   /** Books filed under a library folder but located at `folderPath`, with their content files. */

@@ -167,6 +167,34 @@ describe('FileRenameRepository', () => {
     ]);
   });
 
+  it('finalizeFolderRename moves merged files into the book folder and clears stale source paths', async () => {
+    const updatedValues: unknown[] = [];
+    const tx = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([{ libraryFolderId: 20 }]),
+      }),
+      update: vi.fn().mockReturnValue({
+        set: vi.fn().mockImplementation((values: unknown) => {
+          updatedValues.push(values);
+          return { where: vi.fn().mockResolvedValue(undefined) };
+        }),
+      }),
+      delete: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+    };
+    const db = {
+      transaction: vi.fn().mockImplementation(async (callback: (value: unknown) => Promise<unknown>) => callback(tx)),
+    };
+
+    const repo = new FileRenameRepository(db as never);
+    await repo.finalizeFolderRename(5);
+
+    expect(tx.select).toHaveBeenCalledTimes(1);
+    expect(updatedValues).toEqual([expect.objectContaining({ libraryFolderId: 20 })]);
+    expect(tx.delete).toHaveBeenCalledTimes(1);
+  });
+
   it('findFolderOwners maps each held folder to its book, title, and first-listed author', async () => {
     const db = {
       select: vi

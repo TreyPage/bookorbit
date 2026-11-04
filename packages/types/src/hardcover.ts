@@ -1,5 +1,7 @@
 export type HardcoverSyncDisabledReason = "permission_denied" | "missing_token" | "user_disabled";
 export type HardcoverBookSyncMode = "all_eligible" | "selected_only";
+export const HARDCOVER_SHELF_IDS = ["want_to_read", "currently_reading", "read", "paused", "did_not_finish", "ignored"] as const;
+export type HardcoverShelfId = (typeof HARDCOVER_SHELF_IDS)[number];
 export type HardcoverBookSyncOverride = "included" | "excluded" | null;
 export type HardcoverBookSyncEffectiveReason =
   HardcoverSyncDisabledReason | "global_disabled" | "not_selected" | "excluded" | "unread" | "unsupported_status";
@@ -10,6 +12,8 @@ export interface HardcoverSettings {
   effectiveEnabled: boolean;
   disabledReason: HardcoverSyncDisabledReason | null;
   bookSyncMode: HardcoverBookSyncMode;
+  hardcoverShelfIds: HardcoverShelfId[];
+  hardcoverListIds: number[];
   autoSyncOnStatusChange: boolean;
   autoSyncOnProgressUpdate: boolean;
   autoSyncOnRatingChange: boolean;
@@ -21,10 +25,31 @@ export interface UpsertHardcoverSettingsPayload {
   apiToken?: string;
   enabled?: boolean;
   bookSyncMode?: HardcoverBookSyncMode;
+  hardcoverShelfIds?: HardcoverShelfId[];
+  hardcoverListIds?: number[];
   autoSyncOnStatusChange?: boolean;
   autoSyncOnProgressUpdate?: boolean;
   autoSyncOnRatingChange?: boolean;
   privacySettingId?: number;
+}
+
+export interface HardcoverShelf {
+  id: HardcoverShelfId;
+  name: string;
+}
+
+export interface HardcoverShelvesResult {
+  shelves: HardcoverShelf[];
+}
+
+export interface HardcoverList {
+  id: number;
+  name: string;
+  booksCount: number;
+}
+
+export interface HardcoverListsResult {
+  lists: HardcoverList[];
 }
 
 export interface HardcoverTokenValidationResult {
@@ -77,12 +102,16 @@ export type HardcoverImportedReadStatus = Exclude<import("./book").ReadStatus, "
 
 export interface HardcoverImportPreviewRow {
   hardcoverUserBookId: number;
+  hardcoverListBookId?: number;
+  hardcoverListName?: string;
   hardcoverBookId: number;
   hardcoverEditionId: number | null;
   hardcoverReadId: number | null;
   hardcoverTitle: string | null;
   hardcoverAuthors: string[];
-  hardcoverStatusId: number;
+  hardcoverIsbn10: string | null;
+  hardcoverIsbn13: string | null;
+  hardcoverStatusId: number | null;
   hardcoverStatusLabel: string;
   importedStatus: HardcoverImportedReadStatus | null;
   importedStartedAt: string | null;
@@ -121,6 +150,8 @@ export interface HardcoverImportSummary {
 }
 
 export interface HardcoverImportPreview {
+  hardcoverShelfIds: HardcoverShelfId[];
+  hardcoverListIds: number[];
   summary: HardcoverImportSummary;
   rows: HardcoverImportPreviewRow[];
 }

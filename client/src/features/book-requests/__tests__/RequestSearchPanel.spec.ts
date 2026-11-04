@@ -274,6 +274,43 @@ describe('RequestSearchPanel provider sources', () => {
     expect(state.search).toHaveBeenLastCalledWith({ title: undefined, author: 'Terry Pratchett', mediaKind: 'ebook', resultsPerProvider: 20 })
   })
 
+  it('prefills the actual missing book title from the series page and searches for that title', async () => {
+    state.routeQuery = {
+      seriesBookTitle: "Carl's Doomsday Scenario",
+      seriesBookAuthor: 'Matt Dinniman',
+    }
+
+    const wrapper = await render()
+
+    expect((wrapper.find('#request-title').element as HTMLInputElement).value).toBe("Carl's Doomsday Scenario")
+    expect((wrapper.find('#request-author').element as HTMLInputElement).value).toBe('Matt Dinniman')
+    expect(state.search).toHaveBeenCalledWith({
+      title: "Carl's Doomsday Scenario",
+      author: 'Matt Dinniman',
+      mediaKind: 'ebook',
+      resultsPerProvider: 20,
+    })
+  })
+
+  it('falls back to the series author search when the missing position has no catalog title', async () => {
+    state.routeQuery = {
+      seriesBookName: 'The Series',
+      seriesBookIndex: '2',
+      seriesBookAuthor: 'Author',
+    }
+
+    const wrapper = await render()
+
+    expect((wrapper.find('#request-title').element as HTMLInputElement).value).toBe('')
+    expect((wrapper.find('#request-author').element as HTMLInputElement).value).toBe('Author')
+    expect(state.search).toHaveBeenCalledWith({
+      title: undefined,
+      author: 'Author',
+      mediaKind: 'ebook',
+      resultsPerProvider: 20,
+    })
+  })
+
   it('searches for an author alone when their name on a result is pressed', async () => {
     const scrollIntoView = vi.fn<() => void>()
     Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView })

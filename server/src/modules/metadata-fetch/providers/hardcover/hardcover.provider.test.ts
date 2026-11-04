@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProviderConfigurations } from '@bookorbit/types';
 
 import { ProviderConfigService } from '../../../metadata-preferences/provider-config.service';
+import { HardcoverSettingsService } from '../../../hardcover/hardcover-settings.service';
 import { HardcoverClient } from './hardcover.client';
 import { HardcoverProvider } from './hardcover.provider';
 import { HardcoverBookWithEditions, HardcoverSearchDocument } from './hardcover.types';
@@ -48,6 +49,7 @@ describe('HardcoverProvider', () => {
   let provider: HardcoverProvider;
   let client: HardcoverClient;
   let providerConfig: ProviderConfigService;
+  let hardcoverSettings: HardcoverSettingsService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -68,12 +70,19 @@ describe('HardcoverProvider', () => {
             getConfig: vi.fn().mockResolvedValue(mockConfig),
           },
         },
+        {
+          provide: HardcoverSettingsService,
+          useValue: {
+            getMetadataToken: vi.fn().mockResolvedValue('test-key'),
+          },
+        },
       ],
     }).compile();
 
     provider = module.get(HardcoverProvider);
     client = module.get(HardcoverClient);
     providerConfig = module.get(ProviderConfigService);
+    hardcoverSettings = module.get(HardcoverSettingsService);
   });
 
   afterEach(() => {
@@ -88,8 +97,8 @@ describe('HardcoverProvider', () => {
       expect(client.searchBooks).not.toHaveBeenCalled();
     });
 
-    it('returns empty array when apiKey is missing', async () => {
-      vi.spyOn(providerConfig, 'getConfig').mockResolvedValue({ ...mockConfig, hardcover: { enabled: true, apiKey: '' } });
+    it('returns empty array when the current user has no Hardcover token', async () => {
+      vi.spyOn(hardcoverSettings, 'getMetadataToken').mockResolvedValue(null);
       expect(await provider.search({ title: 'Test' })).toEqual([]);
       expect(client.searchByIsbn).not.toHaveBeenCalled();
       expect(client.searchBooks).not.toHaveBeenCalled();
@@ -219,12 +228,13 @@ describe('HardcoverProvider', () => {
     });
 
     it('passes the apiKey to the client', async () => {
-      vi.spyOn(providerConfig, 'getConfig').mockResolvedValue({ ...mockConfig, hardcover: { enabled: true, apiKey: 'my-secret-key' } });
+      vi.spyOn(hardcoverSettings, 'getMetadataToken').mockResolvedValue('my-personal-key');
       vi.spyOn(client, 'searchBooks').mockResolvedValue([mockDocument]);
 
-      await provider.search({ title: 'Test' });
+      await provider.search({ title: 'Test', userId: 22 });
 
-      expect(client.searchBooks).toHaveBeenCalledWith('Test', 'my-secret-key', undefined, 10);
+      expect(hardcoverSettings.getMetadataToken).toHaveBeenCalledWith(22, undefined);
+      expect(client.searchBooks).toHaveBeenCalledWith('Test', 'my-personal-key', undefined, 10);
     });
 
     it('browses by author name when no title is given', async () => {
@@ -265,8 +275,8 @@ describe('HardcoverProvider', () => {
       expect(client.lookupBySlug).not.toHaveBeenCalled();
     });
 
-    it('returns null when apiKey is missing', async () => {
-      vi.spyOn(providerConfig, 'getConfig').mockResolvedValue({ ...mockConfig, hardcover: { enabled: true, apiKey: '' } });
+    it('returns null when the current user has no Hardcover token', async () => {
+      vi.spyOn(hardcoverSettings, 'getMetadataToken').mockResolvedValue(null);
       expect(await provider.lookupById('the-name-of-the-wind')).toBeNull();
       expect(client.lookupBySlug).not.toHaveBeenCalled();
     });

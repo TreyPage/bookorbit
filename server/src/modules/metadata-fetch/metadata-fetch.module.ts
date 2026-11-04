@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { HardcoverSettingsModule } from '../hardcover/hardcover-settings.module';
 import { MetadataCacheModule } from '../metadata-cache/metadata-cache.module';
 import { MetadataHttpProviderModule } from '../metadata-http-provider/metadata-http-provider.module';
 import { MetadataPreferencesModule } from '../metadata-preferences/metadata-preferences.module';
@@ -46,7 +47,7 @@ const PROVIDER_CLASSES = [
 ];
 
 @Module({
-  imports: [MetadataPreferencesModule, MetadataCacheModule, MetadataHttpProviderModule],
+  imports: [HardcoverSettingsModule, MetadataPreferencesModule, MetadataCacheModule, MetadataHttpProviderModule],
   providers: [
     ...PROVIDER_CLASSES,
     {

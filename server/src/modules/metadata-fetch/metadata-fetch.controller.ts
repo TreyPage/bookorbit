@@ -114,6 +114,8 @@ export class MetadataFetchController {
 
     const searchTitle = normalizeSearchTitle(dto.title);
     const params: MetadataSearchParams = {
+      userId: user.id,
+      libraryId: storedContext?.libraryId,
       title: searchTitle,
       author: dto.author,
       isbn: dto.isbn,
@@ -144,12 +146,15 @@ export class MetadataFetchController {
   }
 
   @Get('lookup')
-  async lookup(@Query() dto: LookupMetadataDto): Promise<MetadataSearchCandidateEvent | null> {
+  async lookup(@Query() dto: LookupMetadataDto, @CurrentUser() user: RequestUser): Promise<MetadataSearchCandidateEvent | null> {
     const [enabledProvider] = await this.resolveEnabledProviderKeys([dto.provider]);
     if (!enabledProvider) return null;
 
     const [result, preferences] = await Promise.all([
-      this.metadataFetchService.lookupById(enabledProvider, dto.id, { directive: requestDirective(dto.cache) }),
+      this.metadataFetchService.lookupById(enabledProvider, dto.id, {
+        directive: requestDirective(dto.cache),
+        params: { userId: user.id },
+      }),
       this.metadataPreferences.getGlobal(),
     ]);
     if (!result) return null;

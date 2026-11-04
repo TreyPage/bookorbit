@@ -7,6 +7,7 @@ import { providerRequestKey } from '../../../common/provider-cache/provider-call
 import type { CacheKeyDescriptor } from '../../../common/provider-cache/provider-cache-spec';
 import type { appConfig } from '../../../config/config';
 import type { ProviderConfigService } from '../../metadata-preferences/provider-config.service';
+import type { HardcoverSettingsService } from '../../hardcover/hardcover-settings.service';
 import { ProviderThrottleTracker } from '../provider-throttle.tracker';
 import { AmazonProvider } from './amazon/amazon.provider';
 import { AudibleProvider } from './audible/audible.provider';
@@ -50,6 +51,7 @@ const CONFIG: ProviderConfigurations = {
 };
 
 const SECRETS = ['google-secret', 'amazon-secret', 'hardcover-secret', 'comicvine-secret'];
+const hardcoverSettings = { getMetadataToken: () => Promise.resolve('hardcover-secret') } as unknown as HardcoverSettingsService;
 
 function buildProvider(key: MetadataProviderKey, config: ProviderConfigurations = CONFIG): MetadataProvider {
   const providerConfig = { getConfig: () => Promise.resolve(config) } as unknown as ProviderConfigService;
@@ -71,7 +73,7 @@ function buildProvider(key: MetadataProviderKey, config: ProviderConfigurations 
     case MetadataProviderKey.AUDIBLE:
       return new AudibleProvider(providerConfig);
     case MetadataProviderKey.HARDCOVER:
-      return new HardcoverProvider(new HardcoverClient(), providerConfig);
+      return new HardcoverProvider(new HardcoverClient(), providerConfig, hardcoverSettings);
     case MetadataProviderKey.COMICVINE:
       return new ComicVineProvider(new ComicVineClient(), providerConfig, new ProviderThrottleTracker());
     case MetadataProviderKey.OPEN_LIBRARY:
@@ -84,6 +86,8 @@ function buildProvider(key: MetadataProviderKey, config: ProviderConfigurations 
 }
 
 const BASE: MetadataSearchParams = {
+  userId: 1,
+  libraryId: 5,
   title: 'Dune',
   author: 'Frank Herbert',
   isbn: '9780441172719',
@@ -229,12 +233,12 @@ const CASES: DeclarationCase[] = [
   },
   {
     key: MetadataProviderKey.HARDCOVER,
-    withIsbn: { ...TITLE_AUTHOR, ...ISBN_ONLY, isAudiobook: true, hardcoverEditionId: '42' },
-    withoutIsbn: { ...TITLE_AUTHOR, isAudiobook: true, hardcoverEditionId: '42' },
+    withIsbn: { userId: 1, libraryId: 5, ...TITLE_AUTHOR, ...ISBN_ONLY, isAudiobook: true, hardcoverEditionId: '42' },
+    withoutIsbn: { userId: 1, libraryId: 5, ...TITLE_AUTHOR, isAudiobook: true, hardcoverEditionId: '42' },
     searchReads: ['isAudiobook', 'hardcoverEditionId', 'resultsPerProvider'],
     honoursMax: false,
     lookup: {
-      inputs: { id: 'provider-id', isAudiobook: true, hardcoverEditionId: '42', isbn: '9780441172719' },
+      inputs: { id: 'provider-id', userId: 1, libraryId: 5, isAudiobook: true, hardcoverEditionId: '42', isbn: '9780441172719' },
       reads: ['isAudiobook', 'hardcoverEditionId'],
     },
     fingerprint: {},
@@ -302,7 +306,7 @@ describe('provider cache declarations', () => {
     it('declares the current mapping version', () => {
       const bumped: Partial<Record<MetadataProviderKey, number>> = {
         [MetadataProviderKey.COMICVINE]: 3,
-        [MetadataProviderKey.HARDCOVER]: 2,
+        [MetadataProviderKey.HARDCOVER]: 3,
       };
       expect(specOf(testCase.key).version).toBe(bumped[testCase.key] ?? 1);
     });
@@ -361,10 +365,13 @@ describe('provider cache declarations', () => {
 
     it.each([
       [MetadataProviderKey.GOOGLE, { ...CONFIG, google: { enabled: true, apiKey: '   ' } }],
-      [MetadataProviderKey.HARDCOVER, { ...CONFIG, hardcover: { enabled: true, apiKey: '' } }],
       [MetadataProviderKey.COMICVINE, { ...CONFIG, comicvine: { enabled: true, apiKey: '' } }],
     ])('%s is unavailable without its credential', async (key, config) => {
       expect((await specOf(key, config).context()).available).toBe(false);
+    });
+
+    it('keeps global cache availability separate from a personal Hardcover token', async () => {
+      expect((await specOf(MetadataProviderKey.HARDCOVER, { ...CONFIG, hardcover: { enabled: true, apiKey: '' } }).context()).available).toBe(true);
     });
 
     it('fingerprints an Amazon cookie by presence and locale only', async () => {

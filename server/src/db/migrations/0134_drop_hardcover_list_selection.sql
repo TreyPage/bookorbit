@@ -1,0 +1,1 @@
+ALTER TABLE "hardcover_user_settings" DROP COLUMN "hardcover_list_ids";

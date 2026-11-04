@@ -5,7 +5,18 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
-import { authors, bookAuthors, bookFiles, bookMetadata, bookNarrators, books, libraries, libraryFolders, narrators } from '../../db/schema';
+import {
+  authors,
+  bookAuthors,
+  bookFiles,
+  bookMergeSources,
+  bookMetadata,
+  bookNarrators,
+  books,
+  libraries,
+  libraryFolders,
+  narrators,
+} from '../../db/schema';
 
 type Db = NodePgDatabase<typeof schema>;
 
@@ -173,6 +184,16 @@ export class FileRenameRepository {
         await tx.update(bookFiles).set({ absolutePath: update.absolutePath, relPath: update.relPath }).where(eq(bookFiles.id, update.id));
       }
       await tx.update(books).set({ folderPath }).where(eq(books.id, bookId));
+    });
+  }
+
+  async finalizeFolderRename(bookId: number): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const [book] = await tx.select({ libraryFolderId: books.libraryFolderId }).from(books).where(eq(books.id, bookId)).limit(1);
+      if (!book) return;
+
+      await tx.update(bookFiles).set({ libraryFolderId: book.libraryFolderId, updatedAt: new Date() }).where(eq(bookFiles.bookId, bookId));
+      await tx.delete(bookMergeSources).where(eq(bookMergeSources.targetBookId, bookId));
     });
   }
 

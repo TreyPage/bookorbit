@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ProviderCallRecord, runWithProviderCallRecord } from '../../../common/provider-cache/provider-call-context';
 import type { ProviderConfigService } from '../../metadata-preferences/provider-config.service';
+import type { HardcoverSettingsService } from '../../hardcover/hardcover-settings.service';
 import { ProviderThrottleTracker } from '../provider-throttle.tracker';
 import { AudibleProvider } from './audible/audible.provider';
 import { AudnexusProvider } from './audnexus/audnexus.provider';
@@ -45,6 +46,7 @@ const CONFIG: ProviderConfigurations = {
 };
 
 const providerConfig = { getConfig: () => Promise.resolve(CONFIG) } as unknown as ProviderConfigService;
+const hardcoverSettings = { getMetadataToken: () => Promise.resolve('hardcover-key') } as unknown as HardcoverSettingsService;
 
 type Handler = (url: URL, init?: RequestInit) => Response | Promise<Response>;
 
@@ -118,7 +120,7 @@ interface TrustSuite {
   genuineEmpty: Handler;
 }
 
-const TITLE_AUTHOR: MetadataSearchParams = { title: 'Dune', author: 'Frank Herbert' };
+const TITLE_AUTHOR: MetadataSearchParams = { userId: 1, title: 'Dune', author: 'Frank Herbert' };
 const AUDIOBOOK: MetadataSearchParams = { ...TITLE_AUTHOR, isAudiobook: true };
 
 const SUITES: TrustSuite[] = [
@@ -155,7 +157,7 @@ const SUITES: TrustSuite[] = [
   },
   {
     name: 'hardcover',
-    build: () => new HardcoverProvider(new HardcoverClient(), providerConfig),
+    build: () => new HardcoverProvider(new HardcoverClient(), providerConfig, hardcoverSettings),
     params: TITLE_AUTHOR,
     apiErrorBody: () => json({ errors: [{ message: 'field "search" not found in type: query_root' }] }),
     partialFailure: () => json({ data: { search: { results: { hits: [{ document: { id: '1', slug: 'dune' } }], found: 1 } } } }),
@@ -298,7 +300,7 @@ describe('authoritative lookup statuses', () => {
     { name: 'itunes', build: () => new ITunesProvider(providerConfig) as IdentifiableProvider, body: { resultCount: 0, results: [] } },
     {
       name: 'hardcover',
-      build: () => new HardcoverProvider(new HardcoverClient(), providerConfig) as IdentifiableProvider,
+      build: () => new HardcoverProvider(new HardcoverClient(), providerConfig, hardcoverSettings) as IdentifiableProvider,
       body: { data: { books: [] } },
     },
   ])('$name keeps an empty lookup answer cacheable', async ({ build, body }) => {
@@ -315,7 +317,7 @@ describe('authoritative lookup statuses', () => {
     { name: 'google', build: () => new GoogleProvider(providerConfig) as IdentifiableProvider },
     { name: 'itunes', build: () => new ITunesProvider(providerConfig) as IdentifiableProvider },
     { name: 'audible', build: () => new AudibleProvider(providerConfig) as IdentifiableProvider },
-    { name: 'hardcover', build: () => new HardcoverProvider(new HardcoverClient(), providerConfig) as IdentifiableProvider },
+    { name: 'hardcover', build: () => new HardcoverProvider(new HardcoverClient(), providerConfig, hardcoverSettings) as IdentifiableProvider },
     { name: 'ranobedb', build: () => new RanobeDbProvider(new RanobeDbClient(), providerConfig) as IdentifiableProvider },
   ])('$name does not pass a malformed lookup body off as an answer', async ({ build }) => {
     routeEgress(malformedJson);
@@ -328,7 +330,11 @@ describe('authoritative lookup statuses', () => {
 
   it.each([
     { name: 'audible', build: () => new AudibleProvider(providerConfig) as IdentifiableProvider, body: { message: 'error' } },
-    { name: 'hardcover', build: () => new HardcoverProvider(new HardcoverClient(), providerConfig) as IdentifiableProvider, body: { errors: [{}] } },
+    {
+      name: 'hardcover',
+      build: () => new HardcoverProvider(new HardcoverClient(), providerConfig, hardcoverSettings) as IdentifiableProvider,
+      body: { errors: [{}] },
+    },
   ])('$name does not cache a lookup error body as not found', async ({ build, body }) => {
     routeEgress(() => json(body));
     const provider = build();

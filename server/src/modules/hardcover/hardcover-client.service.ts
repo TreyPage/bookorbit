@@ -9,6 +9,24 @@ export interface HardcoverGraphQLResponse<T> {
   errors?: { message: string }[];
 }
 
+type HardcoverHttpErrorBody = {
+  error?: unknown;
+  error_description?: unknown;
+  scope?: unknown;
+};
+
+export class HardcoverApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly errorCode: string | null,
+    readonly description: string | null,
+    readonly requiredScope: string | null,
+  ) {
+    super(`Hardcover API error: ${status}`);
+    this.name = 'HardcoverApiError';
+  }
+}
+
 @Injectable()
 export class HardcoverClientService {
   private readonly logger = new Logger(HardcoverClientService.name);
@@ -61,10 +79,17 @@ export class HardcoverClientService {
 
     if (!response.ok) {
       const errorClass = `HttpError${response.status}`;
+      const body = (await response.json().catch((error: unknown) => {
+        if (error instanceof SyntaxError) return null;
+        throw error;
+      })) as HardcoverHttpErrorBody | null;
+      const errorCode = typeof body?.error === 'string' ? body.error : null;
+      const description = typeof body?.error_description === 'string' ? body.error_description : null;
+      const requiredScope = typeof body?.scope === 'string' ? body.scope : null;
       this.logger.error(
-        `[hardcover.client] [fail] userId=${userId} status=${response.status} errorClass=${errorClass} error="unexpected HTTP status" - request failed`,
+        `[hardcover.client] [fail] userId=${userId} status=${response.status} errorClass=${errorClass} scope=${sanitizeLogValue(requiredScope ?? 'unknown')} error="${sanitizeLogValue(description ?? errorCode ?? 'unexpected HTTP status')}" - request failed`,
       );
-      throw new Error(`Hardcover API error: ${response.status}`);
+      throw new HardcoverApiError(response.status, errorCode, description, requiredScope);
     }
 
     const json = (await response.json()) as HardcoverGraphQLResponse<T>;

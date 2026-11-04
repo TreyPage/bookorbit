@@ -73,7 +73,7 @@ export function useSeriesDetail(seriesId: Ref<number | null>) {
 
       items.value = reset ? data.items : [...items.value, ...data.items]
       total.value = data.total
-      seriesInfo.value = data.seriesInfo
+      if (reset || seriesInfo.value === null) seriesInfo.value = data.seriesInfo
       page.value = requestPage + 1
     } catch (err) {
       if (token !== requestToken) return

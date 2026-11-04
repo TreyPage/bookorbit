@@ -121,7 +121,7 @@ describe('ProviderConfigService', () => {
 
     expect(config.google).toEqual({ enabled: false, apiKey: 'key-1' });
     expect(config.amazon).toEqual({ enabled: true, domain: 'amazon.com', cookie: '' });
-    expect(config.hardcover).toEqual({ enabled: true, apiKey: 'hardcover-key' });
+    expect(config.hardcover).toEqual({ enabled: true, apiKey: '' });
     expect(config.itunes).toEqual({ enabled: false, coverResolution: 'high' });
   });
 
@@ -217,7 +217,7 @@ describe('ProviderConfigService', () => {
 
     expect(updated.google).toEqual({ enabled: false, apiKey: 'old' });
     expect(updated.amazon).toEqual({ enabled: true, domain: 'amazon.com', cookie: 'session-cookie' });
-    expect(updated.hardcover).toEqual({ enabled: true, apiKey: 'h-key' });
+    expect(updated.hardcover).toEqual({ enabled: true, apiKey: '' });
     expect(updated.itunes).toEqual({ enabled: true, coverResolution: 'standard' });
     expect(db.transaction).toHaveBeenCalledTimes(1);
     expect(db.__tx.execute).toHaveBeenCalledTimes(1);
@@ -242,56 +242,19 @@ describe('ProviderConfigService', () => {
     expect(db.__tx.insert).toHaveBeenCalledTimes(1);
   });
 
-  it('rejects enabling Hardcover without an API key', async () => {
+  it('does not persist a global Hardcover API key', async () => {
     db.__tx.query.appSettings.findFirst.mockResolvedValue(undefined);
 
-    await expect(service.updateConfig({ hardcover: { enabled: true } })).rejects.toThrow('Hardcover requires an API key before it can be enabled');
-    expect(db.__tx.insert).not.toHaveBeenCalled();
+    const updated = await service.updateConfig({ hardcover: { enabled: true, apiKey: 'legacy-key' } });
+
+    expect(updated.hardcover).toEqual({ enabled: true, apiKey: '' });
+    expect(db.__tx.insert).toHaveBeenCalledTimes(1);
   });
 
   it('rejects enabling ComicVine without an API key', async () => {
     db.__tx.query.appSettings.findFirst.mockResolvedValue(undefined);
 
     await expect(service.updateConfig({ comicvine: { enabled: true } })).rejects.toThrow('ComicVine requires an API key before it can be enabled');
-    expect(db.__tx.insert).not.toHaveBeenCalled();
-  });
-
-  it('rejects enabling Hardcover when live token validation fails', async () => {
-    db.__tx.query.appSettings.findFirst.mockResolvedValue(undefined);
-    fetchMock.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          errors: [{ message: 'Malformed Authorization header' }],
-        }),
-        { status: 200 },
-      ),
-    );
-
-    await expect(service.updateConfig({ hardcover: { enabled: true, apiKey: 'invalid-token' } })).rejects.toThrow(
-      'Hardcover API error: Malformed Authorization header',
-    );
-    expect(db.__tx.insert).not.toHaveBeenCalled();
-  });
-
-  it('rejects enabling Hardcover when the live validation request times out', async () => {
-    db.__tx.query.appSettings.findFirst.mockResolvedValue(undefined);
-    const timeout = new Error('aborted');
-    timeout.name = 'TimeoutError';
-    fetchMock.mockRejectedValue(timeout);
-
-    await expect(service.updateConfig({ hardcover: { enabled: true, apiKey: 'token-123' } })).rejects.toThrow(
-      'Hardcover validation timed out. Please try again.',
-    );
-    expect(db.__tx.insert).not.toHaveBeenCalled();
-  });
-
-  it('rejects enabling Hardcover when the live validation request errors', async () => {
-    db.__tx.query.appSettings.findFirst.mockResolvedValue(undefined);
-    fetchMock.mockRejectedValue(new Error('network down'));
-
-    await expect(service.updateConfig({ hardcover: { enabled: true, apiKey: 'token-123' } })).rejects.toThrow(
-      'Could not reach Hardcover to validate the token.',
-    );
     expect(db.__tx.insert).not.toHaveBeenCalled();
   });
 
@@ -307,7 +270,7 @@ describe('ProviderConfigService', () => {
       amazon: { cookie: 'session-cookie' },
     });
 
-    expect(updated.hardcover).toEqual({ enabled: true, apiKey: 'existing-token' });
+    expect(updated.hardcover).toEqual({ enabled: true, apiKey: '' });
     expect(updated.amazon.cookie).toBe('session-cookie');
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -325,7 +288,7 @@ describe('ProviderConfigService', () => {
     expect(updated.amazon.cookie).toBe('session-cookie');
   });
 
-  it('normalizes Amazon cookie and Hardcover token formats before persisting', async () => {
+  it('normalizes Amazon cookies and discards deprecated global Hardcover keys', async () => {
     db.__tx.query.appSettings.findFirst.mockResolvedValue(undefined);
 
     const updated = await service.updateConfig({
@@ -334,7 +297,7 @@ describe('ProviderConfigService', () => {
     });
 
     expect(updated.amazon.cookie).toBe('session-id=abc; ubid-main=xyz');
-    expect(updated.hardcover.apiKey).toBe('hardcover-token');
+    expect(updated.hardcover.apiKey).toBe('');
   });
 
   it('acquires advisory lock before reading config inside update transaction', async () => {
@@ -407,8 +370,7 @@ describe('ProviderConfigService', () => {
     expect(statuses.find((s) => s.key === MetadataProviderKey.GOOGLE)?.configured).toBe(false);
     expect(statuses.find((s) => s.key === MetadataProviderKey.GOOGLE)?.hint).toContain('API key required');
     expect(statuses.find((s) => s.key === MetadataProviderKey.AMAZON)?.hint).toContain('Cookie recommended');
-    expect(statuses.find((s) => s.key === MetadataProviderKey.HARDCOVER)?.configured).toBe(false);
-    expect(statuses.find((s) => s.key === MetadataProviderKey.HARDCOVER)?.hint).toContain('Run Test');
+    expect(statuses.find((s) => s.key === MetadataProviderKey.HARDCOVER)?.configured).toBe(true);
     expect(statuses.find((s) => s.key === MetadataProviderKey.COMICVINE)?.configured).toBe(false);
     expect(statuses.find((s) => s.key === MetadataProviderKey.COMICVINE)?.hint).toContain('API key required');
     expect(statuses.find((s) => s.key === MetadataProviderKey.GOODREADS)?.enabled).toBe(false);
@@ -472,12 +434,22 @@ describe('ProviderConfigService', () => {
     expect(db.__tx.update).not.toHaveBeenCalled();
   });
 
-  it('reports hardcover as configured when api key is present', async () => {
+  it('removes the legacy global Hardcover key without migrating it', async () => {
+    db.__tx.query.appSettings.findFirst.mockResolvedValue({
+      value: JSON.stringify({ hardcover: { enabled: true, apiKey: 'legacy-key-not-migrated' } }),
+    });
+
+    await service.onModuleInit();
+
+    expect(db.__txUpdateChain.set).toHaveBeenCalledWith({ value: JSON.stringify({ hardcover: { enabled: true } }) });
+  });
+
+  it('treats Hardcover as user-configured rather than checking a global key', async () => {
     const statuses = await service.getProviderStatuses({
       google: { enabled: true, apiKey: 'g' },
       amazon: { enabled: true, domain: 'amazon.com', cookie: 'c' },
       goodreads: { enabled: true },
-      hardcover: { enabled: true, apiKey: 'h-key' },
+      hardcover: { enabled: true, apiKey: '' },
       openLibrary: { enabled: true },
       itunes: { enabled: true, coverResolution: 'high' },
       audible: { enabled: false, domain: 'com' },

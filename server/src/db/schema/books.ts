@@ -123,13 +123,6 @@ export const bookFiles = pgTable(
       .where(sql`${t.mediaOverlayAvailable} = true`),
     index('book_files_library_folder_file_hash_idx').on(t.libraryFolderId, t.fileHash),
     index('book_files_library_folder_ino_idx').on(t.libraryFolderId, t.ino),
-    foreignKey({
-      columns: [t.bookId, t.libraryFolderId],
-      foreignColumns: [books.id, books.libraryFolderId],
-      name: 'book_files_book_folder_consistency_fk',
-    })
-      .onUpdate('cascade')
-      .onDelete('cascade'),
     check('book_files_role_chk', sql`${t.role} in ('content', 'cover', 'metadata', 'supplement')`),
     check('book_files_size_bytes_nonnegative_chk', sql`${t.sizeBytes} is null or ${t.sizeBytes} >= 0`),
     check('book_files_duration_seconds_nonnegative_chk', sql`${t.durationSeconds} is null or ${t.durationSeconds} >= 0`),

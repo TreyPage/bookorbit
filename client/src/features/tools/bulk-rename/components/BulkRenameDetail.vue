@@ -5,6 +5,7 @@ import { ArrowRight, ChevronLeft, ChevronRight, ExternalLink, Eye, EyeOff, Minus
 import type { BulkRenamePreviewItem } from '@bookorbit/types'
 
 import { Button } from '@/components/ui/button'
+import { RouterLink } from 'vue-router'
 import BulkRenameStatusBadge from './BulkRenameStatusBadge.vue'
 import PathDiffLine from './PathDiffLine.vue'
 import PathTree from './PathTree.vue'
@@ -123,10 +124,12 @@ function handleNext(): void {
         </p>
       </div>
 
-      <Button as="router-link" :to="{ name: 'book-detail', params: { bookId: item.bookId } }" variant="outline">
-        <ExternalLink class="size-3.5" aria-hidden="true" />
-        <span class="hidden sm:inline">{{ t('tools.bulkRename.openBook') }}</span>
-      </Button>
+      <RouterLink :to="{ name: 'book-detail', params: { bookId: item.bookId } }">
+        <Button variant="outline" class="group-hover:underline hover:underline-offset-4">
+          <ExternalLink class="size-3.5" aria-hidden="true" />
+          <span class="hidden sm:inline">{{ t('tools.bulkRename.openBook') }}</span>
+        </Button>
+      </RouterLink>
     </div>
 
     <div class="min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-6">

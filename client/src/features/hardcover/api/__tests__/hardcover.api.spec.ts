@@ -16,6 +16,8 @@ import {
   fetchHardcoverBookSyncState,
   fetchHardcoverEditions,
   fetchHardcoverLinkedBooks,
+  fetchHardcoverLists,
+  fetchHardcoverShelves,
   fetchHardcoverSettings,
   fetchHardcoverSyncPendingSummary,
   fetchHardcoverSyncStatus,
@@ -79,6 +81,25 @@ describe('hardcover.api', () => {
         method: 'POST',
         body: JSON.stringify({ token: 'tok' }),
       }),
+    )
+  })
+
+  it('fetches Hardcover shelves', async () => {
+    mockApi.mockResolvedValueOnce(jsonResponse({ shelves: [{ id: 'read', name: 'Read' }] }))
+
+    await expect(fetchHardcoverShelves()).resolves.toEqual({ shelves: [{ id: 'read', name: 'Read' }] })
+    expect(mockApi).toHaveBeenCalledWith('/api/v1/hardcover/shelves')
+  })
+
+  it('fetches custom Hardcover lists with the unsaved token', async () => {
+    mockApi.mockResolvedValueOnce(jsonResponse({ lists: [{ id: 19, name: 'Owned', booksCount: 63 }] }))
+
+    await expect(fetchHardcoverLists('new-token')).resolves.toEqual({
+      lists: [{ id: 19, name: 'Owned', booksCount: 63 }],
+    })
+    expect(mockApi).toHaveBeenCalledWith(
+      '/api/v1/hardcover/lists',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ token: 'new-token' }) }),
     )
   })
 

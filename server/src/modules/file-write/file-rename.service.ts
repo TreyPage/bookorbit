@@ -357,6 +357,7 @@ export class FileRenameService implements OnModuleDestroy {
           moved.push({ from: movedFrom, to: newPath });
         }
       }
+      await this.renameRepo.finalizeFolderRename(bookId);
     } catch (error) {
       for (const { from, to } of [...moved].reverse()) {
         try {
@@ -435,6 +436,7 @@ export class FileRenameService implements OnModuleDestroy {
               movedFilesInside.push({ from: movedFrom, to: intendedPath });
             }
           }
+          await this.renameRepo.finalizeFolderRename(bookId);
         } catch (innerError) {
           for (const { from, to } of [...movedFilesInside].reverse()) {
             try {
@@ -593,6 +595,7 @@ export class FileRenameService implements OnModuleDestroy {
           movedFiles.push({ from: movedFrom, to: newFilePath });
         }
       }
+      await this.renameRepo.finalizeFolderRename(bookId);
     } catch (error) {
       for (const { from, to } of [...movedFiles].reverse()) {
         try {

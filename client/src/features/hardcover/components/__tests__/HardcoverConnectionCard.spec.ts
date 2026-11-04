@@ -1,13 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { nextTick, ref } from 'vue'
-import type { HardcoverSettings, UpsertHardcoverSettingsPayload } from '@bookorbit/types'
+import type { HardcoverList, HardcoverShelf, HardcoverSettings, UpsertHardcoverSettingsPayload } from '@bookorbit/types'
 import HardcoverConnectionCard from '../HardcoverConnectionCard.vue'
 
 const settings = ref<HardcoverSettings | null>(null)
+const shelves = ref<HardcoverShelf[]>([])
+const lists = ref<HardcoverList[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const validating = ref(false)
+const loadingShelves = ref(false)
+const loadingLists = ref(false)
+const shelvesError = ref<string | null>(null)
+const listsError = ref<string | null>(null)
 const error = ref<string | null>(null)
 
 const mocks = vi.hoisted(() => ({
@@ -15,6 +21,8 @@ const mocks = vi.hoisted(() => ({
   saveSettings: vi.fn<(payload: UpsertHardcoverSettingsPayload) => Promise<boolean>>(),
   disconnect: vi.fn<() => Promise<void>>(),
   validateToken: vi.fn<(token?: string) => Promise<{ valid: boolean; username?: string }>>(),
+  fetchShelves: vi.fn<() => Promise<boolean>>(),
+  fetchLists: vi.fn<(token?: string) => Promise<boolean>>(),
 }))
 
 const toastSuccess = vi.hoisted(() => vi.fn<(message: string) => void>())
@@ -23,14 +31,22 @@ const toastError = vi.hoisted(() => vi.fn<(message: string) => void>())
 vi.mock('../../composables/useHardcoverSettings', () => ({
   useHardcoverSettings: () => ({
     settings,
+    shelves,
+    lists,
     loading,
     saving,
     validating,
+    loadingShelves,
+    loadingLists,
+    shelvesError,
+    listsError,
     error,
     fetchSettings: mocks.fetchSettings,
     saveSettings: mocks.saveSettings,
     disconnect: mocks.disconnect,
     validateToken: mocks.validateToken,
+    fetchShelves: mocks.fetchShelves,
+    fetchLists: mocks.fetchLists,
   }),
 }))
 
@@ -48,6 +64,8 @@ function makeSettings(overrides: Partial<HardcoverSettings> = {}): HardcoverSett
     effectiveEnabled: true,
     disabledReason: null,
     bookSyncMode: 'all_eligible',
+    hardcoverShelfIds: [],
+    hardcoverListIds: [],
     autoSyncOnStatusChange: true,
     autoSyncOnProgressUpdate: true,
     autoSyncOnRatingChange: true,
@@ -61,13 +79,34 @@ describe('HardcoverConnectionCard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     settings.value = makeSettings()
+    shelves.value = []
+    lists.value = []
     loading.value = false
     saving.value = false
     validating.value = false
+    loadingShelves.value = false
+    loadingLists.value = false
+    shelvesError.value = null
+    listsError.value = null
     error.value = null
     mocks.saveSettings.mockResolvedValue(true)
     mocks.disconnect.mockResolvedValue()
     mocks.validateToken.mockResolvedValue({ valid: true, username: 'neon' })
+    mocks.fetchShelves.mockImplementation(async () => {
+      shelves.value = [
+        { id: 'want_to_read', name: 'Want to Read' },
+        { id: 'currently_reading', name: 'Currently Reading' },
+        { id: 'read', name: 'Read' },
+        { id: 'paused', name: 'Paused' },
+        { id: 'did_not_finish', name: 'Did Not Finish' },
+        { id: 'ignored', name: 'Ignored' },
+      ]
+      return true
+    })
+    mocks.fetchLists.mockImplementation(async () => {
+      lists.value = [{ id: 19, name: 'Owned', booksCount: 63 }]
+      return true
+    })
   })
 
   afterEach(() => {
@@ -114,6 +153,7 @@ describe('HardcoverConnectionCard', () => {
     expect(mocks.saveSettings).toHaveBeenCalledWith(
       expect.objectContaining({
         apiToken: 'token-123',
+        hardcoverShelfIds: [],
         enabled: true,
         bookSyncMode: 'selected_only',
         autoSyncOnStatusChange: true,
@@ -130,9 +170,11 @@ describe('HardcoverConnectionCard', () => {
 
     const wrapper = mount(HardcoverConnectionCard)
     await flushPromises()
+    await flushPromises()
 
     expect(wrapper.text()).not.toContain('Sync options')
     expect(wrapper.text()).not.toContain('Book sync scope')
+    expect(wrapper.text()).not.toContain('Hardcover shelves')
   })
 
   it('validates tokens and shows both valid and invalid results', async () => {
@@ -147,7 +189,10 @@ describe('HardcoverConnectionCard', () => {
     await flushPromises()
 
     expect(mocks.validateToken).toHaveBeenCalledWith('valid-token')
+    expect(mocks.fetchShelves).toHaveBeenCalled()
+    expect(mocks.fetchLists).toHaveBeenCalledWith('valid-token')
     expect(wrapper.text()).toContain('Valid (neon)')
+    expect(wrapper.text()).toContain('Owned')
 
     mocks.validateToken.mockResolvedValueOnce({ valid: false })
     await tokenInput.setValue('bad-token')
@@ -155,6 +200,24 @@ describe('HardcoverConnectionCard', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Invalid token')
+  })
+
+  it('loads saved lists and submits the selected list IDs', async () => {
+    settings.value = makeSettings({ hardcoverShelfIds: ['read'] })
+    const wrapper = mount(HardcoverConnectionCard)
+    await flushPromises()
+    await flushPromises()
+
+    expect(mocks.fetchLists).toHaveBeenCalled()
+    const owned = wrapper.findAll('label').find((label) => label.text().includes('Owned'))
+    expect(owned).toBeDefined()
+    await owned!.get('input').setValue(true)
+
+    const saveButton = wrapper.findAll('button').find((button) => button.text().includes('Save'))!
+    await saveButton.trigger('click')
+    await flushPromises()
+
+    expect(mocks.saveSettings).toHaveBeenCalledWith(expect.objectContaining({ hardcoverShelfIds: ['read'], hardcoverListIds: [19] }))
   })
 
   it('warns on empty validation, surfaces save failures, and clears state on disconnect', async () => {

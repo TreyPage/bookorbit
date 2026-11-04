@@ -3124,6 +3124,7 @@ export class BookService {
 
       const isAudiobook = resolveIsAudiobook(fileRows, meta, book.books.primaryFileId);
       const searchParams: MetadataSearchParams = {
+        userId: user.id,
         title: meta?.title ?? undefined,
         author: authorRows[0]?.name ?? undefined,
         isbn: meta?.isbn13?.trim() || meta?.isbn10?.trim() || undefined,

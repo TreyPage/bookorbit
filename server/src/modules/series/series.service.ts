@@ -9,6 +9,7 @@ import { assembleBookCards } from '../book/utils/assemble-book-cards';
 import { BookReadService } from '../book/book-read.service';
 import { BookCoverStore } from '../book-cover-store/book-cover-store.service';
 import { LibraryService } from '../library/library.service';
+import { HardcoverSeriesCatalogService } from '../hardcover/hardcover-series-catalog.service';
 import { FindNextSeriesBookDto } from './dto/find-next-series-book.dto';
 import { ListSeriesBooksDto } from './dto/list-series-books.dto';
 import { ListSeriesDto } from './dto/list-series.dto';
@@ -25,6 +26,7 @@ export class SeriesService {
     private readonly bookReadService: BookReadService,
     private readonly libraryService: LibraryService,
     private readonly coverStore: BookCoverStore,
+    private readonly hardcoverSeriesCatalog: HardcoverSeriesCatalogService,
   ) {}
 
   private assertPaginationWindow(page: number, size: number): void {
@@ -147,6 +149,8 @@ export class SeriesService {
             authors: existsInAnyLibrary.authors,
             possibleGaps: [],
             expectedBookCount: existsInAnyLibrary.expectedBookCount ?? null,
+            missingBooks: [],
+            missingBooksStatus: 'no_missing',
           };
           return { items: [], total: 0, page, size, seriesInfo: emptyInfo };
         }
@@ -155,6 +159,11 @@ export class SeriesService {
     }
 
     const possibleGaps = computeSeriesGaps(detail.indices, detail.bookCount, detail.expectedBookCount);
+    const missingBookCatalog =
+      page === 0
+        ? await this.hardcoverSeriesCatalog.findMissingBooks(user.id, detail.name, detail.indices)
+        : { books: [], missingPositions: [], expectedBookCount: null, catalogFound: false, status: 'not_loaded' as const };
+    const resolvedGaps = missingBookCatalog.catalogFound ? missingBookCatalog.missingPositions : possibleGaps;
     const volumeCounts = detail.members
       ? countSeriesVolumes({ members: detail.members, bookCount: detail.bookCount, expectedBookCount: detail.expectedBookCount })
       : { ownedVolumeCount: detail.bookCount, readVolumeCount: detail.readCount };
@@ -198,8 +207,10 @@ export class SeriesService {
       ownedVolumeCount: volumeCounts.ownedVolumeCount,
       readVolumeCount: volumeCounts.readVolumeCount,
       authors: detail.authors,
-      possibleGaps,
-      expectedBookCount: detail.expectedBookCount ?? null,
+      possibleGaps: resolvedGaps,
+      expectedBookCount: missingBookCatalog.expectedBookCount ?? detail.expectedBookCount ?? null,
+      missingBooks: missingBookCatalog.books,
+      missingBooksStatus: missingBookCatalog.status,
     };
 
     return { items, total: bookPage.total, page, size, seriesInfo };

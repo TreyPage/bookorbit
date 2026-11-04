@@ -1,20 +1,40 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Link, Save, CheckCircle2, AlertCircle, Info, Loader2, Unlink } from '@lucide/vue'
 import { toast } from 'vue-sonner'
+import type { HardcoverShelfId } from '@bookorbit/types'
 import ToggleSwitch from '@/components/ui/ToggleSwitch.vue'
 import { SECRET_INPUT_ATTRS } from '@/lib/secret-input'
 import { useHardcoverSettings } from '../composables/useHardcoverSettings'
 
 const { t } = useI18n()
 
-const { settings, saving, validating, error, fetchSettings, saveSettings, disconnect, validateToken } = useHardcoverSettings()
+const {
+  settings,
+  shelves,
+  lists,
+  saving,
+  validating,
+  loadingShelves,
+  loadingLists,
+  shelvesError,
+  listsError,
+  error,
+  fetchSettings,
+  saveSettings,
+  disconnect,
+  validateToken,
+  fetchShelves,
+  fetchLists,
+} = useHardcoverSettings()
 
 const tokenInput = ref('')
 const tokenVisible = ref(false)
 const validationResult = ref<{ valid: boolean; username?: string } | null>(null)
+const selectedShelfIds = ref<HardcoverShelfId[]>([])
+const selectedListIds = ref<number[]>([])
 
 const form = reactive({
   enabled: true,
@@ -34,6 +54,30 @@ onMounted(async () => {
     form.autoSyncOnProgressUpdate = settings.value.autoSyncOnProgressUpdate
     form.autoSyncOnRatingChange = settings.value.autoSyncOnRatingChange
     form.privacySettingId = settings.value.privacySettingId
+    selectedShelfIds.value = settings.value.hardcoverShelfIds
+    selectedListIds.value = settings.value.hardcoverListIds
+    if (settings.value.tokenConfigured) await Promise.all([fetchShelves(), fetchLists()])
+  }
+})
+
+watch(tokenInput, (token) => {
+  validationResult.value = null
+  shelves.value = []
+  shelvesError.value = null
+  lists.value = []
+  listsError.value = null
+
+  if (token.trim()) {
+    selectedShelfIds.value = []
+    selectedListIds.value = []
+  } else if (settings.value?.tokenConfigured) {
+    selectedShelfIds.value = settings.value.hardcoverShelfIds
+    selectedListIds.value = settings.value.hardcoverListIds
+    void fetchShelves()
+    void fetchLists()
+  } else {
+    selectedShelfIds.value = []
+    selectedListIds.value = []
   }
 })
 
@@ -44,11 +88,16 @@ async function handleValidateToken() {
   }
   const result = await validateToken(tokenInput.value.trim())
   validationResult.value = result
+  if (result.valid) {
+    await Promise.all([fetchShelves(), fetchLists(tokenInput.value.trim())])
+  }
 }
 
 async function handleSave() {
   const ok = await saveSettings({
     ...(tokenInput.value.trim() ? { apiToken: tokenInput.value.trim() } : {}),
+    hardcoverShelfIds: selectedShelfIds.value,
+    hardcoverListIds: selectedListIds.value,
     enabled: form.enabled,
     bookSyncMode: form.bookSyncMode,
     autoSyncOnStatusChange: form.autoSyncOnStatusChange,
@@ -68,6 +117,12 @@ async function handleDisconnect() {
   await disconnect()
   tokenInput.value = ''
   validationResult.value = null
+  selectedShelfIds.value = []
+  selectedListIds.value = []
+  shelves.value = []
+  lists.value = []
+  shelvesError.value = null
+  listsError.value = null
   toast.success(t('hardcover.connection.toast.disconnected'))
 }
 
@@ -152,6 +207,37 @@ function selectBookSyncMode(mode: 'all_eligible' | 'selected_only') {
           validationResult.valid ? t('hardcover.connection.valid', { username: validationResult.username }) : t('hardcover.connection.invalidToken')
         }}
       </span>
+    </div>
+
+    <div v-if="validationResult?.valid || (!tokenInput.trim() && settings?.tokenConfigured)" class="space-y-2">
+      <div>
+        <p class="text-sm font-medium">{{ t('hardcover.connection.shelves.title') }}</p>
+        <p class="text-xs text-muted-foreground mt-0.5">{{ t('hardcover.connection.shelves.description') }}</p>
+      </div>
+      <p v-if="loadingShelves" class="text-xs text-muted-foreground">{{ t('hardcover.connection.shelves.loading') }}</p>
+      <p v-else-if="shelvesError" class="text-xs text-destructive">{{ t('hardcover.connection.shelves.loadFailed') }} {{ shelvesError }}</p>
+      <div v-else-if="shelves.length > 0" class="max-h-48 space-y-1 overflow-y-auto rounded-md border border-border p-2">
+        <label v-for="shelf in shelves" :key="shelf.id" class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50">
+          <input v-model="selectedShelfIds" type="checkbox" :value="shelf.id" class="size-4 accent-primary" />
+          <span>{{ shelf.name }}</span>
+        </label>
+      </div>
+      <div class="space-y-2 pt-2">
+        <div>
+          <p class="text-sm font-medium">{{ t('hardcover.connection.lists.title') }}</p>
+          <p class="text-xs text-muted-foreground mt-0.5">{{ t('hardcover.connection.lists.description') }}</p>
+        </div>
+        <p v-if="listsError" class="text-xs text-destructive">{{ t('hardcover.connection.lists.loadFailed') }} {{ listsError }}</p>
+        <p v-else-if="loadingLists" class="text-xs text-muted-foreground">{{ t('hardcover.connection.lists.loading') }}</p>
+        <p v-else-if="lists.length === 0" class="text-xs text-muted-foreground">{{ t('hardcover.connection.lists.empty') }}</p>
+        <div v-else-if="lists.length > 0" class="max-h-48 space-y-1 overflow-y-auto rounded-md border border-border p-2">
+          <label v-for="list in lists" :key="list.id" class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50">
+            <input v-model="selectedListIds" type="checkbox" :value="list.id" class="size-4 accent-primary" />
+            <span class="min-w-0 flex-1 truncate">{{ list.name }}</span>
+            <span class="text-xs text-muted-foreground">{{ list.booksCount }}</span>
+          </label>
+        </div>
+      </div>
     </div>
 
     <div v-if="settings?.tokenConfigured" class="space-y-3 pt-2 border-t border-border">

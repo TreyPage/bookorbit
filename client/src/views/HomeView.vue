@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { formatNumber } from '@/i18n/formatters'
 import { Bookmark, BookmarkCheck, BookOpen, FileSpreadsheet, Pencil, RefreshCw, Telescope, Upload, X } from '@lucide/vue'
+import { toast } from 'vue-sonner'
 import VirtualBookGrid from '@/features/book/components/VirtualBookGrid.vue'
 import BookListRow from '@/features/book/components/BookListRow.vue'
 import VirtualBookTable from '@/features/book/components/VirtualBookTable.vue'
@@ -27,6 +28,7 @@ import { cn } from '@/lib/utils'
 import ViewHeaderDisplayControls from '@/components/view-header/ViewHeaderDisplayControls.vue'
 import BookUploadModal from '@/features/library/components/BookUploadModal.vue'
 import SelectionActionBar from '@/components/SelectionActionBar.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import AddToCollectionSheet from '@/features/collection/components/AddToCollectionSheet.vue'
 import MoveToLibrarySheet from '@/features/book/components/MoveToLibrarySheet.vue'
 import { useMoveToLibraryTarget } from '@/features/book/composables/useMoveToLibraryTarget'
@@ -72,6 +74,7 @@ import { useSavedViews, type SavedView } from '@/features/book/composables/useSa
 import type { GroupRule, Rule, SortSpec } from '@bookorbit/types'
 import EntityNotFound from '@/components/EntityNotFound.vue'
 import { type QuerySelectionState } from '@/features/book/composables/useBookBulkActions'
+import { mergeBooks } from '@/features/tools/api/book-merge'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -478,6 +481,10 @@ watch(libraryId, () => {
 const saveAsSmartScopeOpen = ref(false)
 const querySelection = ref<QuerySelectionState | null>(null)
 const showQuerySelectionBanner = ref(false)
+const mergeDialogOpen = ref(false)
+const mergeDialogBooks = ref<BookCard[]>([])
+const mergeTargetBookId = ref<number | null>(null)
+const mergingSelectedBooks = ref(false)
 
 const {
   tableRef,
@@ -528,6 +535,14 @@ const {
   selectionMode,
   querySelection,
   onMoveToLibrary: (bookId) => openMoveForBook(bookId),
+})
+
+const selectedMergeBooks = computed(() => books.value.filter((book) => selectedIds.value.has(book.id)))
+const canMergeSelectedBooks = computed(() => {
+  if (querySelection.value || selectedCount.value < 2 || selectedCount.value > 101) return false
+  if (selectedMergeBooks.value.length !== selectedCount.value) return false
+  const selectedLibraryIds = selectedMergeBooks.value.map((book) => book.libraryId ?? libraryId.value)
+  return selectedLibraryIds.every((id): id is number => id !== null) && new Set(selectedLibraryIds).size === 1
 })
 
 const {
@@ -625,6 +640,46 @@ const visibleExportColumns = computed(() => {
 function openMetadataExport(scope: 'selected' | 'all-matching') {
   metadataExportDefaultScope.value = scope
   metadataExportOpen.value = true
+}
+
+function handleMergeSelected(): void {
+  if (!canMergeSelectedBooks.value) return
+  mergeDialogBooks.value = [...selectedMergeBooks.value]
+  mergeTargetBookId.value = mergeDialogBooks.value[0]?.id ?? null
+  mergeDialogOpen.value = true
+}
+
+function handleMergeTargetChange(event: Event): void {
+  if (!(event.currentTarget instanceof HTMLInputElement)) return
+  const bookId = Number(event.currentTarget.value)
+  if (Number.isInteger(bookId) && mergeDialogBooks.value.some((book) => book.id === bookId)) {
+    mergeTargetBookId.value = bookId
+  }
+}
+
+function handleCancelMerge(): void {
+  if (mergingSelectedBooks.value) return
+  mergeDialogOpen.value = false
+}
+
+async function handleConfirmMerge(): Promise<void> {
+  const targetBookId = mergeTargetBookId.value
+  const sourceBookIds = mergeDialogBooks.value.filter((book) => book.id !== targetBookId).map((book) => book.id)
+  if (targetBookId === null || sourceBookIds.length === 0 || mergingSelectedBooks.value) return
+
+  mergingSelectedBooks.value = true
+  try {
+    const result = await mergeBooks(sourceBookIds, targetBookId)
+    toast.success(t('components.selectionActionBar.mergeSuccess', { count: result.merged }))
+    mergeDialogOpen.value = false
+    exitSelectionMode()
+    resetBooks()
+    refreshBuckets()
+  } catch {
+    toast.error(t('components.selectionActionBar.mergeFailed'))
+  } finally {
+    mergingSelectedBooks.value = false
+  }
 }
 
 watch(selectionMode, (active) => {
@@ -1024,6 +1079,7 @@ defineOptions({ name: 'HomeView' })
 
     <SelectionActionBar
       :metadata-editable="canEditSelectionMetadata"
+      :merge-enabled="canMergeSelectedBooks"
       :visible="selectionMode"
       :count="querySelection ? querySelection.total : selectedCount"
       :in-flight="inFlight"
@@ -1033,6 +1089,7 @@ defineOptions({ name: 'HomeView' })
       @export-metadata="openMetadataExport(querySelection ? 'all-matching' : 'selected')"
       @add-to-collection="addToCollectionOpen = true"
       @move-to-library="openMoveForSelection"
+      @merge="handleMergeSelected"
       @edit="handleEditSelected"
       @edit-individually="handleEditIndividually"
       @refresh-metadata="handleBulkRefreshMetadata"
@@ -1096,5 +1153,39 @@ defineOptions({ name: 'HomeView' })
     <BookUploadModal v-if="uploadOpen && libraryId !== null" :library-id="libraryId" @close="closeUpload" @uploaded="closeUpload" />
 
     <DeleteBookDialog :open="deleteBookId !== null" :deleting="deletingBook" @confirm="confirmDelete" @cancel="cancelDelete" />
+
+    <ConfirmDialog
+      :open="mergeDialogOpen"
+      :title="t('components.selectionActionBar.mergeDialogTitle')"
+      :description="t('components.selectionActionBar.mergeDialogDescription', { count: mergeDialogBooks.length })"
+      :confirm-label="t('components.selectionActionBar.mergeSelected')"
+      :confirmation-phrase="t('tools.bookMerge.confirm.phrase')"
+      :busy="mergingSelectedBooks"
+      :confirm-disabled="mergeTargetBookId === null"
+      @confirm="handleConfirmMerge"
+      @cancel="handleCancelMerge"
+    >
+      <fieldset class="mt-4 space-y-2">
+        <legend class="mb-2 text-sm font-medium text-foreground">{{ t('components.selectionActionBar.mergeTargetLabel') }}</legend>
+        <label
+          v-for="book in mergeDialogBooks"
+          :key="book.id"
+          class="flex cursor-pointer items-start gap-2 rounded-md border border-border p-3 text-sm text-foreground hover:bg-accent"
+        >
+          <input
+            type="radio"
+            name="selected-book-merge-target"
+            :value="book.id"
+            :checked="mergeTargetBookId === book.id"
+            class="mt-0.5 accent-primary"
+            @change="handleMergeTargetChange"
+          />
+          <span>
+            <span class="block font-medium">{{ book.title ?? t('tools.bookMerge.unknownTitle') }}</span>
+            <span class="block text-xs text-muted-foreground">{{ book.authors.join(', ') || t('tools.bookMerge.unknownAuthor') }}</span>
+          </span>
+        </label>
+      </fieldset>
+    </ConfirmDialog>
   </div>
 </template>

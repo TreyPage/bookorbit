@@ -1,7 +1,18 @@
-import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { HardcoverImportPreview, HardcoverImportPreviewRow } from '@bookorbit/types'
+import { resetLibraries } from '@/features/library/composables/useLibraries'
 import HardcoverImportReviewModal from '../HardcoverImportReviewModal.vue'
+
+type ApiFn = (input: RequestInfo | URL, init?: RequestInit & { _isRetry?: boolean }) => Promise<Response>
+
+vi.mock('@/lib/api', () => ({
+  api: vi.fn<ApiFn>(),
+}))
+
+import { api } from '@/lib/api'
+
+const mockApi = vi.mocked(api)
 
 function makeRow(overrides: Partial<HardcoverImportPreviewRow> = {}): HardcoverImportPreviewRow {
   const id = overrides.hardcoverUserBookId ?? 1000
@@ -12,6 +23,8 @@ function makeRow(overrides: Partial<HardcoverImportPreviewRow> = {}): HardcoverI
     hardcoverReadId: id + 30,
     hardcoverTitle: `Hardcover ${id}`,
     hardcoverAuthors: ['Frank Herbert'],
+    hardcoverIsbn10: null,
+    hardcoverIsbn13: null,
     hardcoverStatusId: 3,
     hardcoverStatusLabel: 'Read',
     importedStatus: 'read',
@@ -34,9 +47,15 @@ function makeRow(overrides: Partial<HardcoverImportPreviewRow> = {}): HardcoverI
   }
 }
 
-function makePreview(rows: HardcoverImportPreviewRow[]): HardcoverImportPreview {
+function makePreview(
+  rows: HardcoverImportPreviewRow[],
+  hardcoverShelfIds: HardcoverImportPreview['hardcoverShelfIds'] = ['read'],
+  hardcoverListIds: HardcoverImportPreview['hardcoverListIds'] = [],
+): HardcoverImportPreview {
   return {
     rows,
+    hardcoverShelfIds,
+    hardcoverListIds,
     summary: {
       totalHardcoverBooks: rows.length,
       matchedBooks: rows.filter((row) => row.localBookId != null).length,
@@ -66,6 +85,11 @@ function mountModal(preview = makePreview([makeRow()])) {
 }
 
 describe('HardcoverImportReviewModal', () => {
+  beforeEach(() => {
+    mockApi.mockReset()
+    resetLibraries()
+  })
+
   it('selects ready rows by default and emits the selected ids', async () => {
     const wrapper = mountModal(
       makePreview([
@@ -86,6 +110,33 @@ describe('HardcoverImportReviewModal', () => {
       .trigger('click')
 
     expect(wrapper.emitted('apply')).toEqual([[[1000]]])
+  })
+
+  it('shows list-only books by default when a custom list is selected', () => {
+    const wrapper = mountModal(
+      makePreview(
+        [
+          makeRow({ hardcoverUserBookId: 1000, outcome: 'will_update' }),
+          makeRow({
+            hardcoverUserBookId: -9001,
+            hardcoverListBookId: 9001,
+            hardcoverListName: 'Owned',
+            hardcoverTitle: 'Owned only book',
+            localTitle: null,
+            hardcoverStatusId: null,
+            hardcoverStatusLabel: 'Unknown',
+            importedStatus: null,
+            outcome: 'unmatched',
+            progressOutcome: 'skipped',
+            reason: 'No matching book found',
+          }),
+        ],
+        ['want_to_read'],
+        [19],
+      ),
+    )
+
+    expect(wrapper.text()).toContain('Owned only book')
   })
 
   it('allows review rows and progress import to be selected explicitly', async () => {
@@ -267,5 +318,89 @@ describe('HardcoverImportReviewModal', () => {
     await wrapper.get('button[aria-label="Close import review"]').trigger('click')
 
     expect(wrapper.emitted('close')).toBeUndefined()
+  })
+
+  it('can request a missing book from a selected custom Hardcover list', async () => {
+    mockApi.mockImplementation(async (path, init) => {
+      if (path === '/api/v1/libraries') {
+        return new Response(JSON.stringify([{ id: 12, name: 'Books', folders: [{ id: 19, path: 'C:/Books' }] }]), { status: 200 })
+      }
+      if (path === '/api/v1/book-requests/default-destinations') {
+        return new Response(
+          JSON.stringify({
+            ebook: { libraryId: null, libraryName: null, folderId: null },
+            audiobook: { libraryId: null, libraryName: null, folderId: null },
+          }),
+          { status: 200 },
+        )
+      }
+      if (path === '/api/v1/book-requests/availability') {
+        const body = JSON.parse(String(init?.body)) as { items: Array<{ mediaKind: string }> }
+        return new Response(
+          JSON.stringify(
+            body.items.map((item) => ({
+              ownedBookId: item.mediaKind === 'audiobook' ? 88 : null,
+              existingRequestId: null,
+              existingRequestStatus: null,
+              alreadySubscribed: false,
+            })),
+          ),
+          { status: 200 },
+        )
+      }
+      return new Response(JSON.stringify({ request: { id: 44, status: 'pending' }, subscribed: false }), { status: 201 })
+    })
+
+    const wrapper = mount(HardcoverImportReviewModal, {
+      props: {
+        preview: makePreview(
+          [
+            makeRow({
+              hardcoverUserBookId: -9001,
+              hardcoverListBookId: 9001,
+              hardcoverListName: 'Owned',
+              hardcoverBookId: 1010,
+              hardcoverTitle: 'Hardcover 1000',
+              hardcoverIsbn13: '9780441172719',
+            }),
+          ],
+          [],
+          [19],
+        ),
+        applying: false,
+        importProgress: true,
+        canRequestBooks: true,
+        requiresRequestDestination: true,
+      },
+      global: { stubs: { Teleport: true } },
+    })
+    await flushPromises()
+
+    expect(mockApi).toHaveBeenCalledWith('/api/v1/book-requests/availability', expect.objectContaining({ method: 'POST' }))
+    await wrapper.get('input[value="list:9001:ebook"]').setValue(true)
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Add 1 to requests'))!
+      .trigger('click')
+    await flushPromises()
+
+    expect(mockApi).toHaveBeenCalledWith(
+      '/api/v1/book-requests',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          title: 'Hardcover 1000',
+          mediaKind: 'ebook',
+          authors: ['Frank Herbert'],
+          isbn10: null,
+          isbn13: '9780441172719',
+          providerKey: 'hardcover',
+          providerId: '1010',
+          targetLibraryId: 12,
+          targetFolderId: 19,
+        }),
+      }),
+    )
+    expect(wrapper.text()).toContain('1 added, 0 joined existing requests, 0 skipped because availability changed.')
   })
 })
