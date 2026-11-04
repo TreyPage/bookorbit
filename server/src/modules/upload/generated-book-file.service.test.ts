@@ -1,6 +1,7 @@
 import { mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { Transform } from 'node:stream';
 
 import type { RequestUser } from '../../common/types/request-user';
 import {
@@ -20,10 +21,18 @@ vi.mock('node:stream/promises', async (importOriginal) => {
     ...actual,
     pipeline: vi.fn(async (...streams: Parameters<typeof actual.pipeline>) => {
       if (!copyMock.failAfterWriting) return actual.pipeline(...streams);
-      const writable = streams.at(-1) as NodeJS.WritableStream;
-      await new Promise<void>((resolve) => writable.write('half a copy', () => resolve()));
-      writable.end();
-      throw Object.assign(new Error('no space left on device'), { code: 'ENOSPC' });
+
+      const failure = Object.assign(new Error('no space left on device'), {
+        code: 'ENOSPC',
+      });
+
+      const failingTransform = new Transform({
+        transform(_chunk, _encoding, callback) {
+          callback(failure);
+        },
+      });
+
+      return actual.pipeline(streams[0] as NodeJS.ReadableStream, failingTransform, streams.at(-1) as NodeJS.WritableStream);
     }),
   };
 });
@@ -37,7 +46,6 @@ vi.mock('node:fs/promises', async (importOriginal) => {
 });
 
 const USER = { id: 7, isSuperuser: false } as RequestUser;
-
 describe('GeneratedBookFileService', () => {
   let root: string;
   let source: string;

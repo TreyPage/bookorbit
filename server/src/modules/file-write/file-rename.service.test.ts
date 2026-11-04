@@ -283,11 +283,11 @@ describe('FileRenameService', () => {
     renameRepo.findBookRenameData.mockResolvedValue(
       makeRenameData({
         file: {
-          absolutePath: 'C:\\Library\\Old Title.epub',
+          absolutePath: '/library/Old Title.epub',
           relPath: 'Old Title.epub',
         },
-        libraryFolderPath: 'C:\\Library',
-        bookFolderPath: 'C:\\Library\\Old Title.epub',
+        libraryFolderPath: '/library',
+        bookFolderPath: '/library/Old Title.epub',
       }),
     );
 
@@ -295,7 +295,7 @@ describe('FileRenameService', () => {
 
     expect(result.status).toBe('success');
     expect(renameRepo.finalizeFolderRename).toHaveBeenCalledWith(5);
-    expect(mockRename).toHaveBeenCalledWith('C:\\Library\\Old Title.epub', 'C:\\Library\\Frank Herbert\\Dune.epub');
+    expect(mockRename).toHaveBeenCalledWith('/library/Old Title.epub', '/library/Frank Herbert/Dune.epub');
   });
 
   it('renames every colliding audio track with PartNN suffixes including the primary track', async () => {
