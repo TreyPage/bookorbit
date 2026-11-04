@@ -112,6 +112,7 @@ function makeRepo(overrides: Record<string, unknown> = {}) {
     findMissingBookFileWithContextByIno: vi.fn().mockResolvedValue(null),
     findBookFileWithContextByHash: vi.fn().mockResolvedValue(null),
     findMissingBookFileWithContextByHash: vi.fn().mockResolvedValue(null),
+    findMergedBookSources: vi.fn().mockResolvedValue([]),
     moveBookToLibrary: vi.fn().mockImplementation((bookId: number, libraryId: number, libraryFolderId: number, folderPath: string) =>
       Promise.resolve({
         id: bookId,

@@ -42,6 +42,7 @@ function makeRepo() {
     countDistinctEarnedCategories: vi.fn().mockResolvedValue(0),
     countDistinctSeasonsWithReading: vi.fn().mockResolvedValue(0),
     countDistinctMonthsWithReading: vi.fn().mockResolvedValue(0),
+    findMergedBookSources: vi.fn().mockResolvedValue([]),
   };
 }
 
