@@ -162,10 +162,6 @@ export class BookMergeRepository {
           ON a.id < b.id
           AND a.library_id = b.library_id
           AND public.bookorbit_unaccent(a.title) % public.bookorbit_unaccent(b.title)
-          AND (
-            (a.has_ebook AND NOT a.has_audiobook AND b.has_audiobook AND NOT b.has_ebook)
-            OR (a.has_audiobook AND NOT a.has_ebook AND b.has_ebook AND NOT b.has_audiobook)
-          )
         JOIN book_authors author_link_a ON author_link_a.book_id = a.id
         JOIN authors author_a ON author_a.id = author_link_a.author_id
         JOIN book_authors author_link_b ON author_link_b.book_id = b.id
