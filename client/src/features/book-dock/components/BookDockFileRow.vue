@@ -29,6 +29,7 @@ const props = defineProps<{
   targetLabel: string
   conflict?: BookDockConflict
   absolutePath?: string
+  unassigned?: boolean
 }>()
 
 const emit = defineEmits<{
