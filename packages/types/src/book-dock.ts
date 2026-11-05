@@ -96,6 +96,7 @@ export interface BookDockFile {
   metadataEditedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  absolutePath: string;
   /**
    * The files this entry is made of, in playback or format order. Empty for the ordinary loose
    * single file, which is what `fileName` and `fileSize` already describe.

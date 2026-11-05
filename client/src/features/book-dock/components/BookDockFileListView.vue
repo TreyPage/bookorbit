@@ -202,6 +202,7 @@ function onUpload() {
         :library-name="libraryNameFor(file)"
         :target-label="targetLabelFor(file)"
         :conflict="props.conflicts[file.id]"
+        :absolute-path="file.absolutePath"
         @select="onSelect"
         @toggle-expand="toggleExpand"
         @set-destination="onSetDestination"
