@@ -44,6 +44,36 @@ describe('LibraryIntegrityService', () => {
     expect(repo.findDuplicateFormatGroups).toHaveBeenNthCalledWith(2, [1, 2], 100, 100);
   });
 
+  it('does not duplicate text-file findings in the legacy sidecar list', async () => {
+    const fs = await import('node:fs/promises');
+    const readdirSpy = vi.spyOn(fs, 'readdir').mockImplementation(async (path) => {
+      if (String(path) !== '/virtual/library') return [];
+      return [
+        { name: 'notes.txt', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
+        { name: 'partial.tmp', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
+      ] as never;
+    });
+    const statSpy = vi.spyOn(fs, 'stat').mockResolvedValue({ size: 12 } as never);
+    const libraryService = {
+      findAll: vi.fn().mockResolvedValue([
+        { id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] },
+      ]),
+    };
+    const service = new LibraryIntegrityService({} as never, libraryService as never, { get: () => '/nonexistent-appdata' } as never);
+
+    try {
+      await expect(service.listSidecarFiles({ id: 1 } as never, 1, 20)).resolves.toMatchObject({
+        total: 1,
+        items: [{ path: '/virtual/library/partial.tmp', kind: 'temporary_file' }],
+      });
+      expect(statSpy).toHaveBeenCalledTimes(1);
+      expect(statSpy).toHaveBeenCalledWith('/virtual/library/partial.tmp');
+    } finally {
+      readdirSpy.mockRestore();
+      statSpy.mockRestore();
+    }
+  });
+
   it('returns filesystem findings only from accessible libraries and caps the displayed results', async () => {
     const originalReaddir = await import('node:fs/promises');
     const repo = { findBookFolderPaths: vi.fn().mockResolvedValue(['/virtual/library/known-book']) };
