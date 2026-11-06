@@ -1355,6 +1355,55 @@ describe('BookDockFinalizeService', () => {
       );
     });
 
+    it('recognizes a multi-file unit as a duplicate when its occupied paths belong to the same existing book', async () => {
+      const { service } = makeService();
+      const candidate = {
+        fileId: 1,
+        fileName: 'Book',
+        status: 'ready',
+        destPath: '/library/Book/track01.mp3',
+        library: { id: 5 },
+        placement: [
+          { destPath: '/library/Book/track01.mp3' },
+          { destPath: '/library/Book/track02.mp3' },
+        ],
+      };
+      const existing = new Map([
+        ['5\u0000/library/Book/track01.mp3', 88],
+        ['5\u0000/library/Book/track02.mp3', 88],
+      ]);
+      mockAccess.mockResolvedValue(undefined as never);
+
+      const result = await (service as any).classifyDestination(candidate, existing);
+
+      expect(result).toMatchObject({ status: 'duplicate', existingBookId: 88 });
+    });
+
+    it('keeps a multi-file unit as a destination conflict when an occupied secondary path belongs elsewhere', async () => {
+      const { service } = makeService();
+      const candidate = {
+        fileId: 1,
+        fileName: 'Book',
+        status: 'ready',
+        destPath: '/library/Book/track01.mp3',
+        library: { id: 5 },
+        placement: [
+          { destPath: '/library/Book/track01.mp3' },
+          { destPath: '/library/Book/track02.mp3' },
+        ],
+      };
+      const existing = new Map([
+        ['5\u0000/library/Book/track01.mp3', 88],
+        ['5\u0000/library/Book/track02.mp3', 99],
+      ]);
+      mockAccess.mockResolvedValue(undefined as never);
+
+      const result = await (service as any).classifyDestination(candidate, existing);
+
+      expect(result).toMatchObject({ status: 'destination_conflict' });
+      expect(result).not.toHaveProperty('existingBookId');
+    });
+
     it('previews ready, duplicate, and destination conflict candidates', async () => {
       const { service, repo } = makeService();
       const duplicateRow = makeRow({ id: 1, fileName: 'duplicate.epub', targetLibraryId: 5, targetFolderId: 9 });
