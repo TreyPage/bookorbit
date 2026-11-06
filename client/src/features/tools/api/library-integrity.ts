@@ -1,4 +1,4 @@
-import type { DuplicateFormatPage, LibraryIntegrityScanStatus, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types'
+import type { DuplicateFormatPage, LibraryFilesystemFindingsResult, LibraryIntegrityScanStatus, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types'
 
 import { api } from '@/lib/api'
 
@@ -52,4 +52,11 @@ export async function startLibraryIntegrityScan(): Promise<LibraryIntegrityScanS
   const response = await api('/api/v1/maintenance/library-integrity/scan-now', { method: 'POST' })
   if (!response.ok) throw new Error('library_integrity_scan_start_failed')
   return response.json() as Promise<LibraryIntegrityScanStatus | null>
+}
+
+
+export async function getLibraryFilesystemFindings(): Promise<LibraryFilesystemFindingsResult> {
+  const response = await api('/api/v1/maintenance/library-integrity/filesystem-findings')
+  if (!response.ok) throw new Error('library_integrity_filesystem_findings_failed')
+  return response.json() as Promise<LibraryFilesystemFindingsResult>
 }

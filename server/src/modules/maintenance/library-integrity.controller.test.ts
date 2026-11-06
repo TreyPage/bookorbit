@@ -26,6 +26,14 @@ describe('LibraryIntegrityController', () => {
     expect(scanScheduler.startScan).toHaveBeenCalledOnce();
   });
 
+  it('delegates filesystem findings with the current user', async () => {
+    const service = { listFilesystemFindings: vi.fn().mockResolvedValue({ orphanedMetadataFiles: { items: [], total: 0 }, emptyBookFolders: { items: [], total: 0 }, truncated: false, resultsTruncated: false }) };
+    const controller = new LibraryIntegrityController(service as never, { getLastScan: vi.fn() } as never);
+    const user = { id: 9 } as never;
+    await controller.listFilesystemFindings(user);
+    expect(service.listFilesystemFindings).toHaveBeenCalledWith(user);
+  });
+
   it('delegates similar-series discovery with the current user', async () => {
     const service = { listSimilarSeries: vi.fn().mockResolvedValue({ items: [], truncated: false }) };
     const controller = new LibraryIntegrityController(service as never, { getLastScan: vi.fn() } as never);

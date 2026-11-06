@@ -27,6 +27,11 @@ export class LibraryIntegrityController {
     return this.scanScheduler.startScan();
   }
 
+  @Get('filesystem-findings')
+  listFilesystemFindings(@CurrentUser() user: RequestUser) {
+    return this.service.listFilesystemFindings(user);
+  }
+
   @Get('sidecar-files')
   listSidecarFiles(@Query() dto: ListLibraryIntegrityDto, @CurrentUser() user: RequestUser) {
     return this.service.listSidecarFiles(user, dto.page, dto.pageSize);
