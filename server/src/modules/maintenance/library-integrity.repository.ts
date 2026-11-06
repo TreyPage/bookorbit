@@ -44,14 +44,7 @@ export class LibraryIntegrityRepository {
       .innerJoin(books, eq(books.id, bookFiles.bookId))
       .innerJoin(libraries, eq(libraries.id, books.libraryId))
       .leftJoin(bookMetadata, eq(bookMetadata.bookId, books.id))
-      .where(
-        and(
-          inArray(books.libraryId, libraryIds),
-          eq(books.status, 'present'),
-          eq(bookFiles.role, 'content'),
-          isNotNull(bookFiles.format),
-        ),
-      )
+      .where(and(inArray(books.libraryId, libraryIds), eq(books.status, 'present'), eq(bookFiles.role, 'content'), isNotNull(bookFiles.format)))
       .groupBy(books.id, bookMetadata.title, libraries.name, sql`lower(trim(${bookFiles.format}))`)
       .having(sql`count(${bookFiles.id}) > 1`)
       .as('duplicate_format_groups');
