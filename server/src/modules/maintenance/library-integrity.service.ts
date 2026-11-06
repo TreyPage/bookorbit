@@ -1,8 +1,8 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { readdir, stat } from 'node:fs/promises';
 import { ConfigService } from '@nestjs/config';
+import { readdir, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import type { DuplicateFormatGroup, DuplicateFormatPage, SidecarFileEntry, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types';
+import type { DuplicateFormatGroup, DuplicateFormatPage, LibraryFilesystemFinding, LibraryFilesystemFindingsResult, SidecarFileEntry, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types';
 
 import type { RequestUser } from '../../common/types/request-user';
 import type { LibraryIntegrityScanSummary } from '@bookorbit/types';
