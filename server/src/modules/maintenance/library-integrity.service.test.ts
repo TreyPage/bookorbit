@@ -139,10 +139,11 @@ describe('LibraryIntegrityService', () => {
       findAll: vi.fn().mockResolvedValue([{ id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] }]),
     };
     const readdirSpy = vi.spyOn(fs, 'readdir').mockImplementation(async (path) => {
-      if (String(path) !== '/virtual/library') return [] as never;
-      return Array.from({ length: 3 }, (_, index) => ({
+      if (String(path) === '/virtual/library') return Array.from({ length: 3 }, (_, index) => ({
         name: `orphan-${index}`, isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false,
       })) as never;
+      if (String(path).startsWith('/virtual/library/orphan-')) return [{ name: 'metadata.json', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true }] as never;
+      return [] as never;
     });
     const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => undefined } as never);
     try {
