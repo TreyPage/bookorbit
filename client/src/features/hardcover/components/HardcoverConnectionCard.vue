@@ -87,6 +87,7 @@ async function handleValidateToken() {
     return
   }
   const result = await validateToken(tokenInput.value.trim())
+  error.value = null
   validationResult.value = result
   if (result.valid) {
     await Promise.all([fetchShelves(), fetchLists(tokenInput.value.trim())])
@@ -123,7 +124,11 @@ async function handleDisconnect() {
   lists.value = []
   shelvesError.value = null
   listsError.value = null
-  toast.success(t('hardcover.connection.toast.disconnected'))
+  if (error.value != null) {
+    toast.error(error.value)
+  } else {
+    toast.success(t('hardcover.connection.toast.disconnected'))
+  }
 }
 
 function toggleTokenVisible() {

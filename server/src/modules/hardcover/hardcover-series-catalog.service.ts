@@ -100,30 +100,35 @@ export class HardcoverSeriesCatalogService {
     );
 
     try {
-      const query = `
-        query SeriesCatalog($seriesName: String!) {
-          series(where: { name: { _eq: $seriesName }, state: { _eq: "active" } }, limit: 10) {
-            name
-            book_series(order_by: { position: asc }, limit: ${MAX_SERIES_BOOKS}) {
-              position
-              book_id
-              book {
-                canonical_id
-                title
-                cached_contributors
-                default_cover_edition {
-                  language {
-                    code2
-                  }
-                }
-              }
-            }
-          }
-        }
-      `;
-      const data = await this.client.query<HardcoverSeriesResponse>(userId, token, query, {
-        seriesName,
-      });
+      const seriesNamePattern = `%${seriesName.trim().replace(/[\\%_]/g, '\\$&')}%`;
+
+      const query = `query SeriesCatalog($seriesNamePattern: String!) {
+                        series(
+                          where: {
+                            name: { _ilike: $seriesNamePattern }
+                            state: { _eq: "active" }
+                          }
+                          limit: 10
+                        ) {
+                          name
+                          book_series(order_by: { position: asc }, limit: ${MAX_SERIES_BOOKS}) {
+                            position
+                            book_id
+                            book {
+                              canonical_id
+                              title
+                              cached_contributors
+                              default_cover_edition {
+                                language {
+                                  code2
+                                }
+                              }
+                            }
+                          }
+                        }
+                      } `;
+
+      const data = await this.client.query<HardcoverSeriesResponse>(userId, token, query, { seriesNamePattern });
 
       if (!Array.isArray(data?.series)) throw new Error('Hardcover series lookup returned an invalid response');
       const matchingSeries = data.series
