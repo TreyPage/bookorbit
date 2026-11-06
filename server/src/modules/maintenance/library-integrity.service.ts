@@ -266,15 +266,15 @@ export class LibraryIntegrityService {
   private pruneFilesystemFindingsSnapshots(): void {
     const now = Date.now();
     for (const [id, snapshot] of this.filesystemFindingsSnapshots) if (snapshot.expiresAt <= now) this.filesystemFindingsSnapshots.delete(id);
+  }
+
+  private storeFilesystemFindingsSnapshot(userId: number, result: LibraryFilesystemFindingsResult, pageSize: number): LibraryFilesystemFindingsResult {
+    this.pruneFilesystemFindingsSnapshots();
     while (this.filesystemFindingsSnapshots.size >= this.filesystemFindingsSnapshotLimit) {
       const oldest = this.filesystemFindingsSnapshots.keys().next().value;
       if (!oldest) break;
       this.filesystemFindingsSnapshots.delete(oldest);
     }
-  }
-
-  private storeFilesystemFindingsSnapshot(userId: number, result: LibraryFilesystemFindingsResult, pageSize: number): LibraryFilesystemFindingsResult {
-    this.pruneFilesystemFindingsSnapshots();
     const snapshotId = randomUUID();
     this.filesystemFindingsSnapshots.set(snapshotId, { userId, expiresAt: Date.now() + this.filesystemFindingsSnapshotTtlMs, result });
     return this.paginateFilesystemFindings(result, 1, pageSize, snapshotId);

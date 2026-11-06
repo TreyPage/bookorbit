@@ -22,8 +22,6 @@ export type DuplicateFormatPage = {
   total: number;
   page: number;
   pageSize: number;
-  /** Opaque, short-lived token used to keep subsequent pages on the same filesystem scan. */
-  snapshotId?: string;
 };
 
 import type { CoverMedium } from "./book";
@@ -195,4 +193,6 @@ export type LibraryFilesystemFindingsResult = {
   hasMore: boolean;
   page: number;
   pageSize: number;
+  /** Opaque, short-lived token used to keep subsequent pages on the same filesystem scan. */
+  snapshotId?: string;
 };
