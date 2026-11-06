@@ -14118,22 +14118,34 @@
       "categories": {
         "missing_books": "Missing books",
         "broken_covers": "Broken covers",
-        "orphaned_cover_dirs": "Orphaned cover folders"
+        "orphaned_cover_dirs": "Orphaned cover folders",
+        "sidecar_files": "Sidecar and temporary files"
       },
       "found": {
         "missing_books": "{count, plural, =0 {No books with missing files} one {One book with missing files} other {# books with missing files}}",
         "broken_covers": "{count, plural, =0 {No broken cover references} one {One broken cover reference} other {# broken cover references}}",
-        "orphaned_cover_dirs": "{count, plural, =0 {No orphaned cover folders} one {One orphaned cover folder} other {# orphaned cover folders}}"
+        "orphaned_cover_dirs": "{count, plural, =0 {No orphaned cover folders} one {One orphaned cover folder} other {# orphaned cover folders}}",
+        "sidecar_files": "{count, plural, =0 {No sidecar or temporary files} one {One sidecar or temporary file} other {# sidecar or temporary files}}"
       },
       "empty": {
         "missing_books": "No missing books",
         "broken_covers": "No broken cover references",
         "orphaned_cover_dirs": "No orphaned cover folders",
+        "sidecar_files": "No sidecar or temporary files",
         "description": "Everything in this category is accounted for."
       },
       "needsSweep": {
         "title": "Run the cover check first",
         "description": "Cover results come from a disk check. Run it to see broken references and orphaned folders."
+      },
+      "sidecar": {
+        "truncated": "The scan reached its safety limit before checking every library folder. Narrow the library scope and scan again.",
+        "kinds": {
+          "text_file": "Text file (.txt)",
+          "temporary_file": "Temporary download file",
+          "conversion_directory": "Chaptarr conversion leftovers"
+        },
+        "fileCount": "{count, plural, one {# file} other {# files}}"
       },
       "coverSource": {
         "extracted": "Extracted",
