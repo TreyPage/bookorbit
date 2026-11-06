@@ -173,7 +173,8 @@ describe('RequestListTable pairs', () => {
       .findAll('.status-badge')
       .map((badge) => badge.text())
     expect(lanes).toEqual(['pending', 'downloading'])
-    expect(wrapper.get('ul').text()).toContain('E-book and audiobook')
+    expect(wrapper.get('ul').text()).toContain('E-book')
+    expect(wrapper.get('ul').text()).toContain('Audiobook')
   })
 
   it('hands a row press on to the page with exactly the halves it applies to', async () => {
