@@ -12,7 +12,11 @@ function openMissingResources(): void {
   void router.push({ name: 'tools-missing-resources' })
 }
 
-function openDuplicateFormats(): void {\n  void router.push({ name: 'tools-library-integrity-duplicate-formats' })\n}\n\nfunction openDuplicateBooks(): void {
+function openDuplicateFormats(): void {
+  void router.push({ name: 'tools-library-integrity-duplicate-formats' })
+}
+
+function openDuplicateBooks(): void {
   void router.push({ name: 'tools-duplicate-books' })
 }
 </script>
