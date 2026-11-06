@@ -121,4 +121,8 @@ export class LibraryIntegrityService {
       pageSize,
     };
   }
+  async listSimilarSeries(user: RequestUser) {
+    const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
+    return this.repo.findSimilarSeriesPairs(libraryIds);
+  }
 }
