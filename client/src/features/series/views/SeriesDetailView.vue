@@ -192,9 +192,9 @@ async function handleRefreshCatalog(): Promise<void> {
   try {
     await refreshSeriesCatalog(seriesId.value)
     await loadBooks(true)
-    toast.success('Hardcover series catalog refreshed')
+    toast.success(t('series.detail.refreshCatalogSuccess'))
   } catch (error) {
-    toast.error(error instanceof Error ? error.message : 'Failed to refresh Hardcover catalog')
+    toast.error(error instanceof Error ? error.message : t('series.detail.refreshCatalogError'))
   } finally {
     refreshingCatalog.value = false
   }
@@ -624,12 +624,12 @@ defineOptions({ name: 'SeriesDetailView' })
                   type="button"
                   class="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 md:w-auto"
                   :disabled="refreshingCatalog"
-                  aria-label="Refresh Hardcover series catalog"
-                  title="Refresh Hardcover series catalog"
+                   :aria-label="t('series.detail.refreshCatalog')"
+                   :title="t('series.detail.refreshCatalog')"
                   @click="handleRefreshCatalog"
                 >
                   <RefreshCw :size="14" :class="{ 'animate-spin': refreshingCatalog }" />
-                  {{ refreshingCatalog ? t('common.loading') : 'Refresh catalog' }}
+                  {{ refreshingCatalog ? t('series.detail.refreshingCatalog') : t('series.detail.refreshCatalog') }}
                 </button>
                 <button
                   v-if="canRequestMissingBooks && seriesInfo.possibleGaps.length > 0"
