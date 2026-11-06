@@ -484,6 +484,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
   ): Promise<BookDockFinalizePreviewResult> {
     const summary = createFinalizePreviewSummary();
     const overrideMap = new Map((overrides ?? []).map((o) => [o.fileId, o]));
+    const claimedDestinations = new Set<string>();
 
     await this.processFinalizeSelection(
       userId,
@@ -498,8 +499,22 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
       async (rows, missingIds) => {
         const prepared = await this.prepareFinalizeBatch(rows, defaultLibraryId, defaultFolderId, overrideMap, userId, isSuperuser);
         for (const candidate of prepared.analyses) {
-          const analysis = await this.classifyDestination(candidate, prepared.existingDestinations);
+          const candidatePaths = (candidate.placement ?? []).map((file) =>
+            this.destinationKey(candidate.library!.id, file.destPath),
+          );
+          const collidesWithSelection = candidate.status === 'ready' && candidatePaths.some((path) => claimedDestinations.has(path));
+          const analysis = collidesWithSelection
+            ? {
+                ...candidate,
+                status: 'destination_conflict' as const,
+                message: 'A file with this name already exists at the target location',
+              }
+            : await this.classifyDestination(candidate, prepared.existingDestinations);
+
           addFinalizePreviewAnalysis(summary, analysis);
+          if (analysis.status === 'ready') {
+            for (const path of candidatePaths) claimedDestinations.add(path);
+          }
         }
         for (const fileId of missingIds) {
           addFinalizePreviewItem(summary, {

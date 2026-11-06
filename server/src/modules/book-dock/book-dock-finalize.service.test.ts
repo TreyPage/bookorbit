@@ -1329,6 +1329,32 @@ describe('BookDockFinalizeService', () => {
   });
 
   describe('finalize preflight and duplicate discard', () => {
+    it('marks later selected files that resolve to an already claimed destination as conflicts', async () => {
+      const { service, repo } = makeService();
+      const firstRow = makeRow({ id: 1, fileName: 'same.epub', targetLibraryId: 5, targetFolderId: 9 });
+      const secondRow = makeRow({ id: 2, fileName: 'same.epub', targetLibraryId: 5, targetFolderId: 9 });
+      repo.findByIds.mockResolvedValue([firstRow, secondRow]);
+      repo.findExistingBooksByAbsolutePaths.mockResolvedValue([]);
+      vi.spyOn(service as never, 'findLibraryOrFail').mockResolvedValue({ id: 5, allowedFormats: ['epub'], fileNamingPattern: null } as never);
+      vi.spyOn(service as never, 'findFolderOrFail').mockResolvedValue({ id: 9, libraryId: 5, path: '/library' } as never);
+      vi.spyOn(service as never, 'resolveDestination').mockResolvedValue('/library/same.epub' as never);
+      mockAccess.mockRejectedValue(Object.assign(new Error('not found'), { code: 'ENOENT' }));
+
+      const preview = await service.previewFinalize(1, true, true, [1, 2], false, [], undefined, undefined);
+
+      expect(preview).toMatchObject({ total: 2, ready: 1, destinationConflicts: 1 });
+      expect(preview.items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ fileId: 1, status: 'ready' }),
+          expect.objectContaining({
+            fileId: 2,
+            status: 'destination_conflict',
+            message: 'A file with this name already exists at the target location',
+          }),
+        ]),
+      );
+    });
+
     it('previews ready, duplicate, and destination conflict candidates', async () => {
       const { service, repo } = makeService();
       const duplicateRow = makeRow({ id: 1, fileName: 'duplicate.epub', targetLibraryId: 5, targetFolderId: 9 });
