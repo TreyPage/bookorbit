@@ -229,6 +229,37 @@ describe('HardcoverSeriesCatalogService', () => {
     );
   });
 
+  it('rejects interior substring matches from the fallback search', async () => {
+    client.query
+      .mockResolvedValueOnce({ series: [] })
+      .mockResolvedValueOnce({
+        series: [{ name: 'The Hobbit', book_series: [{ position: 1, book: { title: 'The Hobbit' } }] }],
+      });
+
+    await expect(service.findMissingBooks(7, 'bit', [])).resolves.toMatchObject({
+      catalogFound: false,
+      status: 'not_found',
+      books: [],
+      missingPositions: [],
+    });
+  });
+
+  it('escapes LIKE wildcards in fallback series names', async () => {
+    client.query
+      .mockResolvedValueOnce({ series: [] })
+      .mockResolvedValueOnce({ series: [] });
+
+    await service.findMissingBooks(7, 'A_B%', []);
+
+    expect(client.query).toHaveBeenNthCalledWith(
+      2,
+      7,
+      'catalog-token',
+      expect.stringContaining('name: { _ilike: $seriesName }'),
+      { seriesName: '%A\\_B\\%%' },
+    );
+  });
+
   it('omits translated and duplicate catalog entries while retaining English originals', async () => {
     client.query.mockResolvedValue({
       series: [

@@ -52,8 +52,9 @@ function seriesNameMatchRank(actualName: string, requestedName: string): number 
   const requested = normalizeSeriesName(requestedName);
   if (!actual || !requested) return Number.MAX_SAFE_INTEGER;
   if (actual === requested) return 0;
+  // Accept only boundary variants (for example, a trailing "Series"). Arbitrary
+  // interior substring matches can select an unrelated series with a short name.
   if (actual.startsWith(requested) || actual.endsWith(requested)) return Math.abs(actual.length - requested.length);
-  if (actual.includes(requested) || requested.includes(actual)) return 100 + Math.abs(actual.length - requested.length);
   return Number.MAX_SAFE_INTEGER;
 }
 
@@ -185,7 +186,9 @@ export class HardcoverSeriesCatalogService {
           }
         }
       `;
-      data = await this.client.query<HardcoverSeriesResponse>(userId, token, fallbackQuery, { seriesName: `%${seriesName}%` });
+      // Escape LIKE metacharacters so user-supplied '%' and '_' stay literal.
+      const escapedSeriesName = seriesName.replace(/[\\%_]/gu, '\\$&');
+      data = await this.client.query<HardcoverSeriesResponse>(userId, token, fallbackQuery, { seriesName: `%${escapedSeriesName}%` });
       if (!Array.isArray(data?.series)) throw new Error('Hardcover fallback series lookup returned an invalid response');
     }
 
