@@ -12,6 +12,8 @@ import MissingResourceCategoryTabs from '../components/MissingResourceCategoryTa
 import MissingResourceSweepPanel from '../components/MissingResourceSweepPanel.vue'
 import MissingResourceTable from '../components/MissingResourceTable.vue'
 
+const props = defineProps<{ embedded?: boolean }>()
+
 const { t } = useI18n()
 const { hasPermission, isDemoRestrictedAccount } = usePermissions()
 const resources = useMissingResources()
@@ -91,7 +93,7 @@ function handleNextPage(): void {
     {{ t('tools.missingResources.accessDenied') }}
   </div>
 
-  <div v-else class="flex h-full min-h-0 w-full flex-col gap-4 overflow-y-auto pr-1">
+  <div v-else class="flex min-h-0 w-full flex-col gap-4" :class="props.embedded ? '' : 'h-full overflow-y-auto pr-1'">
     <MissingResourceSweepPanel :sweep="resources.sweep.value" :sweeping="resources.sweeping.value" @run="handleRunSweep" />
 
     <div
