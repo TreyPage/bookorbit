@@ -44,7 +44,9 @@ function normalizeSeriesName(value: string): string {
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}]/gu, '');
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .replace(/\s+/gu, ' ');
 }
 function normalizeSeriesCacheKey(value: string): string {
   // Keep punctuation and word boundaries in cache identity to avoid collisions such as
@@ -63,7 +65,9 @@ function seriesNameMatchRank(actualName: string, requestedName: string): number 
   if (actual === requested) return 0;
   // Accept only boundary variants (for example, a trailing "Series"). Arbitrary
   // interior substring matches can select an unrelated series with a short name.
-  if (actual.startsWith(requested) || actual.endsWith(requested)) return Math.abs(actual.length - requested.length);
+  if (actual.startsWith(`${requested} `) || actual.endsWith(` ${requested}`)) {
+    return Math.abs(actual.length - requested.length);
+  }
   return Number.MAX_SAFE_INTEGER;
 }
 
