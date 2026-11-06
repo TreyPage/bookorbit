@@ -46,7 +46,6 @@ function openBookMerge(): void {
           <div class="grid size-10 place-items-center rounded-lg bg-muted text-foreground">
             <FolderSearch class="size-5" aria-hidden="true" />
           </div>
-          <span class="rounded-full border border-border px-2 py-1 text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.existingCheck') }}</span>
         </div>
         <div class="space-y-1">
           <h2 class="text-base font-semibold text-foreground">{{ t('tools.header.missingResources') }}</h2>
@@ -95,7 +94,6 @@ function openBookMerge(): void {
           <div class="grid size-10 place-items-center rounded-lg bg-muted text-foreground">
             <Files class="size-5" aria-hidden="true" />
           </div>
-          <span class="rounded-full border border-border px-2 py-1 text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.newCheck') }}</span>
         </div>
         <div class="space-y-1">
           <h2 class="text-base font-semibold text-foreground">{{ t('tools.libraryIntegrity.duplicateFormats.title') }}</h2>
@@ -111,7 +109,6 @@ function openBookMerge(): void {
           <div class="grid size-10 place-items-center rounded-lg bg-muted text-foreground">
             <GitMerge class="size-5" aria-hidden="true" />
           </div>
-          <span class="rounded-full border border-border px-2 py-1 text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.newCheck') }}</span>
         </div>
         <div class="space-y-1">
           <h2 class="text-base font-semibold text-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.title') }}</h2>
