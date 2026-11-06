@@ -14286,7 +14286,7 @@
       "duplicateDescription": "Find duplicate book records using file hashes, ISBNs, and metadata matches. Review the candidates before removing records.",
       "openCheck": "Open check",
       "futureTitle": "Additional integrity checks",
-      "futureDescription": "Duplicate files within a book, unwanted sidecar files, orphaned book files, and invalid file paths will be added here. Detection will be separated from repair so ambiguous files are never deleted automatically.",
+      "futureDescription": "Unwanted sidecar files, orphaned book files, and invalid file paths will be added here. Detection will be separated from repair so ambiguous files are never deleted automatically.",
       "newCheck": "New check",
       "duplicateFormats": {
         "title": "Duplicate Formats",
