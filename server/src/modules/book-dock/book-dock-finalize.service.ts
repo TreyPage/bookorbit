@@ -484,6 +484,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
   ): Promise<BookDockFinalizePreviewResult> {
     const summary = createFinalizePreviewSummary();
     const overrideMap = new Map((overrides ?? []).map((o) => [o.fileId, o]));
+    const claimedDestinations = new Set<string>();
 
     await this.processFinalizeSelection(
       userId,
@@ -498,8 +499,22 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
       async (rows, missingIds) => {
         const prepared = await this.prepareFinalizeBatch(rows, defaultLibraryId, defaultFolderId, overrideMap, userId, isSuperuser);
         for (const candidate of prepared.analyses) {
-          const analysis = await this.classifyDestination(candidate, prepared.existingDestinations);
+          const candidatePaths = (candidate.placement ?? []).map((file) =>
+            this.destinationKey(candidate.library!.id, file.destPath),
+          );
+          const collidesWithSelection = candidate.status === 'ready' && candidatePaths.some((path) => claimedDestinations.has(path));
+          const analysis = collidesWithSelection
+            ? {
+                ...candidate,
+                status: 'destination_conflict' as const,
+                message: 'A file with this name already exists at the target location',
+              }
+            : await this.classifyDestination(candidate, prepared.existingDestinations);
+
           addFinalizePreviewAnalysis(summary, analysis);
+          if (analysis.status === 'ready') {
+            for (const path of candidatePaths) claimedDestinations.add(path);
+          }
         }
         for (const fileId of missingIds) {
           addFinalizePreviewItem(summary, {
@@ -689,7 +704,9 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
       analyses.push(await this.resolveFinalizeCandidate(row, defaultLibraryId, defaultFolderId, overrideMap, userId, isSuperuser));
     }
 
-    const destinationPaths = analyses.filter((analysis) => analysis.status === 'ready' && analysis.destPath).map((analysis) => analysis.destPath!);
+    const destinationPaths = analyses
+      .filter((analysis) => analysis.status === 'ready' && analysis.destPath)
+      .flatMap((analysis) => analysis.placement?.map((file) => file.destPath) ?? [analysis.destPath!]);
     const existingRows = await this.repo.findExistingBooksByAbsolutePaths(destinationPaths);
     const existingDestinations = new Map(
       existingRows.map((existing) => [this.destinationKey(existing.libraryId, existing.absolutePath), existing.bookId]),
@@ -875,33 +892,29 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
   ): Promise<FinalizeCandidateAnalysis> {
     if (analysis.status !== 'ready' || !analysis.destPath || !analysis.library) return analysis;
 
-    // Every target path of a unit, not only the primary's: a folder that collides on track 7 is
-    // just as unplaceable as one that collides on track 1.
+    const occupiedPaths: string[] = [];
     for (const file of analysis.placement ?? []) {
-      if (file.destPath === analysis.destPath) continue;
-      const taken = await fsAccess(file.destPath).then(
-        () => true,
-        () => false,
-      );
-      if (taken) {
-        return { ...analysis, status: 'destination_conflict', message: 'A file with this name already exists at the target location' };
+      try {
+        await fsAccess(file.destPath);
+        occupiedPaths.push(file.destPath);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+        this.logFinalizeFailure(analysis.fileId, 'destination_check', error);
+        return {
+          ...analysis,
+          status: 'error',
+          message: resolveFinalizeErrorMessage(error),
+        };
       }
     }
 
-    try {
-      await fsAccess(analysis.destPath);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return analysis;
-      this.logFinalizeFailure(analysis.fileId, 'destination_check', error);
-      return {
-        ...analysis,
-        status: 'error',
-        message: resolveFinalizeErrorMessage(error),
-      };
-    }
+    if (occupiedPaths.length === 0) return analysis;
 
     const existingBookId = existingDestinations.get(this.destinationKey(analysis.library.id, analysis.destPath));
-    if (existingBookId !== undefined) {
+    if (
+      existingBookId !== undefined &&
+      occupiedPaths.every((path) => existingDestinations.get(this.destinationKey(analysis.library!.id, path)) === existingBookId)
+    ) {
       return {
         ...analysis,
         status: 'duplicate',
