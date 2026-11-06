@@ -14359,6 +14359,7 @@
           "sidecars": "Sidecar entries",
           "orphanedMetadata": "Orphaned metadata files",
           "emptyFolders": "Empty book folders",
+          "unreadableDirectories": "Unreadable directories",
           "orphanedCovers": "Orphaned cover directories",
           "coverBytes": "Orphaned cover storage"
         }
@@ -14370,6 +14371,7 @@
         "loadFailed": "Could not load filesystem findings.",
         "orphanedMetadata": "Orphaned metadata files ({count})",
         "emptyFolders": "Empty book folders ({count})",
+        "unreadableDirectories": "Unreadable directories ({count})",
         "none": "No findings in this category.",
         "truncated": "The scan reached a safety limit or more than 500 results in a category. The list may be incomplete."
       }
