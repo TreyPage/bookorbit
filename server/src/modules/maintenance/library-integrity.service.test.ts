@@ -71,6 +71,7 @@ describe('LibraryIntegrityService', () => {
       if (value === '/virtual/library/locked') throw new Error('EACCES');
       if (value === '/virtual/library/orphan') return [
         { name: 'metadata.json', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
+        { name: 'cover.jpg', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
       ] as never;
       return [] as never;
     });
@@ -80,9 +81,10 @@ describe('LibraryIntegrityService', () => {
         orphanedMetadataFiles: { items: [{ libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan/metadata.json' }], total: 1 },
         orphanedBookFolders: { items: [{ libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan' }], total: 1 },
         orphanedFiles: { items: [
+          { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan/cover.jpg', reason: 'folder_without_format' },
           { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan/metadata.json', reason: 'folder_without_format' },
           { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/valid-book/notes.txt', reason: 'text_file' },
-        ], total: 2 },
+        ], total: 3 },
         emptyBookFolders: { items: [
           { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/empty-untracked' },
           { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/known-book' },

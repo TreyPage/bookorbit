@@ -62,9 +62,9 @@ export class LibraryIntegrityService {
 
 
   /**
-   * Read-only filesystem checks. Metadata is considered orphaned when its containing
-   * directory is not a known book folder; every empty subdirectory beneath a
-   * configured library root is reported, regardless of database ownership.
+   * Read-only filesystem checks. Non-empty subdirectories with files but no recognized
+   * book formats are orphaned regardless of database ownership. Text files are also
+   * reported inside otherwise valid book folders; empty subdirectories are separate findings.
    */
   private async scanFilesystemAnomalies(systemUser: RequestUser, libraryIds: number[]) {
     const libraries = await this.libraryService.findAll(systemUser);
@@ -152,8 +152,7 @@ export class LibraryIntegrityService {
 
 
   /**
-   * Returns bounded, user-scoped details for the two filesystem findings that can
-   * be safely classified against known book-folder paths. This endpoint never mutates files.
+   * Returns bounded, user-scoped filesystem findings. This endpoint never mutates files.
    */
   async listFilesystemFindings(user: RequestUser): Promise<LibraryFilesystemFindingsResult> {
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
@@ -306,7 +305,7 @@ export class LibraryIntegrityService {
     }
   }
 
-  /** Delete one reviewed orphaned file after rechecking its classification and safe path. */
+  /** Delete one explicitly reviewed orphaned file after rechecking its classification and safe path. */
   async cleanupOrphanedFile(user: RequestUser, libraryId: number, filePath: string): Promise<{ removed: boolean }> {
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
     if (!libraryIds.includes(libraryId)) throw new NotFoundException('File not found or not accessible');
