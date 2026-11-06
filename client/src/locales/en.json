@@ -14378,7 +14378,9 @@
         "emptyFolders": "Empty directories ({count})",
         "unreadableDirectories": "Unreadable directories ({count})",
         "none": "No findings in this category.",
-        "truncated": "The scan reached a safety limit or more than 500 results in a category. The list may be incomplete.",
+        "scanTruncated": "Filesystem traversal stopped at a safety limit. Some directories may not have been checked.",
+        "resultsTruncated": "One or more categories exceed the 500-result display limit. Only the first 500 are shown.",
+        "showingCount": "Showing {shown} of {total}. The remaining results are not displayed.",
         "orphanedBookFolders": "Folders without book formats ({count})",
         "orphanedFiles": "Orphaned files ({count})",
         "fileReasons": {
