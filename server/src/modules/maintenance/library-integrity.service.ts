@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'node:crypto';
 import { lstat, readdir, realpath, rmdir, stat, unlink } from 'node:fs/promises';
 import { extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { isBookFormat } from '@bookorbit/types';
@@ -13,6 +14,9 @@ import { LibraryIntegrityRepository } from './library-integrity.repository';
 
 @Injectable()
 export class LibraryIntegrityService {
+  private readonly filesystemFindingsSnapshots = new Map<string, { userId: number; expiresAt: number; result: LibraryFilesystemFindingsResult }>();
+  private readonly filesystemFindingsSnapshotTtlMs = 10 * 60 * 1000;
+  private readonly filesystemFindingsSnapshotLimit = 5;
   constructor(
     private readonly repo: LibraryIntegrityRepository,
     private readonly libraryService: LibraryService,
@@ -154,21 +158,18 @@ export class LibraryIntegrityService {
   /**
    * Returns bounded, user-scoped filesystem findings. This endpoint never mutates files.
    */
-  async listFilesystemFindings(user: RequestUser, page = 1, pageSize = 50): Promise<LibraryFilesystemFindingsResult> {
+  async listFilesystemFindings(user: RequestUser, page = 1, pageSize = 50, snapshotId?: string): Promise<LibraryFilesystemFindingsResult> {
+    this.pruneFilesystemFindingsSnapshots();
+    if (snapshotId) {
+      const cached = this.filesystemFindingsSnapshots.get(snapshotId);
+      if (cached && cached.userId === user.id && cached.expiresAt > Date.now()) return this.paginateFilesystemFindings(cached.result, page, pageSize, snapshotId);
+      page = 1;
+    }
     const offset = (page - 1) * pageSize;
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
     if (libraryIds.length === 0) {
-      return {
-        orphanedMetadataFiles: { items: [], total: 0 },
-        orphanedBookFolders: { items: [], total: 0 },
-        orphanedFiles: { items: [], total: 0 },
-        emptyBookFolders: { items: [], total: 0 },
-        truncated: false,
-        hasMore: false,
-        page,
-        pageSize,
-        unreadableDirectories: { items: [], total: 0 },
-      };
+      const empty = { orphanedMetadataFiles: { items: [], total: 0 }, orphanedBookFolders: { items: [], total: 0 }, orphanedFiles: { items: [], total: 0 }, emptyBookFolders: { items: [], total: 0 }, unreadableDirectories: { items: [], total: 0 }, truncated: false, hasMore: false, page: 1, pageSize: 0 } satisfies LibraryFilesystemFindingsResult;
+      return this.storeFilesystemFindingsSnapshot(user.id, empty, pageSize);
     }
 
     const libraries = await this.libraryService.findAll(user);
@@ -258,17 +259,38 @@ export class LibraryIntegrityService {
     orphanedFiles.sort(sort);
     emptyBookFolders.sort(sort);
     unreadableDirectories.sort(sort);
-    const pageItems = <T>(items: T[]) => items.slice(offset, offset + pageSize);
+    const snapshot = { orphanedMetadataFiles: { items: orphanedMetadataFiles, total: orphanedMetadataTotal }, orphanedBookFolders: { items: orphanedBookFolders, total: orphanedBookFolderTotal }, orphanedFiles: { items: orphanedFiles, total: orphanedFileTotal }, emptyBookFolders: { items: emptyBookFolders, total: emptyFolderTotal }, unreadableDirectories: { items: unreadableDirectories, total: unreadableDirectoryTotal }, truncated, hasMore: false, page: 1, pageSize: 0 } satisfies LibraryFilesystemFindingsResult;
+    return this.storeFilesystemFindingsSnapshot(user.id, snapshot, pageSize);
+  }
+
+  private pruneFilesystemFindingsSnapshots(): void {
+    const now = Date.now();
+    for (const [id, snapshot] of this.filesystemFindingsSnapshots) if (snapshot.expiresAt <= now) this.filesystemFindingsSnapshots.delete(id);
+  }
+
+  private storeFilesystemFindingsSnapshot(userId: number, result: LibraryFilesystemFindingsResult, pageSize: number): LibraryFilesystemFindingsResult {
+    this.pruneFilesystemFindingsSnapshots();
+    while (this.filesystemFindingsSnapshots.size >= this.filesystemFindingsSnapshotLimit) {
+      const oldest = this.filesystemFindingsSnapshots.keys().next().value;
+      if (!oldest) break;
+      this.filesystemFindingsSnapshots.delete(oldest);
+    }
+    const snapshotId = randomUUID();
+    this.filesystemFindingsSnapshots.set(snapshotId, { userId, expiresAt: Date.now() + this.filesystemFindingsSnapshotTtlMs, result });
+    return this.paginateFilesystemFindings(result, 1, pageSize, snapshotId);
+  }
+
+  private paginateFilesystemFindings(snapshot: LibraryFilesystemFindingsResult, page: number, pageSize: number, snapshotId: string): LibraryFilesystemFindingsResult {
+    const offset = (page - 1) * pageSize;
+    const slice = <T>(items: T[]) => items.slice(offset, offset + pageSize);
+    const totals = [snapshot.orphanedMetadataFiles.total, snapshot.orphanedBookFolders.total, snapshot.orphanedFiles.total, snapshot.emptyBookFolders.total, snapshot.unreadableDirectories.total];
     return {
-      orphanedMetadataFiles: { items: pageItems(orphanedMetadataFiles), total: orphanedMetadataTotal },
-      orphanedBookFolders: { items: pageItems(orphanedBookFolders), total: orphanedBookFolderTotal },
-      orphanedFiles: { items: pageItems(orphanedFiles), total: orphanedFileTotal },
-      emptyBookFolders: { items: pageItems(emptyBookFolders), total: emptyFolderTotal },
-      unreadableDirectories: { items: pageItems(unreadableDirectories), total: unreadableDirectoryTotal },
-      truncated,
-      hasMore: [orphanedMetadataTotal, orphanedBookFolderTotal, orphanedFileTotal, emptyFolderTotal, unreadableDirectoryTotal].some((total) => total > offset + pageSize),
-      page,
-      pageSize,
+      orphanedMetadataFiles: { ...snapshot.orphanedMetadataFiles, items: slice(snapshot.orphanedMetadataFiles.items) },
+      orphanedBookFolders: { ...snapshot.orphanedBookFolders, items: slice(snapshot.orphanedBookFolders.items) },
+      orphanedFiles: { ...snapshot.orphanedFiles, items: slice(snapshot.orphanedFiles.items) },
+      emptyBookFolders: { ...snapshot.emptyBookFolders, items: slice(snapshot.emptyBookFolders.items) },
+      unreadableDirectories: { ...snapshot.unreadableDirectories, items: slice(snapshot.unreadableDirectories.items) },
+      truncated: snapshot.truncated, hasMore: totals.some((total) => total > offset + pageSize), page, pageSize, snapshotId,
     };
   }
 

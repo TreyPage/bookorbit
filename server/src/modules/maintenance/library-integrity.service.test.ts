@@ -74,7 +74,7 @@ describe('LibraryIntegrityService', () => {
     }
   });
 
-  it('returns filesystem findings only from accessible libraries and caps the displayed results', async () => {
+  it('returns filesystem findings only from accessible libraries', async () => {
     const originalReaddir = await import('node:fs/promises');
     const repo = { findBookFolderPaths: vi.fn().mockResolvedValue(['/virtual/library/known-book']) };
     const libraryService = {
@@ -121,8 +121,43 @@ describe('LibraryIntegrityService', () => {
         ], total: 2 },
         unreadableDirectories: { items: [{ libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/locked' }], total: 1 },
         truncated: false,
-        resultsTruncated: false,
+        hasMore: false,
+        page: 1,
+        pageSize: 50,
+        snapshotId: expect.any(String),
       });
+    } finally {
+      readdirSpy.mockRestore();
+    }
+  });
+
+  it('reuses a user-scoped filesystem findings snapshot for subsequent pages', async () => {
+    const fs = await import('node:fs/promises');
+    const repo = { findBookFolderPaths: vi.fn().mockResolvedValue([]) };
+    const libraryService = {
+      findAccessibleLibraryIds: vi.fn().mockResolvedValue([1]),
+      findAll: vi.fn().mockResolvedValue([{ id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] }]),
+    };
+    const readdirSpy = vi.spyOn(fs, 'readdir').mockImplementation(async (path) => {
+      if (String(path) === '/virtual/library') return Array.from({ length: 3 }, (_, index) => ({
+        name: `orphan-${index}`, isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false,
+      })) as never;
+      if (String(path).startsWith('/virtual/library/orphan-')) return [{ name: 'metadata.json', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true }] as never;
+      return [] as never;
+    });
+    const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => undefined } as never);
+    try {
+      const first = await service.listFilesystemFindings({ id: 7 } as never, 1, 2);
+      expect(first.orphanedBookFolders.items).toHaveLength(2);
+      expect(first.hasMore).toBe(true);
+      expect(first.snapshotId).toEqual(expect.any(String));
+      const second = await service.listFilesystemFindings({ id: 7 } as never, 2, 2, first.snapshotId);
+      expect(second.orphanedBookFolders.items).toHaveLength(1);
+      expect(second.orphanedBookFolders.items[0].path).toBe('/virtual/library/orphan-2');
+      expect(libraryService.findAll).toHaveBeenCalledTimes(1);
+      const otherUser = await service.listFilesystemFindings({ id: 8 } as never, 2, 2, first.snapshotId);
+      expect(otherUser.page).toBe(1);
+      expect(libraryService.findAll).toHaveBeenCalledTimes(2);
     } finally {
       readdirSpy.mockRestore();
     }

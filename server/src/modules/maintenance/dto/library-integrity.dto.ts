@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsInt, IsOptional, Min, Max } from 'class-validator';
+import { IsInt, IsOptional, Min, Max, IsString, MaxLength } from 'class-validator';
 
 export class ListLibraryIntegrityDto {
   @IsOptional()
@@ -14,4 +14,9 @@ export class ListLibraryIntegrityDto {
   @Min(1)
   @Max(100)
   pageSize = 50;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  snapshotId?: string;
 }
