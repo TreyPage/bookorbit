@@ -50,14 +50,22 @@ export class LibraryIntegrityService {
             const measure = async (path: string, level: number): Promise<void> => {
               if (level > 20) return;
               let nested;
-              try { nested = await readdir(path, { withFileTypes: true }); } catch { return; }
+              try {
+                nested = await readdir(path, { withFileTypes: true });
+              } catch {
+                return;
+              }
               for (const item of nested) {
                 if (item.isSymbolicLink()) continue;
                 const itemPath = join(path, item.name);
                 if (item.isDirectory()) await measure(itemPath, level + 1);
                 else if (item.isFile()) {
                   fileCount += 1;
-                  try { sizeBytes += (await stat(itemPath)).size; } catch { /* file disappeared during scan */ }
+                  try {
+                    sizeBytes += (await stat(itemPath)).size;
+                  } catch {
+                    /* file disappeared during scan */
+                  }
                 }
               }
             };
