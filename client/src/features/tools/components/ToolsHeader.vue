@@ -50,7 +50,13 @@ function navigateToSection(section: ToolSection): void {
       v-for="section in sections"
       :key="section.routeName"
       class="px-3 h-full text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 snap-start"
-      :class="route.name === section.routeName || (section.routeName === 'tools-library-integrity' && ['tools-missing-resources', 'tools-library-integrity-duplicate-formats'].includes(String(route.name))) ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
+      :class="
+        route.name === section.routeName ||
+        (section.routeName === 'tools-library-integrity' &&
+          ['tools-missing-resources', 'tools-library-integrity-duplicate-formats'].includes(String(route.name)))
+          ? 'border-primary text-foreground'
+          : 'border-transparent text-muted-foreground hover:text-foreground'
+      "
       @click="navigateToSection(section)"
     >
       {{ section.label }}

@@ -111,7 +111,6 @@ export type MissingResourceCleanupResult = {
   remaining: number;
 };
 
-
 export type SidecarFileKind = "text_file" | "temporary_file" | "conversion_directory";
 
 export type SidecarFileEntry = {

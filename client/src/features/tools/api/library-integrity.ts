@@ -9,32 +9,35 @@ export async function getDuplicateFormatIssues(params: { page: number; pageSize:
   return response.json() as Promise<DuplicateFormatPage>
 }
 
-
 export async function getSidecarFileIssues(params: { page: number; pageSize: number }): Promise<SidecarFilePage> {
-  const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize) });
-  const response = await api(`/api/v1/maintenance/library-integrity/sidecar-files?${query.toString()}`);
-  if (!response.ok) throw new Error('library_integrity_sidecar_files_failed');
-  return response.json() as Promise<SidecarFilePage>;
+  const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize) })
+  const response = await api(`/api/v1/maintenance/library-integrity/sidecar-files?${query.toString()}`)
+  if (!response.ok) throw new Error('library_integrity_sidecar_files_failed')
+  return response.json() as Promise<SidecarFilePage>
 }
 
-export type SeriesMergeError = Error & { status: number; body: Record<string, unknown> };
+export type SeriesMergeError = Error & { status: number; body: Record<string, unknown> }
 
 export async function getSimilarSeriesCandidates(): Promise<SimilarSeriesCandidatesResult> {
-  const response = await api('/api/v1/maintenance/library-integrity/series-name-candidates');
-  if (!response.ok) throw new Error('library_integrity_series_candidates_failed');
-  return response.json() as Promise<SimilarSeriesCandidatesResult>;
+  const response = await api('/api/v1/maintenance/library-integrity/series-name-candidates')
+  if (!response.ok) throw new Error('library_integrity_series_candidates_failed')
+  return response.json() as Promise<SimilarSeriesCandidatesResult>
 }
 
-export async function mergeSimilarSeries(params: { targetSeriesId: number; sourceSeriesIds: number[]; confirmPositionConflicts: boolean }): Promise<void> {
+export async function mergeSimilarSeries(params: {
+  targetSeriesId: number
+  sourceSeriesIds: number[]
+  confirmPositionConflicts: boolean
+}): Promise<void> {
   const response = await api('/api/v1/maintenance/library-integrity/series-name-merge', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
-  });
+  })
   if (!response.ok) {
-    const error = new Error('library_integrity_series_merge_failed') as SeriesMergeError;
-    error.status = response.status;
-    error.body = await response.json().catch(() => ({})) as Record<string, unknown>;
-    throw error;
+    const error = new Error('library_integrity_series_merge_failed') as SeriesMergeError
+    error.status = response.status
+    error.body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+    throw error
   }
 }

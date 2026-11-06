@@ -67,7 +67,9 @@ export function useMissingResources() {
   const needsSweep = computed(() => (category.value === 'broken_covers' || category.value === 'orphaned_cover_dirs') && !sweepReady.value)
   const selectionCount = computed(() => (selectAllMatching.value ? total.value : selectedIds.value.size))
   const hasSelection = computed(() => selectionCount.value > 0)
-  const allOnPageSelected = computed(() => category.value !== 'sidecar_files' && items.value.length > 0 && items.value.every((item) => selectedIds.value.has(entryId(item))))
+  const allOnPageSelected = computed(
+    () => category.value !== 'sidecar_files' && items.value.length > 0 && items.value.every((item) => selectedIds.value.has(entryId(item))),
+  )
 
   const counts = computed(() => ({
     missing_books: summary.value?.missingBooks ?? 0,

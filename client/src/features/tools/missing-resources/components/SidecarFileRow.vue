@@ -28,7 +28,10 @@ const kindLabel = () => t(`tools.missingResources.sidecar.kinds.${props.entry.ki
       <p class="text-xs text-muted-foreground">{{ entry.libraryName }}</p>
     </div>
     <span class="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
-      {{ formatBytes(entry.sizeBytes) }}<template v-if="entry.kind === 'conversion_directory'"> · {{ t('tools.missingResources.sidecar.fileCount', { count: entry.fileCount }) }}</template>
+      {{ formatBytes(entry.sizeBytes)
+      }}<template v-if="entry.kind === 'conversion_directory'">
+        · {{ t('tools.missingResources.sidecar.fileCount', { count: entry.fileCount }) }}</template
+      >
     </span>
   </li>
 </template>

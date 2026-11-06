@@ -25,7 +25,9 @@ const canCleanCategory = computed<Record<MissingResourceCategory, boolean>>(() =
   sidecar_files: false,
 }))
 const visibleCategories = computed<MissingResourceCategory[]>(() =>
-  (['missing_books', 'broken_covers', 'orphaned_cover_dirs', 'sidecar_files'] as const).filter((category) => category === 'sidecar_files' || canCleanCategory.value[category]),
+  (['missing_books', 'broken_covers', 'orphaned_cover_dirs', 'sidecar_files'] as const).filter(
+    (category) => category === 'sidecar_files' || canCleanCategory.value[category],
+  ),
 )
 const canCleanCurrent = computed(() => canCleanCategory.value[resources.category.value] && !isDemoRestrictedAccount.value)
 const showSelectAllPrompt = computed(
@@ -101,7 +103,11 @@ function handleNextPage(): void {
       <span>{{ resources.error.value }}</span>
     </div>
 
-    <div v-if="resources.category.value === 'sidecar_files' && resources.sidecarTruncated.value" role="status" class="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+    <div
+      v-if="resources.category.value === 'sidecar_files' && resources.sidecarTruncated.value"
+      role="status"
+      class="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground"
+    >
       {{ t('tools.missingResources.sidecar.truncated') }}
     </div>
 
@@ -133,18 +139,24 @@ function handleNextPage(): void {
           {{ t(`tools.missingResources.found.${resources.category.value}`, { count: resources.total.value }) }}
         </p>
         <div class="flex items-center gap-2">
-          <Button v-if="resources.category.value === 'sidecar_files'" variant="outline" size="sm" :disabled="resources.loading.value" @click="resources.setPage(1)">
+          <Button
+            v-if="resources.category.value === 'sidecar_files'"
+            variant="outline"
+            size="sm"
+            :disabled="resources.loading.value"
+            @click="resources.setPage(1)"
+          >
             <RefreshCw class="size-4" aria-hidden="true" />
             {{ t('tools.missingResources.sidecar.rescan') }}
           </Button>
           <template v-if="resources.hasSelection.value">
-          <Button variant="ghost" size="sm" @click="handleClearSelection">
-            {{ t('tools.missingResources.clearSelection') }}
-          </Button>
-          <Button v-if="canCleanCurrent" variant="destructive" size="sm" :disabled="resources.cleaning.value" @click="handleRequestClean">
-            <Trash2 aria-hidden="true" />
-            {{ t('tools.missingResources.cleanSelected', { count: resources.selectionCount.value }) }}
-          </Button>
+            <Button variant="ghost" size="sm" @click="handleClearSelection">
+              {{ t('tools.missingResources.clearSelection') }}
+            </Button>
+            <Button v-if="canCleanCurrent" variant="destructive" size="sm" :disabled="resources.cleaning.value" @click="handleRequestClean">
+              <Trash2 aria-hidden="true" />
+              {{ t('tools.missingResources.cleanSelected', { count: resources.selectionCount.value }) }}
+            </Button>
           </template>
         </div>
       </div>

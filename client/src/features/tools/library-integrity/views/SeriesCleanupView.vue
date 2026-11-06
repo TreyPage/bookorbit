@@ -18,7 +18,7 @@ const truncated = ref(false)
 const error = ref<string | null>(null)
 
 const keyOf = (pair: SimilarSeriesPair) => `${pair.left.id}-${pair.right.id}`
-const sourceOf = (pair: SimilarSeriesPair) => targets.value[keyOf(pair)] === pair.left.id ? pair.right.id : pair.left.id
+const sourceOf = (pair: SimilarSeriesPair) => (targets.value[keyOf(pair)] === pair.left.id ? pair.right.id : pair.left.id)
 
 async function load() {
   loading.value = true
@@ -82,17 +82,28 @@ onMounted(() => void load())
       </Button>
     </header>
 
-    <div v-if="error" role="alert" class="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+    <div
+      v-if="error"
+      role="alert"
+      class="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+    >
       <AlertCircle class="size-4 shrink-0" aria-hidden="true" />{{ error }}
     </div>
-    <p v-if="truncated" role="status" class="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.truncated') }}</p>
-    <p class="text-sm text-muted-foreground" aria-live="polite">{{ t('tools.libraryIntegrity.seriesCleanup.resultCount', { count: items.length }) }}</p>
+    <p v-if="truncated" role="status" class="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+      {{ t('tools.libraryIntegrity.seriesCleanup.truncated') }}
+    </p>
+    <p class="text-sm text-muted-foreground" aria-live="polite">
+      {{ t('tools.libraryIntegrity.seriesCleanup.resultCount', { count: items.length }) }}
+    </p>
 
     <div v-if="loading && !loaded" class="flex flex-1 items-center justify-center py-12">
       <Loader2 class="size-6 animate-spin text-muted-foreground" aria-hidden="true" />
       <span class="sr-only">{{ t('common.loading') }}</span>
     </div>
-    <div v-else-if="loaded && items.length === 0" class="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border/60 p-10 text-center">
+    <div
+      v-else-if="loaded && items.length === 0"
+      class="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border/60 p-10 text-center"
+    >
       <GitMerge class="size-6 text-muted-foreground" aria-hidden="true" />
       <p class="font-semibold text-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.emptyTitle') }}</p>
       <p class="max-w-md text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.emptyDescription') }}</p>
@@ -105,16 +116,32 @@ onMounted(() => void load())
             <span class="text-xs text-muted-foreground">↔</span>
             <h2 class="font-semibold text-foreground">{{ pair.right.name }}</h2>
           </div>
-          <span class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.similarity', { value: Math.round(pair.similarity * 100) }) }}</span>
+          <span class="text-xs text-muted-foreground">{{
+            t('tools.libraryIntegrity.seriesCleanup.similarity', { value: Math.round(pair.similarity * 100) })
+          }}</span>
         </div>
-        <p class="mt-1 text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.bookCounts', { left: pair.left.bookCount, right: pair.right.bookCount }) }}</p>
-        <p v-if="!pair.mergeAllowed" class="mt-3 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
-          {{ t('tools.libraryIntegrity.seriesCleanup.inaccessibleWarning', { left: pair.left.inaccessibleBookCount, right: pair.right.inaccessibleBookCount }) }}
+        <p class="mt-1 text-xs text-muted-foreground">
+          {{ t('tools.libraryIntegrity.seriesCleanup.bookCounts', { left: pair.left.bookCount, right: pair.right.bookCount }) }}
+        </p>
+        <p
+          v-if="!pair.mergeAllowed"
+          class="mt-3 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-700 dark:text-amber-300"
+        >
+          {{
+            t('tools.libraryIntegrity.seriesCleanup.inaccessibleWarning', {
+              left: pair.left.inaccessibleBookCount,
+              right: pair.right.inaccessibleBookCount,
+            })
+          }}
         </p>
         <div class="mt-4 flex flex-wrap items-end gap-3 border-t border-border pt-3">
           <label class="min-w-0 flex-1 space-y-1 text-sm">
             <span class="font-medium text-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.canonicalLabel') }}</span>
-            <select v-model.number="targets[keyOf(pair)]" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" :disabled="!pair.mergeAllowed || busy !== null">
+            <select
+              v-model.number="targets[keyOf(pair)]"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              :disabled="!pair.mergeAllowed || busy !== null"
+            >
               <option :value="pair.left.id">{{ pair.left.name }}</option>
               <option :value="pair.right.id">{{ pair.right.name }}</option>
             </select>
@@ -128,7 +155,9 @@ onMounted(() => void load())
         <div v-if="confirmKey === keyOf(pair)" class="mt-3 rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
           <p class="text-sm text-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.positionConflictWarning', { count: conflictCount }) }}</p>
           <div class="mt-2 flex justify-end">
-            <Button size="sm" variant="destructive" :disabled="busy !== null" @click="merge(pair, true)">{{ t('tools.libraryIntegrity.seriesCleanup.confirmPositionMerge') }}</Button>
+            <Button size="sm" variant="destructive" :disabled="busy !== null" @click="merge(pair, true)">{{
+              t('tools.libraryIntegrity.seriesCleanup.confirmPositionMerge')
+            }}</Button>
           </div>
         </div>
       </article>

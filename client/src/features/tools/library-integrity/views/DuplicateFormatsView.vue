@@ -80,7 +80,11 @@ onMounted(() => void load())
       </Button>
     </header>
 
-    <div v-if="error" role="alert" class="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+    <div
+      v-if="error"
+      role="alert"
+      class="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+    >
       <AlertCircle class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
       {{ error }}
     </div>
@@ -95,7 +99,10 @@ onMounted(() => void load())
       <span class="sr-only">{{ t('common.loading') }}</span>
     </div>
 
-    <div v-else-if="loaded && items.length === 0" class="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border/60 bg-card/20 p-10 text-center">
+    <div
+      v-else-if="loaded && items.length === 0"
+      class="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border/60 bg-card/20 p-10 text-center"
+    >
       <div class="flex size-14 items-center justify-center rounded-full bg-muted/70">
         <FileWarning class="size-6 text-muted-foreground" aria-hidden="true" />
       </div>
@@ -113,8 +120,12 @@ onMounted(() => void load())
           </div>
           <div class="flex shrink-0 flex-wrap items-center gap-2">
             <span class="rounded-md bg-muted px-2 py-1 text-xs font-medium uppercase">{{ group.format }}</span>
-            <span class="rounded-md border border-border px-2 py-1 text-xs">{{ t('tools.libraryIntegrity.duplicateFormats.fileCount', { count: group.fileCount }) }}</span>
-            <span v-if="hasIdenticalContent(group)" class="rounded-md border border-border bg-muted px-2 py-1 text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.duplicateFormats.identical') }}</span>
+            <span class="rounded-md border border-border px-2 py-1 text-xs">{{
+              t('tools.libraryIntegrity.duplicateFormats.fileCount', { count: group.fileCount })
+            }}</span>
+            <span v-if="hasIdenticalContent(group)" class="rounded-md border border-border bg-muted px-2 py-1 text-xs text-muted-foreground">{{
+              t('tools.libraryIntegrity.duplicateFormats.identical')
+            }}</span>
           </div>
         </div>
         <ul class="mt-3 space-y-2 border-t border-border pt-3">
