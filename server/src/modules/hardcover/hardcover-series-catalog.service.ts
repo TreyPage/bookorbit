@@ -42,6 +42,11 @@ function isEnglishCatalogBook(book: HardcoverCatalogBook | null | undefined): bo
 function normalizeSeriesName(value: string): string {
   return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 }
+function normalizeSeriesCacheKey(value: string): string {
+  // Keep punctuation and word boundaries in cache identity to avoid collisions such as
+  // "A-B" and "AB". Case, diacritics, and repeated whitespace remain equivalent.
+  return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').trim().toLowerCase().replace(/\s+/gu, ' ');
+}
 function seriesNameMatchRank(actualName: string, requestedName: string): number {
   const actual = normalizeSeriesName(actualName);
   const requested = normalizeSeriesName(requestedName);
@@ -66,7 +71,7 @@ export class HardcoverSeriesCatalogService {
   ) {}
 
   async findMissingBooks(userId: number, seriesName: string, ownedIndices: readonly string[]): Promise<MissingSeriesBooksResult> {
-    const key = normalizeSeriesName(seriesName);
+    const key = normalizeSeriesCacheKey(seriesName);
     const cached = key ? await this.cache.findByNormalizedName(key) : null;
     if (cached && Date.now() - cached.fetchedAt.getTime() < CACHE_TTL_MS) {
       return this.toResult(cached.books, cached.catalogFound, cached.expectedBookCount, ownedIndices);
@@ -107,7 +112,7 @@ export class HardcoverSeriesCatalogService {
   }
 
   async forceRefresh(userId: number, seriesName: string, ownedIndices: readonly string[]): Promise<MissingSeriesBooksResult> {
-    const key = normalizeSeriesName(seriesName);
+    const key = normalizeSeriesCacheKey(seriesName);
     const token = await this.settings.getMetadataToken(userId);
     if (!token) return this.emptyResult('not_configured');
     try {
@@ -159,8 +164,31 @@ export class HardcoverSeriesCatalogService {
         }
       }
     `;
-    const data = await this.client.query<HardcoverSeriesResponse>(userId, token, query, { seriesName });
+    let data = await this.client.query<HardcoverSeriesResponse>(userId, token, query, { seriesName });
     if (!Array.isArray(data?.series)) throw new Error('Hardcover series lookup returned an invalid response');
+
+    // The exact lookup is the cheapest and most precise path. If Hardcover stores a
+    // slightly different display name (for example, a trailing "Series"), retry with
+    // a bounded substring lookup so the ranking below can select the closest match.
+    if (data.series.length === 0) {
+      const fallbackQuery = `
+        query SeriesCatalogFallback($seriesName: String!) {
+          series(where: { name: { _ilike: $seriesName }, state: { _eq: "active" } }, limit: 25) {
+            name
+            book_series(order_by: { position: asc }, limit: ${MAX_SERIES_BOOKS}) {
+              position book_id
+              book {
+                canonical_id title cached_contributors
+                default_cover_edition { language { code2 } }
+              }
+            }
+          }
+        }
+      `;
+      data = await this.client.query<HardcoverSeriesResponse>(userId, token, fallbackQuery, { seriesName: `%${seriesName}%` });
+      if (!Array.isArray(data?.series)) throw new Error('Hardcover fallback series lookup returned an invalid response');
+    }
+
     const matching = data.series
       .map((series) => ({ series, rank: seriesNameMatchRank(series.name, seriesName) }))
       .filter(({ rank }) => rank !== Number.MAX_SAFE_INTEGER)

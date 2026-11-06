@@ -36,6 +36,7 @@ const mocks = vi.hoisted(() => ({
   order: null as unknown as { value: 'asc' | 'desc' },
   libraryId: null as unknown as { value: number | null },
   fetchSeriesBooks: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  refreshSeriesCatalog: vi.fn<(...args: unknown[]) => Promise<void>>(),
   api: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   readOnlyLibraryIds: new Set<number>(),
 }))
@@ -100,6 +101,7 @@ vi.mock('@/features/book/composables/useSafeHtml', () => ({
 
 vi.mock('../api/series', () => ({
   fetchSeriesBooks: (...args: unknown[]) => mocks.fetchSeriesBooks(...args),
+  refreshSeriesCatalog: (...args: unknown[]) => mocks.refreshSeriesCatalog(...args),
 }))
 
 vi.mock('@/lib/api', () => ({
@@ -303,6 +305,8 @@ describe('SeriesDetailView', () => {
     mocks.setBookContext.mockReset()
     mocks.loadBooks.mockReset()
     mocks.loadBooks.mockResolvedValue(undefined)
+    mocks.refreshSeriesCatalog.mockReset()
+    mocks.refreshSeriesCatalog.mockResolvedValue(undefined)
     mocks.fetchSeriesBooks.mockReset()
     mocks.fetchSeriesBooks.mockResolvedValue({
       items: [makeBook({ id: 7, seriesIndex: '1' })],
@@ -320,6 +324,21 @@ describe('SeriesDetailView', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+  })
+
+  it('refreshes the Hardcover catalog and reloads the series books', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    mocks.loadBooks.mockClear()
+
+    const refreshButton = wrapper.findAll('button').find((button) => button.attributes('title') === 'Refresh catalog')
+    expect(refreshButton).toBeDefined()
+
+    await refreshButton!.trigger('click')
+    await flushPromises()
+
+    expect(mocks.refreshSeriesCatalog).toHaveBeenCalledWith(42)
+    expect(mocks.loadBooks).toHaveBeenCalledWith(true)
   })
 
   it('renders book grids without depending on global view mode', async () => {
