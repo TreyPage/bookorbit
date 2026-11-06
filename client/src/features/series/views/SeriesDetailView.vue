@@ -192,6 +192,7 @@ async function handleRefreshCatalog(): Promise<void> {
   try {
     await refreshSeriesCatalog(seriesId.value)
     await loadBooks(true)
+    toast.success('Hardcover series catalog refreshed')
   } catch (error) {
     toast.error(error instanceof Error ? error.message : 'Failed to refresh Hardcover catalog')
   } finally {
