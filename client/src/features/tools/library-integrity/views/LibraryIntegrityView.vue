@@ -66,7 +66,6 @@ function openDuplicateBooks(): void {
           <ArrowRight class="size-4" aria-hidden="true" />
         </Button>
       </article>
-    </section>
 
       <article class="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
         <div class="flex items-start justify-between gap-3">
@@ -84,6 +83,8 @@ function openDuplicateBooks(): void {
           <ArrowRight class="size-4" aria-hidden="true" />
         </Button>
       </article>
+    </section>
+
     <section class="rounded-xl border border-dashed border-border bg-card/30 p-5">
       <div class="flex items-start gap-3">
         <div class="grid size-9 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
