@@ -27,7 +27,7 @@ describe('LibraryIntegrityController', () => {
   });
 
   it('delegates filesystem findings with the current user', async () => {
-    const service = { listFilesystemFindings: vi.fn().mockResolvedValue({ orphanedMetadataFiles: { items: [], total: 0 }, orphanedBookFolders: { items: [], total: 0 }, orphanedFiles: { items: [], total: 0 }, emptyBookFolders: { items: [], total: 0 }, truncated: false, resultsTruncated: false }) };
+    const service = { listFilesystemFindings: vi.fn().mockResolvedValue({ orphanedMetadataFiles: { items: [], total: 0 }, orphanedBookFolders: { items: [], total: 0 }, orphanedFiles: { items: [], total: 0 }, emptyBookFolders: { items: [], total: 0 }, truncated: false, hasMore: false, page: 2, pageSize: 25, unreadableDirectories: { items: [], total: 0 } }) };
     const controller = new LibraryIntegrityController(service as never, { getLastScan: vi.fn() } as never);
     const user = { id: 9 } as never;
     await controller.listFilesystemFindings({ page: 2, pageSize: 25 }, user);
