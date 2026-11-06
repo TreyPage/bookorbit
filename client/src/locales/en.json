@@ -14140,6 +14140,7 @@
       },
       "sidecar": {
         "truncated": "The scan reached its safety limit before checking every library folder. Narrow the library scope and scan again.",
+        "rescan": "Scan again",
         "kinds": {
           "text_file": "Text file (.txt)",
           "temporary_file": "Temporary download file",
