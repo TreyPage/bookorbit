@@ -63,6 +63,7 @@ describe('SeriesService', () => {
 
   const hardcoverSeriesCatalog = {
     findMissingBooks: vi.fn(),
+    forceRefresh: vi.fn(),
   };
 
   let service: SeriesService;
@@ -85,6 +86,54 @@ describe('SeriesService', () => {
     });
     libraryService.findAll.mockResolvedValue([{ id: 1 }, { id: 2 }]);
     libraryService.findAccessibleLibraryIds.mockResolvedValue([1, 2]);
+  });
+
+  describe('refreshCatalog', () => {
+    it('forces a Hardcover catalog refresh for an accessible series', async () => {
+      seriesRepo.findDetail.mockResolvedValue({
+        id: 42,
+        name: 'Dungeon Crawler Carl',
+        bookCount: 1,
+        readCount: 0,
+        authors: ['Matt Dinniman'],
+        indices: ['1'],
+      });
+      hardcoverSeriesCatalog.forceRefresh.mockResolvedValue({
+        books: [{ index: 2, title: 'New Book', authors: ['Matt Dinniman'] }],
+        missingPositions: [2],
+        expectedBookCount: 2,
+        catalogFound: true,
+        status: 'available',
+      });
+
+      await expect(service.refreshCatalog(reqUser(), 42)).resolves.toBeUndefined();
+      expect(seriesRepo.findDetail).toHaveBeenCalledWith(expect.objectContaining({
+        seriesId: 42,
+        userId: 7,
+        libraryIds: [1, 2],
+      }));
+      expect(hardcoverSeriesCatalog.forceRefresh).toHaveBeenCalledWith(7, 'Dungeon Crawler Carl', ['1']);
+    });
+
+    it('rejects manual refresh when Hardcover is not configured', async () => {
+      seriesRepo.findDetail.mockResolvedValue({
+        id: 42,
+        name: 'Dungeon Crawler Carl',
+        bookCount: 1,
+        readCount: 0,
+        authors: [],
+        indices: ['1'],
+      });
+      hardcoverSeriesCatalog.forceRefresh.mockResolvedValue({
+        books: [],
+        missingPositions: [],
+        expectedBookCount: null,
+        catalogFound: false,
+        status: 'not_configured',
+      });
+
+      await expect(service.refreshCatalog(reqUser(), 42)).rejects.toBeInstanceOf(BadRequestException);
+    });
   });
 
   describe('countAll', () => {
