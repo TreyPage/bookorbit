@@ -263,7 +263,8 @@ jobs:
         run: |
           set -euo pipefail
           SHORT_SHA="${COMMIT_SHA:0:12}"
-          SOURCE_TAG="ghcr.io/${IMAGE_NAME}:sha-${SHORT_SHA}"
+          IMAGE_LOWER=$(echo "${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')
+          SOURCE_TAG="ghcr.io/${IMAGE_LOWER}:sha-${SHORT_SHA}"
           if ! docker buildx imagetools inspect "${SOURCE_TAG}" > /dev/null 2>&1; then
             echo "::error::Multi-arch image sha-${SHORT_SHA} not found in GHCR. Wait for the Container Image workflow to complete for this commit before releasing."
             exit 1
@@ -330,7 +331,12 @@ jobs:
       - name: Prepare image metadata
         id: image-meta
         shell: bash
-        run: echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+        env:
+          IMAGE_NAME: ${{ github.repository }}
+        run: |
+          echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          IMAGE_LOWER=$(echo "${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')
+          echo "image_name=${IMAGE_LOWER}" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
@@ -354,8 +360,8 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.release.outputs.version }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ steps.image-meta.outputs.image_name }}:${{ needs.release.outputs.version }}
+            ${{ env.REGISTRY }}/${{ steps.image-meta.outputs.image_name }}:latest
           build-args: APP_VERSION=v${{ needs.release.outputs.version }}
           labels: |
             org.opencontainers.image.created=${{ steps.image-meta.outputs.created }}
@@ -372,8 +378,8 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-read-aloud-worker:${{ needs.release.outputs.version }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-read-aloud-worker:latest
+            ${{ env.REGISTRY }}/${{ steps.image-meta.outputs.image_name }}-read-aloud-worker:${{ needs.release.outputs.version }}
+            ${{ env.REGISTRY }}/${{ steps.image-meta.outputs.image_name }}-read-aloud-worker:latest
           build-args: APP_VERSION=v${{ needs.release.outputs.version }}
           labels: |
             org.opencontainers.image.created=${{ steps.image-meta.outputs.created }}
@@ -388,7 +394,7 @@ jobs:
           TAG: ${{ needs.release.outputs.tag }}
           VERSION: ${{ needs.release.outputs.version }}
           SHA: ${{ github.sha }}
-          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          IMAGE: ${{ env.REGISTRY }}/${{ steps.image-meta.outputs.image_name }}
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           set -euo pipefail
