@@ -22,9 +22,10 @@ const canCleanCategory = computed<Record<MissingResourceCategory, boolean>>(() =
   missing_books: canUseTool.value,
   broken_covers: canUseTool.value && hasPermission('library_edit_metadata'),
   orphaned_cover_dirs: canUseTool.value && hasPermission('manage_libraries'),
+  sidecar_files: false,
 }))
 const visibleCategories = computed<MissingResourceCategory[]>(() =>
-  (['missing_books', 'broken_covers', 'orphaned_cover_dirs'] as const).filter((category) => canCleanCategory.value[category]),
+  (['missing_books', 'broken_covers', 'orphaned_cover_dirs', 'sidecar_files'] as const).filter((category) => category === 'sidecar_files' || canCleanCategory.value[category]),
 )
 const canCleanCurrent = computed(() => canCleanCategory.value[resources.category.value] && !isDemoRestrictedAccount.value)
 const showSelectAllPrompt = computed(
@@ -98,6 +99,10 @@ function handleNextPage(): void {
     >
       <AlertCircle class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <span>{{ resources.error.value }}</span>
+    </div>
+
+    <div v-if="resources.category.value === 'sidecar_files' && resources.sidecarTruncated.value" role="status" class="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+      {{ t('tools.missingResources.sidecar.truncated') }}
     </div>
 
     <MissingResourceCategoryTabs
@@ -178,6 +183,7 @@ function handleNextPage(): void {
           :select-all-matching="resources.selectAllMatching.value"
           :all-on-page-selected="resources.allOnPageSelected.value"
           :disabled="resources.cleaning.value"
+          :selectable="resources.loadedCategory.value !== 'sidecar_files'"
           @toggle="handleToggle"
           @toggle-page="handleTogglePage"
         />
