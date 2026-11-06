@@ -1,3 +1,29 @@
+export type DuplicateFormatFile = {
+  id: number;
+  absolutePath: string;
+  sizeBytes: number | null;
+  fileHash: string | null;
+};
+
+export type DuplicateFormatGroup = {
+  bookId: number;
+  title: string | null;
+  libraryId: number;
+  libraryName: string;
+  folderPath: string;
+  /** Normalized lowercase file format, such as "epub" or "m4b". */
+  format: string;
+  fileCount: number;
+  files: DuplicateFormatFile[];
+};
+
+export type DuplicateFormatPage = {
+  items: DuplicateFormatGroup[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 import type { CoverMedium } from "./book";
 
 export const MISSING_RESOURCE_CATEGORIES = ["missing_books", "broken_covers", "orphaned_cover_dirs"] as const;

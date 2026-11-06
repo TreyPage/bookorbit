@@ -14286,7 +14286,22 @@
       "duplicateDescription": "Find duplicate book records using file hashes, ISBNs, and metadata matches. Review the candidates before removing records.",
       "openCheck": "Open check",
       "futureTitle": "Additional integrity checks",
-      "futureDescription": "Duplicate files within a book, unwanted sidecar files, orphaned book files, and invalid file paths will be added here. Detection will be separated from repair so ambiguous files are never deleted automatically."
+      "futureDescription": "Unwanted sidecar files, orphaned book files, and invalid file paths will be added here. Detection will be separated from repair so ambiguous files are never deleted automatically.",
+      "newCheck": "New check",
+      "duplicateFormats": {
+        "title": "Duplicate Formats",
+        "description": "Find books that have more than one content file recorded with the same format. This check is read-only; review each group before removing or moving files.",
+        "resultCount": "{count} duplicate format groups",
+        "page": "Page {page} of {total}",
+        "emptyTitle": "No duplicate formats found",
+        "emptyDescription": "Every scanned book currently has at most one content file per recorded format.",
+        "loadFailed": "Could not load duplicate format issues.",
+        "unknownSize": "Size unknown",
+        "untitled": "Untitled book",
+        "fileCount": "{count} files",
+        "identical": "Identical content",
+        "refresh": "Refresh"
+      }
     }
   },
   "views": {
@@ -14579,7 +14594,8 @@
     "tts": "Text-to-Speech",
     "chapterHealth": "Chapter Health",
     "readingHistory": "Reading History",
-    "libraryIntegrity": "Library Integrity"
+    "libraryIntegrity": "Library Integrity",
+    "libraryIntegrityDuplicateFormats": "Duplicate Formats"
   },
   "tts": {
     "readerControls": {
