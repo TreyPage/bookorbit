@@ -64,7 +64,10 @@ export function buildReadingAttemptSurvivors(attempts: readonly MergeReadingAtte
   const survivors = new Map<number, number>();
   for (const group of components.values()) {
     if (group.length < 2) continue;
-    const survivor = group.find((attempt) => attempt.book_id === targetBookId) ?? group.reduce((lowest, attempt) => attempt.id < lowest.id ? attempt : lowest);
+    const targetAttempt = group.find((attempt) => attempt.book_id === targetBookId);
+    const survivor = targetAttempt ?? group.reduce(
+      (lowest, attempt) => (attempt.id < lowest.id ? attempt : lowest),
+    );
     for (const attempt of group) {
       if (attempt.id !== survivor.id) survivors.set(attempt.id, survivor.id);
     }
