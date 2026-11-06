@@ -40,12 +40,21 @@ function isEnglishCatalogBook(book: HardcoverCatalogBook | null | undefined): bo
   return language == null || language === '' || language === 'en';
 }
 function normalizeSeriesName(value: string): string {
-  return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]/gu, '');
 }
 function normalizeSeriesCacheKey(value: string): string {
   // Keep punctuation and word boundaries in cache identity to avoid collisions such as
   // "A-B" and "AB". Case, diacritics, and repeated whitespace remain equivalent.
-  return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').trim().toLowerCase().replace(/\s+/gu, ' ');
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/gu, ' ');
 }
 function seriesNameMatchRank(actualName: string, requestedName: string): number {
   const actual = normalizeSeriesName(actualName);
@@ -87,9 +96,7 @@ export class HardcoverSeriesCatalogService {
 
     const token = await this.settings.getMetadataToken(userId);
     if (!token) {
-      return cached
-        ? this.toResult(cached.books, cached.catalogFound, cached.expectedBookCount, ownedIndices)
-        : this.emptyResult('not_configured');
+      return cached ? this.toResult(cached.books, cached.catalogFound, cached.expectedBookCount, ownedIndices) : this.emptyResult('not_configured');
     }
 
     try {
@@ -225,20 +232,45 @@ export class HardcoverSeriesCatalogService {
       const byId = new Map(titles.books.map((book) => [Number(book.id), book]));
       for (const [index, bookId] of missingBookIds) {
         const book = byId.get(bookId);
-        if (!isEnglishCatalogBook(book)) { catalog.delete(index); continue; }
+        if (!isEnglishCatalogBook(book)) {
+          catalog.delete(index);
+          continue;
+        }
         const title = book?.title?.trim();
         const entry = catalog.get(index);
-        if (entry && title) { entry.title = title; entry.authors = contributorAuthors(book?.cached_contributors); }
+        if (entry && title) {
+          entry.title = title;
+          entry.authors = contributorAuthors(book?.cached_contributors);
+        }
       }
     }
     return [...catalog.values()].sort((a, b) => a.index - b.index);
   }
 
-  private toResult(books: MissingSeriesBook[], catalogFound: boolean, expectedBookCount: number | null, ownedIndices: readonly string[]): MissingSeriesBooksResult {
-    const owned = new Set(ownedIndices.filter((value) => /^\d+$/.test(value)).map(Number).filter((value) => Number.isSafeInteger(value) && value > 0));
-    const missingPositions = books.map((book) => book.index).filter((index) => !owned.has(index)).sort((a, b) => a - b);
+  private toResult(
+    books: MissingSeriesBook[],
+    catalogFound: boolean,
+    expectedBookCount: number | null,
+    ownedIndices: readonly string[],
+  ): MissingSeriesBooksResult {
+    const owned = new Set(
+      ownedIndices
+        .filter((value) => /^\d+$/.test(value))
+        .map(Number)
+        .filter((value) => Number.isSafeInteger(value) && value > 0),
+    );
+    const missingPositions = books
+      .map((book) => book.index)
+      .filter((index) => !owned.has(index))
+      .sort((a, b) => a - b);
     const missingBooks = books.filter((book) => missingPositions.includes(book.index) && Boolean(book.title));
-    const status: MissingSeriesBooksStatus = !catalogFound ? 'not_found' : missingPositions.length === 0 ? 'no_missing' : missingBooks.length ? 'available' : 'not_found';
+    const status: MissingSeriesBooksStatus = !catalogFound
+      ? 'not_found'
+      : missingPositions.length === 0
+        ? 'no_missing'
+        : missingBooks.length
+          ? 'available'
+          : 'not_found';
     return { books: missingBooks, missingPositions, expectedBookCount, catalogFound, status };
   }
 
@@ -248,6 +280,8 @@ export class HardcoverSeriesCatalogService {
 
   private logFailure(userId: number, seriesName: string, error: unknown): void {
     const err = error instanceof Error ? error : new Error(String(error));
-    this.logger.warn(`[hardcover.series_catalog] [fail] userId=${userId} seriesName="${sanitizeLogValue(seriesName)}" errorClass=${err.constructor.name} error="${sanitizeLogValue(err.message)}" - series catalog refresh failed`);
+    this.logger.warn(
+      `[hardcover.series_catalog] [fail] userId=${userId} seriesName="${sanitizeLogValue(seriesName)}" errorClass=${err.constructor.name} error="${sanitizeLogValue(err.message)}" - series catalog refresh failed`,
+    );
   }
 }

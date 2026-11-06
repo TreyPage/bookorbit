@@ -51,7 +51,7 @@ export interface TtsEffectivePreferences {
 
 // Playback state
 
-export type TtsPlaybackState = 'idle' | 'loading' | 'playing' | 'paused' | 'error';
+export type TtsPlaybackState = "idle" | "loading" | "playing" | "paused" | "error";
 
 // Position persistence
 
@@ -99,7 +99,7 @@ export interface TtsChapterText {
 export interface TtsProviderInfo {
   id: string;
   name: string;
-  type: 'openai-compatible';
+  type: "openai-compatible";
 }
 
 // Captioned synthesis: audio plus the timing of each spoken word, for readers that

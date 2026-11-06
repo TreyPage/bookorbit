@@ -9196,6 +9196,13 @@
       "pageOf": "Page {page} of {total}",
       "emptyHint": "Search for a book and it will show up here once you ask for it."
     },
+    "toolbar": {
+      "close": "Done",
+      "hide": "Hide controls",
+      "show": "Show controls",
+      "autoFit": "Auto-fit columns",
+      "hint": "Click Columns to toggle visibility, then Auto-fit to adjust widths"
+    },
     "toasts": {
       "approved": "Request approved",
       "rejected": "Request rejected",

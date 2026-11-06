@@ -8,7 +8,14 @@ import { HardcoverSeriesCatalogService } from './hardcover-series-catalog.servic
 import { HardcoverSeriesCatalogRepository } from './hardcover-series-catalog.repository';
 
 @Module({
-  providers: [HardcoverQueueService, HardcoverClientService, HardcoverRepository, HardcoverSettingsService, HardcoverSeriesCatalogRepository, HardcoverSeriesCatalogService],
+  providers: [
+    HardcoverQueueService,
+    HardcoverClientService,
+    HardcoverRepository,
+    HardcoverSettingsService,
+    HardcoverSeriesCatalogRepository,
+    HardcoverSeriesCatalogService,
+  ],
   exports: [HardcoverQueueService, HardcoverClientService, HardcoverRepository, HardcoverSettingsService, HardcoverSeriesCatalogService],
 })
 export class HardcoverSettingsModule {}
