@@ -22,12 +22,27 @@ export class LibraryIntegrityRepository {
   async getLibraryIntegrityScanStatus(): Promise<LibraryIntegrityScanStatus | null> {
     const [row] = await this.db.select().from(libraryIntegrityScanStatus).where(eq(libraryIntegrityScanStatus.id, 'latest')).limit(1);
     if (!row) return null;
-    return { status: row.status as LibraryIntegrityScanStatus['status'], startedAt: row.startedAt.toISOString(), completedAt: row.completedAt?.toISOString() ?? null, summary: row.summary ?? null, errorMessage: row.errorMessage ?? null };
+    return {
+      status: row.status as LibraryIntegrityScanStatus['status'],
+      startedAt: row.startedAt.toISOString(),
+      completedAt: row.completedAt?.toISOString() ?? null,
+      summary: row.summary ?? null,
+      errorMessage: row.errorMessage ?? null,
+    };
   }
 
   async saveLibraryIntegrityScanStatus(status: LibraryIntegrityScanStatus): Promise<void> {
-    const values = { status: status.status, startedAt: new Date(status.startedAt), completedAt: status.completedAt ? new Date(status.completedAt) : null, summary: status.summary, errorMessage: status.errorMessage };
-    await this.db.insert(libraryIntegrityScanStatus).values({ id: 'latest', ...values }).onConflictDoUpdate({ target: libraryIntegrityScanStatus.id, set: values });
+    const values = {
+      status: status.status,
+      startedAt: new Date(status.startedAt),
+      completedAt: status.completedAt ? new Date(status.completedAt) : null,
+      summary: status.summary,
+      errorMessage: status.errorMessage,
+    };
+    await this.db
+      .insert(libraryIntegrityScanStatus)
+      .values({ id: 'latest', ...values })
+      .onConflictDoUpdate({ target: libraryIntegrityScanStatus.id, set: values });
   }
 
   async findBookFolderPaths(libraryIds: number[]): Promise<string[]> {

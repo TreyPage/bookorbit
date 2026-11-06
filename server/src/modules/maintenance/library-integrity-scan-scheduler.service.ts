@@ -12,17 +12,27 @@ export class LibraryIntegrityScanSchedulerService implements OnModuleInit {
   private running = false;
   private lastScan: LibraryIntegrityScanStatus | null = null;
 
-  constructor(private readonly integrityService: LibraryIntegrityService, private readonly repository: LibraryIntegrityRepository) {}
+  constructor(
+    private readonly integrityService: LibraryIntegrityService,
+    private readonly repository: LibraryIntegrityRepository,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     try {
       this.lastScan = await this.repository.getLibraryIntegrityScanStatus();
       if (this.lastScan?.status === 'running') {
-        this.lastScan = { ...this.lastScan, status: 'failed', completedAt: new Date().toISOString(), errorMessage: 'Scan interrupted by application restart.' };
+        this.lastScan = {
+          ...this.lastScan,
+          status: 'failed',
+          completedAt: new Date().toISOString(),
+          errorMessage: 'Scan interrupted by application restart.',
+        };
         await this.persist(this.lastScan);
       }
     } catch (error) {
-      this.logger.error(`[library.integrity.scan] [restore-fail] error="${sanitizeLogValue(error instanceof Error ? error.message : String(error))}" - could not restore persisted scan status`);
+      this.logger.error(
+        `[library.integrity.scan] [restore-fail] error="${sanitizeLogValue(error instanceof Error ? error.message : String(error))}" - could not restore persisted scan status`,
+      );
     }
   }
 
@@ -51,7 +61,9 @@ export class LibraryIntegrityScanSchedulerService implements OnModuleInit {
     try {
       const summary = await this.integrityService.scanAllLibraries();
       this.lastScan = { status: 'completed', startedAt, completedAt: new Date().toISOString(), summary, errorMessage: null };
-      this.logger.log(`[library.integrity.scan] [end] libraryCount=${summary.libraryCount} duplicateFormatGroups=${summary.duplicateFormatGroups} duplicateFormatFiles=${summary.duplicateFormatFiles} sidecarEntries=${summary.sidecarEntries} sidecarScanTruncated=${summary.sidecarScanTruncated} orphanedMetadataFiles=${summary.orphanedMetadataFiles} orphanedBookFolders=${summary.orphanedBookFolders} orphanedFiles=${summary.orphanedFiles} emptyBookFolders=${summary.emptyBookFolders} orphanedCoverDirectories=${summary.orphanedCoverDirectories} orphanedCoverBytes=${summary.orphanedCoverBytes} filesystemScanTruncated=${summary.filesystemScanTruncated} unreadableDirectories=${summary.unreadableDirectories} - read-only library integrity scan completed`);
+      this.logger.log(
+        `[library.integrity.scan] [end] libraryCount=${summary.libraryCount} duplicateFormatGroups=${summary.duplicateFormatGroups} duplicateFormatFiles=${summary.duplicateFormatFiles} sidecarEntries=${summary.sidecarEntries} sidecarScanTruncated=${summary.sidecarScanTruncated} orphanedMetadataFiles=${summary.orphanedMetadataFiles} emptyBookFolders=${summary.emptyBookFolders} orphanedCoverDirectories=${summary.orphanedCoverDirectories} orphanedCoverBytes=${summary.orphanedCoverBytes} filesystemScanTruncated=${summary.filesystemScanTruncated} - read-only library integrity scan completed`,
+      );
     } catch (error) {
       const message = sanitizeLogValue(error instanceof Error ? error.message : String(error));
       this.lastScan = { status: 'failed', startedAt, completedAt: new Date().toISOString(), summary: null, errorMessage: message };
@@ -67,7 +79,9 @@ export class LibraryIntegrityScanSchedulerService implements OnModuleInit {
     try {
       await this.repository.saveLibraryIntegrityScanStatus(status);
     } catch (error) {
-      this.logger.error(`[library.integrity.scan] [persist-fail] error="${sanitizeLogValue(error instanceof Error ? error.message : String(error))}" - could not persist scan status`);
+      this.logger.error(
+        `[library.integrity.scan] [persist-fail] error="${sanitizeLogValue(error instanceof Error ? error.message : String(error))}" - could not persist scan status`,
+      );
     }
   }
 }
