@@ -29,7 +29,7 @@ const scanMetrics = computed(() => {
     { key: 'sidecars', value: summary.sidecarEntries },
     { key: 'orphanedMetadata', value: summary.orphanedMetadataFiles },
     { key: 'emptyFolders', value: summary.emptyBookFolders },
-    { key: 'unreadableDirectories', value: summary.unreadableDirectories },
+    { key: 'unreadableDirectories', value: summary.unreadableDirectories ?? 0 },
     { key: 'orphanedCovers', value: summary.orphanedCoverDirectories },
     { key: 'coverBytes', value: summary.orphanedCoverBytes },
   ]
