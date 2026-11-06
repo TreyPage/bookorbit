@@ -224,6 +224,7 @@ function openBookMerge(): void {
           <div v-if="findings" class="mt-3 grid gap-4 lg:grid-cols-2">
             <section class="min-w-0 space-y-2">
               <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.orphanedBookFolders', { count: findings.orphanedBookFolders.total }) }}</h4>
+              <p v-if="findings.orphanedBookFolders.total > findings.orphanedBookFolders.items.length" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.showingCount', { shown: findings.orphanedBookFolders.items.length, total: findings.orphanedBookFolders.total }) }}</p>
               <p v-if="findings.orphanedBookFolders.items.length === 0" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.none') }}</p>
               <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
                 <li v-for="item in findings.orphanedBookFolders.items" :key="item.path" class="space-y-0.5 text-xs">
@@ -234,6 +235,7 @@ function openBookMerge(): void {
             </section>
             <section class="min-w-0 space-y-2">
               <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.orphanedFiles', { count: findings.orphanedFiles.total }) }}</h4>
+              <p v-if="findings.orphanedFiles.total > findings.orphanedFiles.items.length" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.showingCount', { shown: findings.orphanedFiles.items.length, total: findings.orphanedFiles.total }) }}</p>
               <p v-if="findings.orphanedFiles.items.length === 0" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.none') }}</p>
               <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
                 <li v-for="item in findings.orphanedFiles.items" :key="item.path" class="flex items-start justify-between gap-2 text-xs">
@@ -249,6 +251,7 @@ function openBookMerge(): void {
             </section>
             <section class="min-w-0 space-y-2">
               <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.emptyFolders', { count: findings.emptyBookFolders.total }) }}</h4>
+              <p v-if="findings.emptyBookFolders.total > findings.emptyBookFolders.items.length" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.showingCount', { shown: findings.emptyBookFolders.items.length, total: findings.emptyBookFolders.total }) }}</p>
               <p v-if="findings.emptyBookFolders.items.length === 0" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.none') }}</p>
               <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
                 <li v-for="item in findings.emptyBookFolders.items" :key="item.path" class="flex items-start justify-between gap-2 text-xs">
@@ -264,6 +267,7 @@ function openBookMerge(): void {
             </section>
             <section class="min-w-0 space-y-2">
               <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.unreadableDirectories', { count: findings.unreadableDirectories.total }) }}</h4>
+              <p v-if="findings.unreadableDirectories.total > findings.unreadableDirectories.items.length" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.showingCount', { shown: findings.unreadableDirectories.items.length, total: findings.unreadableDirectories.total }) }}</p>
               <p v-if="findings.unreadableDirectories.items.length === 0" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.none') }}</p>
               <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
                 <li v-for="item in findings.unreadableDirectories.items" :key="item.path" class="space-y-0.5 text-xs">
@@ -273,7 +277,8 @@ function openBookMerge(): void {
               </ul>
             </section>
           </div>
-          <p v-if="findings?.truncated || findings?.resultsTruncated" class="mt-2 text-xs text-warning">{{ t('tools.libraryIntegrity.findings.truncated') }}</p>
+          <p v-if="findings?.truncated" class="mt-2 text-xs text-warning">{{ t('tools.libraryIntegrity.findings.scanTruncated') }}</p>
+          <p v-if="findings?.resultsTruncated" class="mt-2 text-xs text-warning">{{ t('tools.libraryIntegrity.findings.resultsTruncated') }}</p>
     </section>
 
     <section class="grid gap-4 md:grid-cols-2" :aria-label="t('tools.libraryIntegrity.checksLabel')">
