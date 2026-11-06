@@ -1,8 +1,8 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { readdir, stat } from 'node:fs/promises';
 import { ConfigService } from '@nestjs/config';
+import { readdir, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import type { DuplicateFormatGroup, DuplicateFormatPage, SidecarFileEntry, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types';
+import type { DuplicateFormatGroup, DuplicateFormatPage, LibraryFilesystemFinding, LibraryFilesystemFindingsResult, SidecarFileEntry, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types';
 
 import type { RequestUser } from '../../common/types/request-user';
 import type { LibraryIntegrityScanSummary } from '@bookorbit/types';
@@ -132,6 +132,92 @@ export class LibraryIntegrityService {
     }
 
     return { orphanedMetadataFiles, emptyBookFolders, orphanedCoverDirectories, orphanedCoverBytes, truncated };
+  }
+
+
+  /**
+   * Returns bounded, user-scoped details for the two filesystem findings that can
+   * be safely classified against known book-folder paths. This endpoint never mutates files.
+   */
+  async listFilesystemFindings(user: RequestUser): Promise<LibraryFilesystemFindingsResult> {
+    const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
+    if (libraryIds.length === 0) {
+      return {
+        orphanedMetadataFiles: { items: [], total: 0 },
+        emptyBookFolders: { items: [], total: 0 },
+        truncated: false,
+        resultsTruncated: false,
+      };
+    }
+
+    const libraries = await this.libraryService.findAll(user);
+    const knownFolderPaths = new Set((await this.repo.findBookFolderPaths(libraryIds)).map((path) => resolve(path)));
+    const orphanedMetadataFiles: LibraryFilesystemFinding[] = [];
+    const emptyBookFolders: LibraryFilesystemFinding[] = [];
+    const maxResults = 500;
+    let orphanedMetadataTotal = 0;
+    let emptyFolderTotal = 0;
+    let scannedEntries = 0;
+    let truncated = false;
+    const visitedRoots = new Set<string>();
+
+    const inspect = async (directory: string, libraryId: number, libraryName: string, depth: number): Promise<void> => {
+      if (depth > 40 || truncated) {
+        truncated = true;
+        return;
+      }
+      let children;
+      try {
+        children = await readdir(directory, { withFileTypes: true });
+      } catch {
+        return;
+      }
+
+      if (knownFolderPaths.has(resolve(directory)) && children.length === 0) {
+        emptyFolderTotal += 1;
+        if (emptyBookFolders.length < maxResults) emptyBookFolders.push({ libraryId, libraryName, path: resolve(directory) });
+      }
+
+      for (const child of children) {
+        if (child.isSymbolicLink()) continue;
+        scannedEntries += 1;
+        if (scannedEntries > 100_000) {
+          truncated = true;
+          return;
+        }
+        const childPath = resolve(directory, child.name);
+        if (child.isDirectory()) {
+          await inspect(childPath, libraryId, libraryName, depth + 1);
+          if (truncated) return;
+        } else if (child.isFile() && child.name.toLowerCase() === 'metadata.json' && !knownFolderPaths.has(resolve(directory))) {
+          orphanedMetadataTotal += 1;
+          if (orphanedMetadataFiles.length < maxResults) orphanedMetadataFiles.push({ libraryId, libraryName, path: childPath });
+        }
+      }
+    };
+
+    for (const library of libraries) {
+      if (!libraryIds.includes(library.id)) continue;
+      for (const folder of library.folders) {
+        const root = resolve(folder.path);
+        if (visitedRoots.has(root)) continue;
+        visitedRoots.add(root);
+        await inspect(root, library.id, library.name, 0);
+        if (truncated) break;
+      }
+      if (truncated) break;
+    }
+
+    const sort = (a: LibraryFilesystemFinding, b: LibraryFilesystemFinding) =>
+      a.libraryName.localeCompare(b.libraryName) || a.path.localeCompare(b.path);
+    orphanedMetadataFiles.sort(sort);
+    emptyBookFolders.sort(sort);
+    return {
+      orphanedMetadataFiles: { items: orphanedMetadataFiles, total: orphanedMetadataTotal },
+      emptyBookFolders: { items: emptyBookFolders, total: emptyFolderTotal },
+      truncated,
+      resultsTruncated: orphanedMetadataTotal > maxResults || emptyFolderTotal > maxResults,
+    };
   }
 
   async listSidecarFiles(user: RequestUser, page: number, pageSize: number): Promise<SidecarFilePage> {

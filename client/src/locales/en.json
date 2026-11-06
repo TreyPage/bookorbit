@@ -14362,6 +14362,16 @@
           "orphanedCovers": "Orphaned cover directories",
           "coverBytes": "Orphaned cover storage"
         }
+      },
+      "findings": {
+        "title": "Filesystem findings",
+        "description": "Review paths before making any changes. This check is read-only.",
+        "load": "Load findings",
+        "loadFailed": "Could not load filesystem findings.",
+        "orphanedMetadata": "Orphaned metadata files ({count})",
+        "emptyFolders": "Empty book folders ({count})",
+        "none": "No findings in this category.",
+        "truncated": "The scan reached a safety limit or more than 500 results in a category. The list may be incomplete."
       }
     }
   },

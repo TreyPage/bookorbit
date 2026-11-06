@@ -41,6 +41,41 @@ describe('LibraryIntegrityService', () => {
     expect(repo.findDuplicateFormatGroups).toHaveBeenNthCalledWith(2, [1, 2], 100, 100);
   });
 
+  it('returns filesystem findings only from accessible libraries and caps the displayed results', async () => {
+    const originalReaddir = await import('node:fs/promises');
+    const repo = { findBookFolderPaths: vi.fn().mockResolvedValue(['/virtual/library/known-book']) };
+    const libraryService = {
+      findAccessibleLibraryIds: vi.fn().mockResolvedValue([1]),
+      findAll: vi.fn().mockResolvedValue([
+        { id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] },
+        { id: 2, name: 'Private', folders: [{ path: '/private' }] },
+      ]),
+    };
+    const readdirSpy = vi.spyOn(originalReaddir, 'readdir').mockImplementation(async (path) => {
+      const value = String(path);
+      if (value === '/virtual/library') return [
+        { name: 'known-book', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
+        { name: 'orphan', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
+      ] as never;
+      if (value === '/virtual/library/known-book') return [] as never;
+      if (value === '/virtual/library/orphan') return [
+        { name: 'metadata.json', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
+      ] as never;
+      return [] as never;
+    });
+    const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => undefined } as never);
+    try {
+      await expect(service.listFilesystemFindings({ id: 7 } as never)).resolves.toEqual({
+        orphanedMetadataFiles: { items: [{ libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan/metadata.json' }], total: 1 },
+        emptyBookFolders: { items: [{ libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/known-book' }], total: 1 },
+        truncated: false,
+        resultsTruncated: false,
+      });
+    } finally {
+      readdirSpy.mockRestore();
+    }
+  });
+
   it('scopes duplicate-format results to libraries the user can access', async () => {
     const repo = {
       findDuplicateFormatGroups: vi.fn().mockResolvedValue({

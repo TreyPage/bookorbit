@@ -172,3 +172,17 @@ export type LibraryIntegrityScanStatus = {
   summary: LibraryIntegrityScanSummary | null;
   errorMessage: string | null;
 };
+
+
+export type LibraryFilesystemFinding = {
+  libraryId: number;
+  libraryName: string;
+  path: string;
+};
+
+export type LibraryFilesystemFindingsResult = {
+  orphanedMetadataFiles: { items: LibraryFilesystemFinding[]; total: number };
+  emptyBookFolders: { items: LibraryFilesystemFinding[]; total: number };
+  truncated: boolean;
+  resultsTruncated: boolean;
+};
