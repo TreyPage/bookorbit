@@ -22,6 +22,11 @@ export class LibraryIntegrityController {
     return this.scanScheduler.getLastScan();
   }
 
+  @Post('scan-now')
+  startScan() {
+    return this.scanScheduler.startScan();
+  }
+
   @Get('sidecar-files')
   listSidecarFiles(@Query() dto: ListLibraryIntegrityDto, @CurrentUser() user: RequestUser) {
     return this.service.listSidecarFiles(user, dto.page, dto.pageSize);

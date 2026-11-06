@@ -14333,6 +14333,35 @@
         "positionConflictWarning": "{count} books have conflicting series positions. Confirming keeps the target series position when present; otherwise it keeps the first source position.",
         "confirmPositionMerge": "Confirm merge and keep the selected positions",
         "truncated": "Only the first 500 candidate pairs are shown. Refine the library's series names before reviewing more."
+      },
+      "scanStatus": {
+        "title": "Scheduled library scan",
+        "description": "Read-only checks across your libraries. The latest result is saved and remains available after a restart.",
+        "refresh": "Refresh status",
+        "runNow": "Run scan now",
+        "running": "Scan running…",
+        "loadFailed": "Could not load or start the library scan.",
+        "noScan": "No scan has completed yet. The scheduled scan runs daily at 3:00 AM.",
+        "status": "Status",
+        "started": "Started",
+        "completed": "Completed",
+        "notCompleted": "Not completed",
+        "states": {
+          "running": "Running",
+          "completed": "Completed",
+          "failed": "Failed"
+        },
+        "truncated": "The scan reached a safety limit. Some filesystem entries may not have been checked.",
+        "metrics": {
+          "libraries": "Libraries scanned",
+          "duplicateGroups": "Duplicate-format groups",
+          "duplicateFiles": "Duplicate-format files",
+          "sidecars": "Sidecar entries",
+          "orphanedMetadata": "Orphaned metadata files",
+          "emptyFolders": "Empty book folders",
+          "orphanedCovers": "Orphaned cover directories",
+          "coverBytes": "Orphaned cover storage"
+        }
       }
     }
   },

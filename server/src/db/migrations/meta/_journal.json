@@ -974,6 +974,13 @@
       "when": 1793900000000,
       "tag": "0138_add_hardcover_series_catalog_cache",
       "breakpoints": true
+    },
+    {
+      "idx": 139,
+      "version": "7",
+      "when": 1794000000000,
+      "tag": "0139_persist_library_integrity_scan_status",
+      "breakpoints": true
     }
   ]
 }

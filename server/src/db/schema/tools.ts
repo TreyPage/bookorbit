@@ -1,4 +1,4 @@
-import { boolean, index, integer, pgTable, real, serial, text, timestamp, unique, varchar } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, jsonb, pgTable, real, serial, text, timestamp, unique, varchar } from 'drizzle-orm/pg-core';
 
 import { users } from './auth';
 
@@ -81,3 +81,14 @@ export const entityDuplicateScanStatus = pgTable('entity_duplicate_scan_status',
 });
 
 export type EntityDuplicateScanStatus = typeof entityDuplicateScanStatus.$inferSelect;
+
+
+/** The single durable record for the latest global library-integrity scan. */
+export const libraryIntegrityScanStatus = pgTable('library_integrity_scan_status', {
+  id: varchar('id', { length: 32 }).primaryKey(),
+  status: varchar('status', { length: 16 }).notNull(),
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  summary: jsonb('summary').$type<import('@bookorbit/types').LibraryIntegrityScanSummary | null>(),
+  errorMessage: text('error_message'),
+});

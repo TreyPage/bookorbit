@@ -4,7 +4,8 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
-import { bookFiles, bookMetadata, books, libraries } from '../../db/schema';
+import { bookFiles, bookMetadata, books, libraries, libraryIntegrityScanStatus } from '../../db/schema';
+import type { LibraryIntegrityScanStatus } from '@bookorbit/types';
 
 type Db = NodePgDatabase<typeof schema>;
 
@@ -18,6 +19,17 @@ export type DuplicateFormatFileRow = {
 @Injectable()
 export class LibraryIntegrityRepository {
   constructor(@Inject(DB) private readonly db: Db) {}
+
+  async getLibraryIntegrityScanStatus(): Promise<LibraryIntegrityScanStatus | null> {
+    const [row] = await this.db.select().from(libraryIntegrityScanStatus).where(eq(libraryIntegrityScanStatus.id, 'latest')).limit(1);
+    if (!row) return null;
+    return { status: row.status as LibraryIntegrityScanStatus['status'], startedAt: row.startedAt.toISOString(), completedAt: row.completedAt?.toISOString() ?? null, summary: row.summary ?? null, errorMessage: row.errorMessage ?? null };
+  }
+
+  async saveLibraryIntegrityScanStatus(status: LibraryIntegrityScanStatus): Promise<void> {
+    const values = { status: status.status, startedAt: new Date(status.startedAt), completedAt: status.completedAt ? new Date(status.completedAt) : null, summary: status.summary, errorMessage: status.errorMessage };
+    await this.db.insert(libraryIntegrityScanStatus).values({ id: 'latest', ...values }).onConflictDoUpdate({ target: libraryIntegrityScanStatus.id, set: values });
+  }
 
   async findBookFolderPaths(libraryIds: number[]): Promise<string[]> {
     if (libraryIds.length === 0) return [];

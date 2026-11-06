@@ -1,14 +1,51 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight, Copy, Files, GitMerge, Merge, ShieldCheck } from '@lucide/vue'
+import { ArrowRight, Copy, Files, GitMerge, Merge, RefreshCw, ShieldCheck } from '@lucide/vue'
 
+import type { LibraryIntegrityScanStatus } from '@bookorbit/types'
+
+import { getLibraryIntegrityScanStatus, startLibraryIntegrityScan } from '@/features/tools/api/library-integrity'
 import MissingResourcesView from '@/features/tools/missing-resources/views/MissingResourcesView.vue'
 
 import { Button } from '@/components/ui/button'
 
 const router = useRouter()
 const { t } = useI18n()
+const scanStatus = ref<LibraryIntegrityScanStatus | null>(null)
+const scanLoading = ref(false)
+const scanError = ref(false)
+
+async function refreshScanStatus(): Promise<void> {
+  scanLoading.value = true
+  scanError.value = false
+  try {
+    scanStatus.value = await getLibraryIntegrityScanStatus()
+  } catch {
+    scanError.value = true
+  } finally {
+    scanLoading.value = false
+  }
+}
+
+async function runScan(): Promise<void> {
+  scanLoading.value = true
+  scanError.value = false
+  try {
+    scanStatus.value = await startLibraryIntegrityScan()
+  } catch {
+    scanError.value = true
+  } finally {
+    scanLoading.value = false
+  }
+}
+
+function formatScanDate(value: string | null): string {
+  return value ? new Date(value).toLocaleString() : t('tools.libraryIntegrity.scanStatus.notCompleted')
+}
+
+onMounted(() => { void refreshScanStatus() })
 
 function openDuplicateFormats(): void {
   void router.push({ name: 'tools-library-integrity-duplicate-formats' })
@@ -37,6 +74,49 @@ function openBookMerge(): void {
       <h1 class="text-2xl font-semibold tracking-tight text-foreground">{{ t('titles.libraryIntegrity') }}</h1>
       <p class="max-w-3xl text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.description') }}</p>
     </header>
+
+    <section class="rounded-xl border border-border bg-card p-5" aria-live="polite">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="space-y-1">
+          <h2 class="text-base font-semibold text-foreground">{{ t('tools.libraryIntegrity.scanStatus.title') }}</h2>
+          <p class="text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.scanStatus.description') }}</p>
+        </div>
+        <div class="flex gap-2">
+          <Button size="sm" variant="outline" :disabled="scanLoading" @click="refreshScanStatus">
+            <RefreshCw class="size-4" aria-hidden="true" /> {{ t('tools.libraryIntegrity.scanStatus.refresh') }}
+          </Button>
+          <Button size="sm" :disabled="scanLoading || scanStatus?.status === 'running'" @click="runScan">
+            {{ scanStatus?.status === 'running' ? t('tools.libraryIntegrity.scanStatus.running') : t('tools.libraryIntegrity.scanStatus.runNow') }}
+          </Button>
+        </div>
+      </div>
+      <p v-if="scanError" class="mt-3 text-sm text-destructive">{{ t('tools.libraryIntegrity.scanStatus.loadFailed') }}</p>
+      <p v-else-if="!scanStatus" class="mt-3 text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.scanStatus.noScan') }}</p>
+      <div v-else class="mt-4 space-y-3">
+        <div class="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+          <span><strong>{{ t('tools.libraryIntegrity.scanStatus.status') }}:</strong> {{ t('tools.libraryIntegrity.scanStatus.states.' + scanStatus.status) }}</span>
+          <span><strong>{{ t('tools.libraryIntegrity.scanStatus.started') }}:</strong> {{ formatScanDate(scanStatus.startedAt) }}</span>
+          <span v-if="scanStatus.completedAt"><strong>{{ t('tools.libraryIntegrity.scanStatus.completed') }}:</strong> {{ formatScanDate(scanStatus.completedAt) }}</span>
+        </div>
+        <p v-if="scanStatus.errorMessage" class="text-sm text-destructive">{{ scanStatus.errorMessage }}</p>
+        <dl v-if="scanStatus.summary" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div v-for="item in [
+            ['libraries', scanStatus.summary.libraryCount],
+            ['duplicateGroups', scanStatus.summary.duplicateFormatGroups],
+            ['duplicateFiles', scanStatus.summary.duplicateFormatFiles],
+            ['sidecars', scanStatus.summary.sidecarEntries],
+            ['orphanedMetadata', scanStatus.summary.orphanedMetadataFiles],
+            ['emptyFolders', scanStatus.summary.emptyBookFolders],
+            ['orphanedCovers', scanStatus.summary.orphanedCoverDirectories],
+            ['coverBytes', scanStatus.summary.orphanedCoverBytes],
+          ]" :key="item[0]" class="rounded-lg bg-muted/50 px-3 py-2">
+            <dt class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.scanStatus.metrics.' + item[0]) }}</dt>
+            <dd class="text-lg font-semibold tabular-nums text-foreground">{{ item[0] === 'coverBytes' ? (Number(item[1]) / 1024 / 1024).toFixed(2) + ' MB' : item[1] }}</dd>
+          </div>
+        </dl>
+        <p v-if="scanStatus.summary?.sidecarScanTruncated || scanStatus.summary?.filesystemScanTruncated" class="text-sm text-warning">{{ t('tools.libraryIntegrity.scanStatus.truncated') }}</p>
+      </div>
+    </section>
 
     <section class="grid gap-4 md:grid-cols-2" :aria-label="t('tools.libraryIntegrity.checksLabel')">
       <article class="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
