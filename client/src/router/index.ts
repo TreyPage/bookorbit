@@ -681,7 +681,7 @@ export const routes: RouteRecordRaw[] = [
             path: 'library-integrity',
             name: 'tools-library-integrity',
             component: () => import('@/features/tools/library-integrity/views/LibraryIntegrityView.vue'),
-            meta: { title: () => 'Library Integrity' },
+            meta: { title: () => t('titles.libraryIntegrity') },
           },
           {
             path: 'missing-resources',
