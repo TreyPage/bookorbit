@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ArrowRight, Copy, Files, GitMerge, Merge, RefreshCw, ShieldCheck } from '@lucide/vue'
@@ -19,6 +19,35 @@ const scanError = ref(false)
 const findings = ref<LibraryFilesystemFindingsResult | null>(null)
 const findingsLoading = ref(false)
 const findingsError = ref(false)
+let scanPollInterval: ReturnType<typeof setInterval> | null = null
+let scanPollInFlight = false
+
+function stopScanPolling(): void {
+  if (scanPollInterval) clearInterval(scanPollInterval)
+  scanPollInterval = null
+}
+
+function startScanPolling(): void {
+  stopScanPolling()
+  scanPollInterval = setInterval(() => { void pollScanStatus() }, 2000)
+}
+
+async function pollScanStatus(): Promise<void> {
+  if (scanPollInFlight) return
+  scanPollInFlight = true
+  try {
+    scanStatus.value = await getLibraryIntegrityScanStatus()
+    scanError.value = false
+    if (scanStatus.value?.status !== 'running') {
+      stopScanPolling()
+      await loadFilesystemFindings()
+    }
+  } catch {
+    scanError.value = true
+  } finally {
+    scanPollInFlight = false
+  }
+}
 const scanMetrics = computed(() => {
   const summary = scanStatus.value?.summary
   if (!summary) return []
@@ -64,6 +93,8 @@ async function runScan(): Promise<void> {
   scanError.value = false
   try {
     scanStatus.value = await startLibraryIntegrityScan()
+    if (scanStatus.value?.status === 'running') startScanPolling()
+    else if (scanStatus.value) await loadFilesystemFindings()
   } catch {
     scanError.value = true
   } finally {
@@ -75,7 +106,13 @@ function formatScanDate(value: string | null): string {
   return value ? new Date(value).toLocaleString() : t('tools.libraryIntegrity.scanStatus.notCompleted')
 }
 
-onMounted(() => { void refreshScanStatus() })
+onMounted(() => {
+  void refreshScanStatus().then(() => {
+    if (scanStatus.value?.status === 'running') startScanPolling()
+  })
+})
+
+onUnmounted(stopScanPolling)
 
 function openDuplicateFormats(): void {
   void router.push({ name: 'tools-library-integrity-duplicate-formats' })
