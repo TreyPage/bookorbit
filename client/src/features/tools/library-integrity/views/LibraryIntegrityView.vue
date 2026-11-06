@@ -59,7 +59,6 @@ const scanMetrics = computed(() => {
     { key: 'duplicateGroups', value: summary.duplicateFormatGroups },
     { key: 'duplicateFiles', value: summary.duplicateFormatFiles },
     { key: 'sidecars', value: summary.sidecarEntries },
-    { key: 'orphanedMetadata', value: summary.orphanedMetadataFiles },
     { key: 'orphanedBookFolders', value: summary.orphanedBookFolders ?? 0 },
     { key: 'orphanedFiles', value: summary.orphanedFiles ?? 0 },
     { key: 'emptyFolders', value: summary.emptyBookFolders },
