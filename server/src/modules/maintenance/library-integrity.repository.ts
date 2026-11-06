@@ -4,7 +4,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
-import { bookFiles, bookMetadata, books, bookSeries, bookSeriesMemberships, libraries } from '../../db/schema';
+import { bookFiles, bookMetadata, books, libraries } from '../../db/schema';
 
 type Db = NodePgDatabase<typeof schema>;
 
