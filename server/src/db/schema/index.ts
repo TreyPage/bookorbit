@@ -37,6 +37,7 @@ export * from './fonts';
 export * from './koreader';
 export * from './achievements';
 export * from './hardcover';
+export * from './hardcover-series-catalog';
 export * from './readwise';
 export * from './read-aloud';
 export * from './storygraph';

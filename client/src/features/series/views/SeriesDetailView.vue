@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } fr
 import { useI18n } from 'vue-i18n'
 import { formatNumber } from '@/i18n/formatters'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronLeft, Pencil } from '@lucide/vue'
+import { ChevronLeft, Pencil, RefreshCw } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 
 import type { BookCard, BookDetail, MissingSeriesBook } from '@bookorbit/types'
@@ -31,7 +31,7 @@ import { useDeleteBook } from '@/features/book/composables/useDeleteBook'
 import SeriesCompletionBar from '../components/SeriesCompletionBar.vue'
 import SeriesOwnershipBar from '../components/SeriesOwnershipBar.vue'
 import SeriesGapBanner from '../components/SeriesGapBanner.vue'
-import { fetchSeriesBooks } from '../api/series'
+import { fetchSeriesBooks, refreshSeriesCatalog } from '../api/series'
 import { groupSeriesBooksByMedia } from '../composables/useSeriesBookMediaGroups'
 import { useSeriesDetail } from '../composables/useSeriesDetail'
 import { useCoverStack, MAX_VISIBLE as MAX_STACK_VISIBLE } from '../composables/useCoverStack'
@@ -90,6 +90,7 @@ usePageTitle(pageTitle)
 
 const sentinel = ref<HTMLElement | null>(null)
 const openingSeriesEditor = ref(false)
+const refreshingCatalog = ref(false)
 const loadingLeadBook = ref(false)
 const leadBookError = ref<string | null>(null)
 const leadDescriptionExpanded = ref(false)
@@ -183,6 +184,20 @@ function handleRequestSeriesBook(): void {
 
 function handleRetryMissingBookTitles(): void {
   void loadBooks(true)
+}
+
+async function handleRefreshCatalog(): Promise<void> {
+  if (seriesId.value == null || refreshingCatalog.value) return
+  refreshingCatalog.value = true
+  try {
+    await refreshSeriesCatalog(seriesId.value)
+    await loadBooks(true)
+    toast.success('Hardcover series catalog refreshed')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : 'Failed to refresh Hardcover catalog')
+  } finally {
+    refreshingCatalog.value = false
+  }
 }
 
 // 'move-to-library' is part of the shared card contract; this view does not
@@ -604,6 +619,17 @@ defineOptions({ name: 'SeriesDetailView' })
                 >
                   <Pencil :size="14" />
                   {{ openingSeriesEditor ? t('series.detail.preparingEditor') : t('series.detail.editMetadata') }}
+                </button>
+                <button
+                  type="button"
+                  class="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 md:w-auto"
+                  :disabled="refreshingCatalog"
+                  aria-label="Refresh Hardcover series catalog"
+                  title="Refresh Hardcover series catalog"
+                  @click="handleRefreshCatalog"
+                >
+                  <RefreshCw :size="14" :class="{ 'animate-spin': refreshingCatalog }" />
+                  {{ refreshingCatalog ? t('common.loading') : 'Refresh catalog' }}
                 </button>
                 <button
                   v-if="canRequestMissingBooks && seriesInfo.possibleGaps.length > 0"

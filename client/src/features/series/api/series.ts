@@ -39,3 +39,11 @@ export async function fetchSeriesBooks(seriesId: number, params: ListSeriesBooks
   if (!res.ok) throw new Error(`Failed to fetch series books: ${res.status}`)
   return res.json()
 }
+
+export async function refreshSeriesCatalog(seriesId: number): Promise<void> {
+  const res = await api(`/api/v1/series/${seriesId}/refresh-catalog`, { method: 'POST' })
+  if (!res.ok) {
+    const body = await res.json().catch(() => null) as { message?: string } | null
+    throw new Error(body?.message ?? `Failed to refresh series catalog: ${res.status}`)
+  }
+}
