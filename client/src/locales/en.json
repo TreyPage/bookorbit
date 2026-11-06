@@ -14314,6 +14314,25 @@
         "fileCount": "{count} files",
         "identical": "Identical content",
         "refresh": "Refresh"
+      },
+      "seriesCleanup": {
+        "title": "Series Name Cleanup",
+        "description": "Review similar series names and merge confirmed variants into one canonical series. Similarity is only a suggestion; every merge is explicit.",
+        "resultCount": "{count} possible series pairs",
+        "emptyTitle": "No similar series names found",
+        "emptyDescription": "No series name pairs currently meet the similarity threshold.",
+        "loadFailed": "Could not load similar series names.",
+        "refresh": "Rescan",
+        "canonicalLabel": "Keep this series name",
+        "merge": "Merge other name into this one",
+        "similarity": "{value}% name similarity",
+        "bookCounts": "{left} books · {right} books",
+        "inaccessibleWarning": "This pair includes books in libraries you cannot access ({left} and {right} hidden books). Merging is disabled to protect those records.",
+        "inaccessibleError": "This merge would affect books in libraries you cannot access. No changes were made.",
+        "mergeFailed": "Could not merge these series. Refresh the list and try again.",
+        "positionConflictWarning": "{count} books have conflicting series positions. Confirming keeps the target series position when present; otherwise it keeps the first source position.",
+        "confirmPositionMerge": "Confirm merge and keep the selected positions",
+        "truncated": "Only the first 500 candidate pairs are shown. Refine the library's series names before reviewing more."
       }
     }
   },
