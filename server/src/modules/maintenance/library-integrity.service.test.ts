@@ -62,6 +62,6 @@ describe('LibraryIntegrityService', () => {
       page: 1,
       pageSize: 50,
     });
-    expect(repo.findDuplicateFormatGroups).toHaveBeenCalledWith([], 0, 50);
+    expect(repo.findDuplicateFormatGroups).not.toHaveBeenCalled();
   });
 });
