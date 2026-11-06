@@ -11,7 +11,7 @@ describe('LibraryIntegrityController', () => {
 
   it('delegates similar-series discovery with the current user', async () => {
     const service = { listSimilarSeries: vi.fn().mockResolvedValue({ items: [], truncated: false }) };
-    const controller = new LibraryIntegrityController(service as never);
+    const controller = new LibraryIntegrityController(service as never, { getLastScan: vi.fn() } as never);
     const user = { id: 9 } as never;
 
     await controller.listSimilarSeries(user);

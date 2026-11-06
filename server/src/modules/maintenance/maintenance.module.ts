@@ -8,6 +8,7 @@ import { CoverSweepStore } from './cover-sweep.store';
 import { LibraryIntegrityController } from './library-integrity.controller';
 import { LibraryIntegrityRepository } from './library-integrity.repository';
 import { LibraryIntegrityService } from './library-integrity.service';
+import { LibraryIntegrityScanSchedulerService } from './library-integrity-scan-scheduler.service';
 import { MissingResourcesController } from './missing-resources.controller';
 import { MissingResourcesRepository } from './missing-resources.repository';
 import { MissingResourcesService } from './missing-resources.service';
@@ -15,6 +16,6 @@ import { MissingResourcesService } from './missing-resources.service';
 @Module({
   imports: [BookModule, BookCoverStoreModule, LibraryModule, ReadingAttemptEventsModule],
   controllers: [MissingResourcesController, LibraryIntegrityController],
-  providers: [MissingResourcesService, MissingResourcesRepository, CoverSweepStore, LibraryIntegrityRepository, LibraryIntegrityService],
+  providers: [MissingResourcesService, MissingResourcesRepository, CoverSweepStore, LibraryIntegrityRepository, LibraryIntegrityService, LibraryIntegrityScanSchedulerService],
 })
 export class MaintenanceModule {}

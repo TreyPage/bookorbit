@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import type { DuplicateFormatGroup, DuplicateFormatPage, SidecarFileEntry, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types';
 
 import type { RequestUser } from '../../common/types/request-user';
+import type { LibraryIntegrityScanSummary } from '@bookorbit/types';
 import { LibraryService } from '../library/library.service';
 import { LibraryIntegrityRepository } from './library-integrity.repository';
 
@@ -13,6 +14,38 @@ export class LibraryIntegrityService {
     private readonly repo: LibraryIntegrityRepository,
     private readonly libraryService: LibraryService,
   ) {}
+
+  /**
+   * Read-only scheduled integrity pass. Detailed findings remain available through the
+   * paginated integrity endpoints; this pass records a bounded summary for operators.
+   */
+  async scanAllLibraries(): Promise<LibraryIntegrityScanSummary> {
+    const systemUser = { id: 0, isSuperuser: true, contentFilters: {} } as RequestUser;
+    const libraryIds = await this.libraryService.findAccessibleLibraryIds(systemUser);
+    const sidecars = await this.listSidecarFiles(systemUser, 1, 1);
+
+    const pageSize = 100;
+    let duplicateFormatGroups = 0;
+    let duplicateFormatFiles = 0;
+    let page = 1;
+    let totalPages = 1;
+
+    while (page <= totalPages) {
+      const result = await this.listDuplicateFormats(systemUser, page, pageSize);
+      duplicateFormatGroups = result.total;
+      duplicateFormatFiles += result.items.reduce((total, group) => total + group.fileCount, 0);
+      totalPages = Math.max(1, Math.ceil(result.total / pageSize));
+      page += 1;
+    }
+
+    return {
+      libraryCount: libraryIds.length,
+      duplicateFormatGroups,
+      duplicateFormatFiles,
+      sidecarEntries: sidecars.total,
+      sidecarScanTruncated: sidecars.truncated,
+    };
+  }
 
   async listSidecarFiles(user: RequestUser, page: number, pageSize: number): Promise<SidecarFilePage> {
     const libraries = await this.libraryService.findAll(user);

@@ -150,3 +150,20 @@ export type SimilarSeriesCandidatesResult = {
   items: SimilarSeriesPair[];
   truncated: boolean;
 };
+
+/** Summary from the most recent scheduled, read-only library integrity pass. */
+export type LibraryIntegrityScanSummary = {
+  libraryCount: number;
+  duplicateFormatGroups: number;
+  duplicateFormatFiles: number;
+  sidecarEntries: number;
+  sidecarScanTruncated: boolean;
+};
+
+export type LibraryIntegrityScanStatus = {
+  status: "running" | "completed" | "failed";
+  startedAt: string;
+  completedAt: string | null;
+  summary: LibraryIntegrityScanSummary | null;
+  errorMessage: string | null;
+};

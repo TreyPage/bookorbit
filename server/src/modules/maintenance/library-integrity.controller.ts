@@ -4,6 +4,7 @@ import { Permission } from '@bookorbit/types';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import type { RequestUser } from '../../common/types/request-user';
+import { LibraryIntegrityScanSchedulerService } from './library-integrity-scan-scheduler.service';
 import { ListLibraryIntegrityDto } from './dto/library-integrity.dto';
 import { MergeSeriesDto } from './dto/merge-series.dto';
 import { LibraryIntegrityService } from './library-integrity.service';
@@ -11,7 +12,15 @@ import { LibraryIntegrityService } from './library-integrity.service';
 @Controller('maintenance/library-integrity')
 @RequirePermission(Permission.LibraryDeleteBooks)
 export class LibraryIntegrityController {
-  constructor(private readonly service: LibraryIntegrityService) {}
+  constructor(
+    private readonly service: LibraryIntegrityService,
+    private readonly scanScheduler: LibraryIntegrityScanSchedulerService,
+  ) {}
+
+  @Get('scan-status')
+  getScanStatus() {
+    return this.scanScheduler.getLastScan();
+  }
 
   @Get('sidecar-files')
   listSidecarFiles(@Query() dto: ListLibraryIntegrityDto, @CurrentUser() user: RequestUser) {
