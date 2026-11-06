@@ -13649,7 +13649,8 @@
       "duplicateBooks": "Duplicate Books",
       "bookMerge": "Merge Books",
       "missingResources": "Missing Resources",
-      "chapterHealth": "Chapter Health"
+      "chapterHealth": "Chapter Health",
+      "libraryIntegrity": "Library Integrity"
     },
     "entityTypes": {
       "authors": "Authors",
