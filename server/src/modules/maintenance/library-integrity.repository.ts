@@ -1,12 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, count, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { LibraryIntegrityScanStatus } from '@bookorbit/types';
 
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
 import { bookFiles, bookMetadata, books, libraries, libraryIntegrityScanStatus } from '../../db/schema';
-import type { LibraryIntegrityScanStatus } from '@bookorbit/types';
-
 type Db = NodePgDatabase<typeof schema>;
 
 export type DuplicateFormatFileRow = {

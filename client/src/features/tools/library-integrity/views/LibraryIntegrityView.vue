@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ArrowRight, Copy, Files, GitMerge, Merge, RefreshCw, ShieldCheck } from '@lucide/vue'
@@ -16,6 +16,20 @@ const { t } = useI18n()
 const scanStatus = ref<LibraryIntegrityScanStatus | null>(null)
 const scanLoading = ref(false)
 const scanError = ref(false)
+const scanMetrics = computed(() => {
+  const summary = scanStatus.value?.summary
+  if (!summary) return []
+  return [
+    { key: 'libraries', value: summary.libraryCount },
+    { key: 'duplicateGroups', value: summary.duplicateFormatGroups },
+    { key: 'duplicateFiles', value: summary.duplicateFormatFiles },
+    { key: 'sidecars', value: summary.sidecarEntries },
+    { key: 'orphanedMetadata', value: summary.orphanedMetadataFiles },
+    { key: 'emptyFolders', value: summary.emptyBookFolders },
+    { key: 'orphanedCovers', value: summary.orphanedCoverDirectories },
+    { key: 'coverBytes', value: summary.orphanedCoverBytes },
+  ]
+})
 
 async function refreshScanStatus(): Promise<void> {
   scanLoading.value = true
@@ -100,18 +114,9 @@ function openBookMerge(): void {
         </div>
         <p v-if="scanStatus.errorMessage" class="text-sm text-destructive">{{ scanStatus.errorMessage }}</p>
         <dl v-if="scanStatus.summary" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <div v-for="item in [
-            ['libraries', scanStatus.summary.libraryCount],
-            ['duplicateGroups', scanStatus.summary.duplicateFormatGroups],
-            ['duplicateFiles', scanStatus.summary.duplicateFormatFiles],
-            ['sidecars', scanStatus.summary.sidecarEntries],
-            ['orphanedMetadata', scanStatus.summary.orphanedMetadataFiles],
-            ['emptyFolders', scanStatus.summary.emptyBookFolders],
-            ['orphanedCovers', scanStatus.summary.orphanedCoverDirectories],
-            ['coverBytes', scanStatus.summary.orphanedCoverBytes],
-          ]" :key="item[0]" class="rounded-lg bg-muted/50 px-3 py-2">
-            <dt class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.scanStatus.metrics.' + item[0]) }}</dt>
-            <dd class="text-lg font-semibold tabular-nums text-foreground">{{ item[0] === 'coverBytes' ? (Number(item[1]) / 1024 / 1024).toFixed(2) + ' MB' : item[1] }}</dd>
+          <div v-for="item in scanMetrics" :key="item.key" class="rounded-lg bg-muted/50 px-3 py-2">
+            <dt class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.scanStatus.metrics.' + item.key) }}</dt>
+            <dd class="text-lg font-semibold tabular-nums text-foreground">{{ item.key === 'coverBytes' ? (item.value / 1024 / 1024).toFixed(2) + ' MB' : item.value }}</dd>
           </div>
         </dl>
         <p v-if="scanStatus.summary?.sidecarScanTruncated || scanStatus.summary?.filesystemScanTruncated" class="text-sm text-warning">{{ t('tools.libraryIntegrity.scanStatus.truncated') }}</p>
