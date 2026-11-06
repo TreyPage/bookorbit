@@ -690,6 +690,12 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: () => t('titles.libraryIntegrityDuplicateFormats') },
           },
           {
+            path: 'library-integrity/sidecar-files',
+            name: 'tools-library-integrity-sidecar-files',
+            component: () => import('@/features/tools/library-integrity/views/SidecarFilesView.vue'),
+            meta: { title: () => 'Sidecar and temporary files' },
+          },
+          {
             path: 'missing-resources',
             name: 'tools-missing-resources',
             component: () => import('@/features/tools/missing-resources/views/MissingResourcesView.vue'),
