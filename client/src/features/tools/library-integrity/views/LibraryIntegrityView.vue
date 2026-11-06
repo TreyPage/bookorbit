@@ -18,6 +18,8 @@ const scanLoading = ref(false)
 const scanError = ref(false)
 const findings = ref<LibraryFilesystemFindingsResult | null>(null)
 const findingsLoading = ref(false)
+const findingsPage = ref(1)
+const findingsPageSize = 50
 const findingsError = ref(false)
 const cleaningFolder = ref<string | null>(null)
 const cleaningFile = ref<string | null>(null)
@@ -68,11 +70,25 @@ const scanMetrics = computed(() => {
   ]
 })
 
-async function loadFilesystemFindings(): Promise<void> {
+async function loadFilesystemFindings(append = false): Promise<void> {
+  const requestedPage = append ? findingsPage.value + 1 : 1
   findingsLoading.value = true
   findingsError.value = false
   try {
-    findings.value = await getLibraryFilesystemFindings()
+    const result = await getLibraryFilesystemFindings({ page: requestedPage, pageSize: findingsPageSize })
+    if (append && findings.value) {
+      findings.value = {
+        ...result,
+        orphanedMetadataFiles: { ...result.orphanedMetadataFiles, items: [...findings.value.orphanedMetadataFiles.items, ...result.orphanedMetadataFiles.items] },
+        orphanedBookFolders: { ...result.orphanedBookFolders, items: [...findings.value.orphanedBookFolders.items, ...result.orphanedBookFolders.items] },
+        orphanedFiles: { ...result.orphanedFiles, items: [...findings.value.orphanedFiles.items, ...result.orphanedFiles.items] },
+        emptyBookFolders: { ...result.emptyBookFolders, items: [...findings.value.emptyBookFolders.items, ...result.emptyBookFolders.items] },
+        unreadableDirectories: { ...result.unreadableDirectories, items: [...findings.value.unreadableDirectories.items, ...result.unreadableDirectories.items] },
+      }
+    } else {
+      findings.value = result
+    }
+    findingsPage.value = requestedPage
   } catch {
     findingsError.value = true
   } finally {
@@ -278,7 +294,9 @@ function openBookMerge(): void {
             </section>
           </div>
           <p v-if="findings?.truncated" class="mt-2 text-xs text-warning">{{ t('tools.libraryIntegrity.findings.scanTruncated') }}</p>
-          <p v-if="findings?.resultsTruncated" class="mt-2 text-xs text-warning">{{ t('tools.libraryIntegrity.findings.resultsTruncated') }}</p>
+          <div v-if="findings?.hasMore" class="mt-3 flex justify-center">
+            <Button size="sm" variant="outline" :disabled="findingsLoading" @click="loadFilesystemFindings(true)">{{ findingsLoading ? t('tools.libraryIntegrity.findings.loadingMore') : t('tools.libraryIntegrity.findings.loadMore') }}</Button>
+          </div>
     </section>
 
     <section class="grid gap-4 md:grid-cols-2" :aria-label="t('tools.libraryIntegrity.checksLabel')">

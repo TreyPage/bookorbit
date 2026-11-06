@@ -190,5 +190,7 @@ export type LibraryFilesystemFindingsResult = {
   emptyBookFolders: { items: LibraryFilesystemFinding[]; total: number };
   unreadableDirectories: { items: LibraryFilesystemFinding[]; total: number };
   truncated: boolean;
-  resultsTruncated: boolean;
+  hasMore: boolean;
+  page: number;
+  pageSize: number;
 };

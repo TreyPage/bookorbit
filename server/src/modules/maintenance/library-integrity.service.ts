@@ -154,7 +154,8 @@ export class LibraryIntegrityService {
   /**
    * Returns bounded, user-scoped filesystem findings. This endpoint never mutates files.
    */
-  async listFilesystemFindings(user: RequestUser): Promise<LibraryFilesystemFindingsResult> {
+  async listFilesystemFindings(user: RequestUser, page = 1, pageSize = 50): Promise<LibraryFilesystemFindingsResult> {
+    const offset = (page - 1) * pageSize;
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
     if (libraryIds.length === 0) {
       return {
@@ -163,7 +164,9 @@ export class LibraryIntegrityService {
         orphanedFiles: { items: [], total: 0 },
         emptyBookFolders: { items: [], total: 0 },
         truncated: false,
-        resultsTruncated: false,
+        hasMore: false,
+        page,
+        pageSize,
         unreadableDirectories: { items: [], total: 0 },
       };
     }
@@ -175,7 +178,6 @@ export class LibraryIntegrityService {
     const orphanedFiles: Array<LibraryFilesystemFinding & { reason: 'folder_without_format' | 'text_file' }> = [];
     const emptyBookFolders: LibraryFilesystemFinding[] = [];
     const unreadableDirectories: LibraryFilesystemFinding[] = [];
-    const maxResults = 500;
     let orphanedMetadataTotal = 0;
     let orphanedBookFolderTotal = 0;
     let orphanedFileTotal = 0;
@@ -195,20 +197,20 @@ export class LibraryIntegrityService {
         children = await readdir(directory, { withFileTypes: true });
       } catch {
         unreadableDirectoryTotal += 1;
-        if (unreadableDirectories.length < maxResults) unreadableDirectories.push({ libraryId, libraryName, path: resolve(directory) });
+        unreadableDirectories.push({ libraryId, libraryName, path: resolve(directory) });
         return;
       }
 
       if (depth > 0 && children.length === 0) {
         emptyFolderTotal += 1;
-        if (emptyBookFolders.length < maxResults) emptyBookFolders.push({ libraryId, libraryName, path: resolve(directory) });
+        emptyBookFolders.push({ libraryId, libraryName, path: resolve(directory) });
       }
       const directFiles = children.filter((child) => child.isFile());
       const hasBookFormat = directFiles.some((child) => isBookFormat(extname(child.name).slice(1)));
       const filesWithoutFormat = depth > 0 && directFiles.length > 0 && !hasBookFormat;
       if (filesWithoutFormat) {
         orphanedBookFolderTotal += 1;
-        if (orphanedBookFolders.length < maxResults) orphanedBookFolders.push({ libraryId, libraryName, path: resolve(directory) });
+        orphanedBookFolders.push({ libraryId, libraryName, path: resolve(directory) });
       }
 
       for (const child of children) {
@@ -226,12 +228,12 @@ export class LibraryIntegrityService {
           const lowerName = child.name.toLowerCase();
           if (lowerName === 'metadata.json' && !knownFolderPaths.has(resolve(directory))) {
             orphanedMetadataTotal += 1;
-            if (orphanedMetadataFiles.length < maxResults) orphanedMetadataFiles.push({ libraryId, libraryName, path: childPath });
+            orphanedMetadataFiles.push({ libraryId, libraryName, path: childPath });
           }
           const reason = filesWithoutFormat ? 'folder_without_format' : lowerName.endsWith('.txt') ? 'text_file' : null;
           if (reason) {
             orphanedFileTotal += 1;
-            if (orphanedFiles.length < maxResults) orphanedFiles.push({ libraryId, libraryName, path: childPath, reason });
+            orphanedFiles.push({ libraryId, libraryName, path: childPath, reason });
           }
         }
       }
@@ -256,14 +258,17 @@ export class LibraryIntegrityService {
     orphanedFiles.sort(sort);
     emptyBookFolders.sort(sort);
     unreadableDirectories.sort(sort);
+    const pageItems = <T>(items: T[]) => items.slice(offset, offset + pageSize);
     return {
-      orphanedMetadataFiles: { items: orphanedMetadataFiles, total: orphanedMetadataTotal },
-      orphanedBookFolders: { items: orphanedBookFolders, total: orphanedBookFolderTotal },
-      orphanedFiles: { items: orphanedFiles, total: orphanedFileTotal },
-      emptyBookFolders: { items: emptyBookFolders, total: emptyFolderTotal },
-      unreadableDirectories: { items: unreadableDirectories, total: unreadableDirectoryTotal },
+      orphanedMetadataFiles: { items: pageItems(orphanedMetadataFiles), total: orphanedMetadataTotal },
+      orphanedBookFolders: { items: pageItems(orphanedBookFolders), total: orphanedBookFolderTotal },
+      orphanedFiles: { items: pageItems(orphanedFiles), total: orphanedFileTotal },
+      emptyBookFolders: { items: pageItems(emptyBookFolders), total: emptyFolderTotal },
+      unreadableDirectories: { items: pageItems(unreadableDirectories), total: unreadableDirectoryTotal },
       truncated,
-      resultsTruncated: orphanedMetadataTotal > maxResults || orphanedBookFolderTotal > maxResults || orphanedFileTotal > maxResults || emptyFolderTotal > maxResults || unreadableDirectoryTotal > maxResults,
+      hasMore: [orphanedMetadataTotal, orphanedBookFolderTotal, orphanedFileTotal, emptyFolderTotal, unreadableDirectoryTotal].some((total) => total > offset + pageSize),
+      page,
+      pageSize,
     };
   }
 

@@ -7,6 +7,7 @@ import type { RequestUser } from '../../common/types/request-user';
 import { LibraryIntegrityScanSchedulerService } from './library-integrity-scan-scheduler.service';
 import { ListLibraryIntegrityDto } from './dto/library-integrity.dto';
 import { CleanupEmptyBookFolderDto } from './dto/cleanup-empty-book-folder.dto';
+import { ListLibraryIntegrityDto } from './dto/library-integrity.dto';
 import { MergeSeriesDto } from './dto/merge-series.dto';
 import { LibraryIntegrityService } from './library-integrity.service';
 
@@ -29,8 +30,8 @@ export class LibraryIntegrityController {
   }
 
   @Get('filesystem-findings')
-  listFilesystemFindings(@CurrentUser() user: RequestUser) {
-    return this.service.listFilesystemFindings(user);
+  listFilesystemFindings(@Query() dto: ListLibraryIntegrityDto, @CurrentUser() user: RequestUser) {
+    return this.service.listFilesystemFindings(user, dto.page, dto.pageSize);
   }
 
   @Post('filesystem-findings/cleanup-empty-folder')
