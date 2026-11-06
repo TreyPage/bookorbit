@@ -137,8 +137,7 @@ function handleNextPage(): void {
             <RefreshCw class="size-4" aria-hidden="true" />
             {{ t('tools.missingResources.sidecar.rescan') }}
           </Button>
-        </div>
-        <div v-if="resources.hasSelection.value" class="flex items-center gap-2">
+          <template v-if="resources.hasSelection.value">
           <Button variant="ghost" size="sm" @click="handleClearSelection">
             {{ t('tools.missingResources.clearSelection') }}
           </Button>
@@ -146,6 +145,7 @@ function handleNextPage(): void {
             <Trash2 aria-hidden="true" />
             {{ t('tools.missingResources.cleanSelected', { count: resources.selectionCount.value }) }}
           </Button>
+          </template>
         </div>
       </div>
 
