@@ -6,7 +6,7 @@ import { ArrowRight, Copy, Files, GitMerge, Merge, RefreshCw, ShieldCheck } from
 
 import type { LibraryFilesystemFindingsResult, LibraryIntegrityScanStatus } from '@bookorbit/types'
 
-import { cleanupEmptyBookFolder, getLibraryFilesystemFindings, getLibraryIntegrityScanStatus, startLibraryIntegrityScan } from '@/features/tools/api/library-integrity'
+import { cleanupEmptyBookFolder, cleanupOrphanedFile, getLibraryFilesystemFindings, getLibraryIntegrityScanStatus, startLibraryIntegrityScan } from '@/features/tools/api/library-integrity'
 import MissingResourcesView from '@/features/tools/missing-resources/views/MissingResourcesView.vue'
 
 import { Button } from '@/components/ui/button'
@@ -20,6 +20,7 @@ const findings = ref<LibraryFilesystemFindingsResult | null>(null)
 const findingsLoading = ref(false)
 const findingsError = ref(false)
 const cleaningFolder = ref<string | null>(null)
+const cleaningFile = ref<string | null>(null)
 const cleanupError = ref(false)
 let scanPollInterval: ReturnType<typeof setInterval> | null = null
 let scanPollInFlight = false
@@ -59,6 +60,8 @@ const scanMetrics = computed(() => {
     { key: 'duplicateFiles', value: summary.duplicateFormatFiles },
     { key: 'sidecars', value: summary.sidecarEntries },
     { key: 'orphanedMetadata', value: summary.orphanedMetadataFiles },
+    { key: 'orphanedBookFolders', value: summary.orphanedBookFolders ?? 0 },
+    { key: 'orphanedFiles', value: summary.orphanedFiles ?? 0 },
     { key: 'emptyFolders', value: summary.emptyBookFolders },
     { key: 'unreadableDirectories', value: summary.unreadableDirectories ?? 0 },
     { key: 'orphanedCovers', value: summary.orphanedCoverDirectories },
@@ -89,6 +92,20 @@ async function removeEmptyFolder(item: { libraryId: number; path: string }): Pro
     cleanupError.value = true
   } finally {
     cleaningFolder.value = null
+  }
+}
+
+async function removeOrphanedFile(item: { libraryId: number; path: string }): Promise<void> {
+  if (!window.confirm(t('tools.libraryIntegrity.findings.confirmOrphanedFile', { path: item.path }))) return
+  cleaningFile.value = item.path
+  cleanupError.value = false
+  try {
+    await cleanupOrphanedFile({ libraryId: item.libraryId, path: item.path })
+    await loadFilesystemFindings()
+  } catch {
+    cleanupError.value = true
+  } finally {
+    cleaningFile.value = null
   }
 }
 
@@ -207,12 +224,27 @@ function openBookMerge(): void {
           <p v-if="cleanupError" role="alert" class="mt-2 text-sm text-destructive">{{ t('tools.libraryIntegrity.findings.cleanupFailed') }}</p>
           <div v-if="findings" class="mt-3 grid gap-4 lg:grid-cols-2">
             <section class="min-w-0 space-y-2">
-              <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.orphanedMetadata', { count: findings.orphanedMetadataFiles.total }) }}</h4>
-              <p v-if="findings.orphanedMetadataFiles.items.length === 0" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.none') }}</p>
+              <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.orphanedBookFolders', { count: findings.orphanedBookFolders.total }) }}</h4>
+              <p v-if="findings.orphanedBookFolders.items.length === 0" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.none') }}</p>
               <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
-                <li v-for="item in findings.orphanedMetadataFiles.items" :key="item.path" class="space-y-0.5 text-xs">
+                <li v-for="item in findings.orphanedBookFolders.items" :key="item.path" class="space-y-0.5 text-xs">
                   <span class="block text-muted-foreground">{{ item.libraryName }}</span>
                   <code class="block break-all text-foreground">{{ item.path }}</code>
+                </li>
+              </ul>
+            </section>
+            <section class="min-w-0 space-y-2">
+              <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.orphanedFiles', { count: findings.orphanedFiles.total }) }}</h4>
+              <p v-if="findings.orphanedFiles.items.length === 0" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.none') }}</p>
+              <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
+                <li v-for="item in findings.orphanedFiles.items" :key="item.path" class="flex items-start justify-between gap-2 text-xs">
+                  <div class="min-w-0 space-y-0.5">
+                    <span class="block text-muted-foreground">{{ item.libraryName }} · {{ t('tools.libraryIntegrity.findings.fileReasons.' + item.reason) }}</span>
+                    <code class="block break-all text-foreground">{{ item.path }}</code>
+                  </div>
+                  <Button size="sm" variant="outline" :disabled="cleaningFile !== null || cleaningFolder !== null" @click="removeOrphanedFile(item)">
+                    {{ cleaningFile === item.path ? t('tools.libraryIntegrity.findings.cleaning') : t('tools.libraryIntegrity.findings.removeOrphanedFile') }}
+                  </Button>
                 </li>
               </ul>
             </section>

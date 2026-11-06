@@ -38,6 +38,11 @@ export class LibraryIntegrityController {
     return this.service.cleanupEmptyBookFolder(user, dto.libraryId, dto.path);
   }
 
+  @Post('filesystem-findings/cleanup-orphaned-file')
+  cleanupOrphanedFile(@Body() dto: CleanupEmptyBookFolderDto, @CurrentUser() user: RequestUser) {
+    return this.service.cleanupOrphanedFile(user, dto.libraryId, dto.path);
+  }
+
   @Get('sidecar-files')
   listSidecarFiles(@Query() dto: ListLibraryIntegrityDto, @CurrentUser() user: RequestUser) {
     return this.service.listSidecarFiles(user, dto.page, dto.pageSize);

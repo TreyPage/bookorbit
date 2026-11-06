@@ -12,6 +12,8 @@ describe('LibraryIntegrityScanSchedulerService', () => {
         sidecarEntries: 4,
         sidecarScanTruncated: false,
         orphanedMetadataFiles: 2,
+        orphanedBookFolders: 1,
+        orphanedFiles: 3,
         emptyBookFolders: 1,
         orphanedCoverDirectories: 3,
         orphanedCoverBytes: 2048,
@@ -25,7 +27,7 @@ describe('LibraryIntegrityScanSchedulerService', () => {
 
     expect(result).toMatchObject({
       status: 'completed',
-      summary: { libraryCount: 2, duplicateFormatGroups: 3, duplicateFormatFiles: 6, sidecarEntries: 4, orphanedMetadataFiles: 2, emptyBookFolders: 1, orphanedCoverDirectories: 3, orphanedCoverBytes: 2048 },
+      summary: { libraryCount: 2, duplicateFormatGroups: 3, duplicateFormatFiles: 6, sidecarEntries: 4, orphanedMetadataFiles: 2, orphanedBookFolders: 1, orphanedFiles: 3, emptyBookFolders: 1, orphanedCoverDirectories: 3, orphanedCoverBytes: 2048 },
       errorMessage: null,
     });
     expect(integrityService.scanAllLibraries).toHaveBeenCalledOnce();
@@ -45,7 +47,7 @@ describe('LibraryIntegrityScanSchedulerService', () => {
     expect(second).toMatchObject({ status: 'running' });
     finish({
       libraryCount: 0, duplicateFormatGroups: 0, duplicateFormatFiles: 0, sidecarEntries: 0, sidecarScanTruncated: false,
-      orphanedMetadataFiles: 0, emptyBookFolders: 0, orphanedCoverDirectories: 0, orphanedCoverBytes: 0, filesystemScanTruncated: false,
+      orphanedMetadataFiles: 0, orphanedBookFolders: 0, orphanedFiles: 0, emptyBookFolders: 0, orphanedCoverDirectories: 0, orphanedCoverBytes: 0, filesystemScanTruncated: false,
     } as never);
     await first;
   });
