@@ -5,6 +5,8 @@ import { LibraryIntegrityService } from './library-integrity.service';
 describe('LibraryIntegrityService', () => {
   it('runs a read-only summary across all libraries and all duplicate-format pages', async () => {
     const repo = {
+      findBookFolderPaths: vi.fn().mockResolvedValue([]),
+      findExistingBookIds: vi.fn().mockResolvedValue([]),
       findDuplicateFormatGroups: vi.fn()
         .mockResolvedValueOnce({ items: [{ fileCount: 3 }], total: 101 })
         .mockResolvedValueOnce({ items: [{ fileCount: 2 }], total: 101 }),
@@ -16,7 +18,7 @@ describe('LibraryIntegrityService', () => {
         { id: 2, name: 'Audio', folders: [{ path: '/audio' }] },
       ]),
     };
-    const service = new LibraryIntegrityService(repo as never, libraryService as never);
+    const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => '/nonexistent-appdata' } as never);
     const sidecarSpy = vi.spyOn(service, 'listSidecarFiles').mockResolvedValue({
       items: [], total: 7, page: 1, pageSize: 1, truncated: true,
     });
@@ -27,6 +29,11 @@ describe('LibraryIntegrityService', () => {
       duplicateFormatFiles: 5,
       sidecarEntries: 7,
       sidecarScanTruncated: true,
+      orphanedMetadataFiles: 0,
+      emptyBookFolders: 0,
+      orphanedCoverDirectories: 0,
+      orphanedCoverBytes: 0,
+      filesystemScanTruncated: false,
     });
     expect(libraryService.findAccessibleLibraryIds).toHaveBeenCalledWith(expect.objectContaining({ isSuperuser: true }));
     expect(sidecarSpy).toHaveBeenCalledWith(expect.objectContaining({ isSuperuser: true }), 1, 1);
@@ -56,7 +63,7 @@ describe('LibraryIntegrityService', () => {
       }),
     };
     const libraryService = { findAccessibleLibraryIds: vi.fn().mockResolvedValue([4, 8]) };
-    const service = new LibraryIntegrityService(repo as never, libraryService as never);
+    const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => '/nonexistent-appdata' } as never);
 
     await expect(service.listDuplicateFormats({ id: 7 } as never, 2, 25)).resolves.toEqual({
       items: [
@@ -92,7 +99,7 @@ describe('LibraryIntegrityService', () => {
     };
     const repo = { mergeSeries: vi.fn().mockResolvedValue(result) };
     const libraryService = { findAccessibleLibraryIds: vi.fn().mockResolvedValue([4, 8]) };
-    const service = new LibraryIntegrityService(repo as never, libraryService as never);
+    const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => '/nonexistent-appdata' } as never);
     const dto = { targetSeriesId: 10, sourceSeriesIds: [11], confirmPositionConflicts: false };
 
     await expect(service.mergeSeries({ id: 7 } as never, dto)).resolves.toEqual(result);
@@ -102,7 +109,7 @@ describe('LibraryIntegrityService', () => {
   it('returns no similar-series candidates when the user has no accessible libraries', async () => {
     const repo = { findSimilarSeriesPairs: vi.fn() };
     const libraryService = { findAccessibleLibraryIds: vi.fn().mockResolvedValue([]) };
-    const service = new LibraryIntegrityService(repo as never, libraryService as never);
+    const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => '/nonexistent-appdata' } as never);
 
     await expect(service.listSimilarSeries({ id: 7 } as never)).resolves.toEqual({ items: [], truncated: false });
     expect(repo.findSimilarSeriesPairs).not.toHaveBeenCalled();
@@ -111,7 +118,7 @@ describe('LibraryIntegrityService', () => {
   it('returns an empty page when the user has no accessible libraries', async () => {
     const repo = { findDuplicateFormatGroups: vi.fn() };
     const libraryService = { findAccessibleLibraryIds: vi.fn().mockResolvedValue([]) };
-    const service = new LibraryIntegrityService(repo as never, libraryService as never);
+    const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => '/nonexistent-appdata' } as never);
 
     await expect(service.listDuplicateFormats({ id: 7 } as never, 1, 50)).resolves.toEqual({
       items: [],

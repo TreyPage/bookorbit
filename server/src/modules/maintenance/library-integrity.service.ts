@@ -1,10 +1,12 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { readdir, stat } from 'node:fs/promises';
+import { ConfigService } from '@nestjs/config';
 import { join, resolve } from 'node:path';
 import type { DuplicateFormatGroup, DuplicateFormatPage, SidecarFileEntry, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types';
 
 import type { RequestUser } from '../../common/types/request-user';
 import type { LibraryIntegrityScanSummary } from '@bookorbit/types';
+import { readCoverDirBookIds, measureCoverDir } from './lib/cover-disk';
 import { LibraryService } from '../library/library.service';
 import { LibraryIntegrityRepository } from './library-integrity.repository';
 
@@ -13,6 +15,7 @@ export class LibraryIntegrityService {
   constructor(
     private readonly repo: LibraryIntegrityRepository,
     private readonly libraryService: LibraryService,
+    private readonly config: ConfigService,
   ) {}
 
   /**
@@ -23,6 +26,7 @@ export class LibraryIntegrityService {
     const systemUser = { id: 0, isSuperuser: true, contentFilters: {} } as RequestUser;
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(systemUser);
     const sidecars = await this.listSidecarFiles(systemUser, 1, 1);
+    const filesystem = await this.scanFilesystemAnomalies(systemUser, libraryIds);
 
     const pageSize = 100;
     let duplicateFormatGroups = 0;
@@ -44,7 +48,90 @@ export class LibraryIntegrityService {
       duplicateFormatFiles,
       sidecarEntries: sidecars.total,
       sidecarScanTruncated: sidecars.truncated,
+      orphanedMetadataFiles: filesystem.orphanedMetadataFiles,
+      emptyBookFolders: filesystem.emptyBookFolders,
+      orphanedCoverDirectories: filesystem.orphanedCoverDirectories,
+      orphanedCoverBytes: filesystem.orphanedCoverBytes,
+      filesystemScanTruncated: filesystem.truncated,
     };
+  }
+
+
+  /**
+   * Read-only filesystem checks. Metadata is considered orphaned when its containing
+   * directory is not a known book folder; empty folders are counted only when the
+   * database identifies that exact path as a book folder.
+   */
+  private async scanFilesystemAnomalies(systemUser: RequestUser, libraryIds: number[]) {
+    const libraries = await this.libraryService.findAll(systemUser);
+    const knownFolderPaths = new Set(
+      (await this.repo.findBookFolderPaths(libraryIds)).map((path) => resolve(path)),
+    );
+    const visitedRoots = new Set<string>();
+    let orphanedMetadataFiles = 0;
+    let emptyBookFolders = 0;
+    let scannedEntries = 0;
+    let truncated = false;
+
+    const inspect = async (directory: string, depth: number): Promise<void> => {
+      if (depth > 40 || truncated) {
+        truncated = true;
+        return;
+      }
+      let children;
+      try {
+        children = await readdir(directory, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      if (knownFolderPaths.has(resolve(directory)) && children.length === 0) emptyBookFolders += 1;
+
+      for (const child of children) {
+        if (child.isSymbolicLink()) continue;
+        scannedEntries += 1;
+        if (scannedEntries > 100_000) {
+          truncated = true;
+          return;
+        }
+        if (child.isDirectory()) {
+          await inspect(resolve(directory, child.name), depth + 1);
+          if (truncated) return;
+        } else if (child.isFile() && child.name.toLowerCase() === 'metadata.json') {
+          if (!knownFolderPaths.has(resolve(directory))) orphanedMetadataFiles += 1;
+        }
+      }
+    };
+
+    for (const library of libraries) {
+      if (!libraryIds.includes(library.id)) continue;
+      for (const folder of library.folders) {
+        const root = resolve(folder.path);
+        if (visitedRoots.has(root)) continue;
+        visitedRoots.add(root);
+        await inspect(root, 0);
+        if (truncated) break;
+      }
+      if (truncated) break;
+    }
+
+    const appDataPath = this.config.get<string>('storage.appDataPath');
+    let orphanedCoverDirectories = 0;
+    let orphanedCoverBytes = 0;
+    if (appDataPath) {
+      const coversRoot = join(appDataPath, 'covers');
+      const diskIds = [...(await readCoverDirBookIds(coversRoot))];
+      for (let index = 0; index < diskIds.length; index += 500) {
+        const batch = diskIds.slice(index, index + 500);
+        const existing = new Set(await this.repo.findExistingBookIds(batch));
+        for (const id of batch.filter((bookId) => !existing.has(bookId))) {
+          const measured = await measureCoverDir(coversRoot, id);
+          orphanedCoverDirectories += 1;
+          orphanedCoverBytes += measured.sizeBytes;
+        }
+      }
+    }
+
+    return { orphanedMetadataFiles, emptyBookFolders, orphanedCoverDirectories, orphanedCoverBytes, truncated };
   }
 
   async listSidecarFiles(user: RequestUser, page: number, pageSize: number): Promise<SidecarFilePage> {

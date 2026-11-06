@@ -34,7 +34,7 @@ export class LibraryIntegrityScanSchedulerService {
       const summary = await this.integrityService.scanAllLibraries();
       this.lastScan = { status: 'completed', startedAt, completedAt: new Date().toISOString(), summary, errorMessage: null };
       this.logger.log(
-        `[library.integrity.scan] [end] libraryCount=${summary.libraryCount} duplicateFormatGroups=${summary.duplicateFormatGroups} duplicateFormatFiles=${summary.duplicateFormatFiles} sidecarEntries=${summary.sidecarEntries} sidecarScanTruncated=${summary.sidecarScanTruncated} - read-only library integrity scan completed`,
+        `[library.integrity.scan] [end] libraryCount=${summary.libraryCount} duplicateFormatGroups=${summary.duplicateFormatGroups} duplicateFormatFiles=${summary.duplicateFormatFiles} sidecarEntries=${summary.sidecarEntries} sidecarScanTruncated=${summary.sidecarScanTruncated} orphanedMetadataFiles=${summary.orphanedMetadataFiles} emptyBookFolders=${summary.emptyBookFolders} orphanedCoverDirectories=${summary.orphanedCoverDirectories} orphanedCoverBytes=${summary.orphanedCoverBytes} filesystemScanTruncated=${summary.filesystemScanTruncated} - read-only library integrity scan completed`,
       );
     } catch (error) {
       const message = sanitizeLogValue(error instanceof Error ? error.message : String(error));

@@ -19,6 +19,18 @@ export type DuplicateFormatFileRow = {
 export class LibraryIntegrityRepository {
   constructor(@Inject(DB) private readonly db: Db) {}
 
+  async findBookFolderPaths(libraryIds: number[]): Promise<string[]> {
+    if (libraryIds.length === 0) return [];
+    const rows = await this.db.select({ folderPath: books.folderPath }).from(books).where(inArray(books.libraryId, libraryIds));
+    return [...new Set(rows.map((row) => row.folderPath))];
+  }
+
+  async findExistingBookIds(bookIds: number[]): Promise<number[]> {
+    if (bookIds.length === 0) return [];
+    const rows = await this.db.select({ id: books.id }).from(books).where(inArray(books.id, bookIds));
+    return rows.map((row) => row.id);
+  }
+
   async findDuplicateFormatGroups(libraryIds: number[], offset: number, limit: number) {
     if (libraryIds.length === 0) return { items: [], total: 0 };
 
