@@ -403,8 +403,9 @@ export class LibraryIntegrityService {
         if (!child.isFile()) continue;
         const lowerName = child.name.toLowerCase();
         let kind: SidecarFileEntry['kind'] | null = null;
-        if (lowerName.endsWith('.txt')) kind = 'text_file';
-        else if (/\.(tmp|temp|part|crdownload|download)$/.test(lowerName)) kind = 'temporary_file';
+        // Text files are reported by the Library Integrity orphaned-files scan.
+        // Keep this legacy sidecar list focused on temporary files and conversion directories.
+        if (/\.(tmp|temp|part|crdownload|download)$/.test(lowerName)) kind = 'temporary_file';
         if (!kind) continue;
 
         try {
