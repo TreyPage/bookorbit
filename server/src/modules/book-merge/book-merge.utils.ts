@@ -12,11 +12,7 @@ function conflicts(left: MergeReadingAttempt, right: MergeReadingAttempt): boole
   const sameUser = left.user_id === right.user_id;
   if (!sameUser) return false;
 
-  const bothActive =
-    left.outcome === null &&
-    left.deleted_at === null &&
-    right.outcome === null &&
-    right.deleted_at === null;
+  const bothActive = left.outcome === null && left.deleted_at === null && right.outcome === null && right.deleted_at === null;
 
   const sameExternalIdentity =
     left.external_provider !== null &&
@@ -36,10 +32,7 @@ function conflicts(left: MergeReadingAttempt, right: MergeReadingAttempt): boole
  * target-book attempts, then the lowest ID, and map each discarded attempt
  * directly to one retained conflicting attempt.
  */
-export function buildReadingAttemptSurvivors(
-  attempts: readonly MergeReadingAttempt[],
-  targetBookId: number,
-): Map<number, number> {
+export function buildReadingAttemptSurvivors(attempts: readonly MergeReadingAttempt[], targetBookId: number): Map<number, number> {
   const ordered = [...attempts].sort((left, right) => {
     const leftIsTarget = left.book_id === targetBookId;
     const rightIsTarget = right.book_id === targetBookId;
