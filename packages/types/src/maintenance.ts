@@ -108,3 +108,24 @@ export type MissingResourceCleanupResult = {
   /** Entries still matching after this pass. Cleaning "all" works in bounded passes; repeat until zero. */
   remaining: number;
 };
+
+
+export type SidecarFileKind = "text_file" | "temporary_file" | "conversion_directory";
+
+export type SidecarFileEntry = {
+  libraryId: number;
+  libraryName: string;
+  path: string;
+  kind: SidecarFileKind;
+  sizeBytes: number;
+  fileCount: number;
+};
+
+export type SidecarFilePage = {
+  items: SidecarFileEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
+  /** True when the scan reached its safety cap before every folder was visited. */
+  truncated: boolean;
+};

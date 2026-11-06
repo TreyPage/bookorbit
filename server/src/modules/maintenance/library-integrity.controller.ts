@@ -12,6 +12,11 @@ import { LibraryIntegrityService } from './library-integrity.service';
 export class LibraryIntegrityController {
   constructor(private readonly service: LibraryIntegrityService) {}
 
+  @Get('sidecar-files')
+  listSidecarFiles(@Query() dto: ListLibraryIntegrityDto, @CurrentUser() user: RequestUser) {
+    return this.service.listSidecarFiles(user, dto.page, dto.pageSize);
+  }
+
   @Get('duplicate-formats')
   listDuplicateFormats(@Query() dto: ListLibraryIntegrityDto, @CurrentUser() user: RequestUser) {
     return this.service.listDuplicateFormats(user, dto.page, dto.pageSize);
