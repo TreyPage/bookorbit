@@ -189,6 +189,7 @@ export class LibraryIntegrityRepository {
       `);
       if (visibleTarget.rows.length === 0) return { status: 'not_accessible' as const };
 
+
       const hiddenRefs = await tx.execute(sql`
         SELECT count(DISTINCT visible_book.id)::int AS count
         FROM books visible_book
@@ -218,6 +219,26 @@ export class LibraryIntegrityRepository {
         FOR UPDATE OF metadata
       `);
 
+      const invisibleSources = await tx.execute(sql`
+        SELECT source.id
+        FROM unnest(${sourceSeriesIds}::int[]) AS source(id)
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM book_series_memberships membership
+          INNER JOIN books visible_book ON visible_book.id = membership.book_id
+          WHERE membership.series_id = source.id
+            AND visible_book.library_id = ANY(${libraryIds}::int[])
+        )
+        AND NOT EXISTS (
+          SELECT 1
+          FROM book_metadata metadata
+          INNER JOIN books visible_book ON visible_book.id = metadata.book_id
+          WHERE metadata.series_id = source.id
+            AND visible_book.library_id = ANY(${libraryIds}::int[])
+        )
+      `);
+      if (invisibleSources.rows.length > 0) return { status: 'not_accessible' as const };
+
       const conflictsResult = await tx.execute(sql`
         WITH relevant AS (
           SELECT membership.book_id, membership.series_id, membership.series_index
@@ -231,7 +252,7 @@ export class LibraryIntegrityRepository {
           array_agg(DISTINCT series_index) FILTER (WHERE series_id <> ${targetSeriesId} AND series_index IS NOT NULL) AS source_indices
         FROM relevant
         GROUP BY book_id
-        HAVING count(DISTINCT series_index) FILTER (WHERE series_index IS NOT NULL) > 1
+        HAVING count(DISTINCT series_index::numeric) FILTER (WHERE series_index IS NOT NULL) > 1
       `);
       const conflicts = conflictsResult.rows as Array<{ book_id: number; target_index: string | null; source_indices: string[] }>;
       if (conflicts.length > 0 && !confirmPositionConflicts) {
