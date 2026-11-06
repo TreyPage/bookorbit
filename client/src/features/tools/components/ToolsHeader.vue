@@ -24,9 +24,9 @@ const sections = computed<ToolSection[]>(() => {
   }
 
   if (hasPermission('library_delete_books')) {
+    result.push({ label: t('tools.header.libraryIntegrity'), routeName: 'tools-library-integrity' })
     result.push({ label: t('tools.header.duplicateBooks'), routeName: 'tools-duplicate-books' })
     result.push({ label: t('tools.header.bookMerge'), routeName: 'tools-book-merge' })
-    result.push({ label: t('tools.header.missingResources'), routeName: 'tools-missing-resources' })
   }
 
   if (hasPermission('library_edit_metadata')) {
@@ -52,7 +52,7 @@ function navigateToSection(section: ToolSection): void {
       v-for="section in sections"
       :key="section.routeName"
       class="px-3 h-full text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 snap-start"
-      :class="route.name === section.routeName ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
+      :class="route.name === section.routeName || (section.routeName === 'tools-library-integrity' && route.name === 'tools-missing-resources') ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
       @click="navigateToSection(section)"
     >
       {{ section.label }}

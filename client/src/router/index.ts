@@ -678,6 +678,12 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: () => t('titles.bookMerge') },
           },
           {
+            path: 'library-integrity',
+            name: 'tools-library-integrity',
+            component: () => import('@/features/tools/library-integrity/views/LibraryIntegrityView.vue'),
+            meta: { title: () => t('titles.libraryIntegrity') },
+          },
+          {
             path: 'missing-resources',
             name: 'tools-missing-resources',
             component: () => import('@/features/tools/missing-resources/views/MissingResourcesView.vue'),
