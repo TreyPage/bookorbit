@@ -111,6 +111,10 @@ export class LibraryIntegrityService {
 
   async listDuplicateFormats(user: RequestUser, page: number, pageSize: number): Promise<DuplicateFormatPage> {
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
+    if (libraryIds.length === 0) {
+      return { items: [], total: 0, page, pageSize };
+    }
+
     const result = await this.repo.findDuplicateFormatGroups(libraryIds, (page - 1) * pageSize, pageSize);
 
     return {
@@ -128,5 +132,9 @@ export class LibraryIntegrityService {
       page,
       pageSize,
     };
+  }
+  async listSimilarSeries(user: RequestUser) {
+    const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
+    return this.repo.findSimilarSeriesPairs(libraryIds);
   }
 }

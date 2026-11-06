@@ -21,4 +21,8 @@ export class LibraryIntegrityController {
   listDuplicateFormats(@Query() dto: ListLibraryIntegrityDto, @CurrentUser() user: RequestUser) {
     return this.service.listDuplicateFormats(user, dto.page, dto.pageSize);
   }
+  @Get('series-name-candidates')
+  listSimilarSeries(@CurrentUser() user: RequestUser) {
+    return this.service.listSimilarSeries(user);
+  }
 }
