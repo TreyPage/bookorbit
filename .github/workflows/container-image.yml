@@ -47,6 +47,7 @@ jobs:
       created: ${{ steps.ctx.outputs.created }}
       update_main: ${{ steps.ctx.outputs.update_main }}
       skip_build: ${{ steps.ctx.outputs.skip_build }}
+      image_name: ${{ steps.ctx.outputs.image_name }}
     steps:
       - name: Resolve build context
         id: ctx
@@ -78,6 +79,7 @@ jobs:
             echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } >> "$GITHUB_OUTPUT"
           IMAGE_LOWER=$(echo "${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')
+          echo "image_name=${IMAGE_LOWER}" >> "$GITHUB_OUTPUT"
           HTTP_STATUS_SHORT=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.oci.image.index.v1+json" \
@@ -126,7 +128,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ needs.prepare.outputs.image_name }},push-by-digest=true,name-canonical=true,push=true
           platforms: linux/amd64
           build-args: APP_VERSION=sha-${{ needs.prepare.outputs.source_sha_short }}
           labels: |
@@ -139,7 +141,7 @@ jobs:
         env:
           TRIVY_PLATFORM: linux/amd64
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          image-ref: ${{ env.REGISTRY }}/${{ needs.prepare.outputs.image_name }}@${{ steps.build.outputs.digest }}
           format: table
           vuln-type: os,library
           severity: CRITICAL,HIGH
@@ -179,7 +181,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ needs.prepare.outputs.image_name }},push-by-digest=true,name-canonical=true,push=true
           platforms: linux/arm64
           build-args: APP_VERSION=sha-${{ needs.prepare.outputs.source_sha_short }}
           labels: |
@@ -192,7 +194,7 @@ jobs:
         env:
           TRIVY_PLATFORM: linux/arm64
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          image-ref: ${{ env.REGISTRY }}/${{ needs.prepare.outputs.image_name }}@${{ steps.build.outputs.digest }}
           format: table
           vuln-type: os,library
           severity: CRITICAL,HIGH
@@ -223,7 +225,7 @@ jobs:
         shell: bash
         env:
           REGISTRY: ${{ env.REGISTRY }}
-          IMAGE: ${{ env.IMAGE_NAME }}
+          IMAGE: ${{ needs.prepare.outputs.image_name }}
           SHA_SHORT: ${{ needs.prepare.outputs.source_sha_short }}
           AMD64_DIGEST: ${{ needs.build-amd64.outputs.digest }}
           ARM64_DIGEST: ${{ needs.build-arm64.outputs.digest }}
@@ -239,7 +241,7 @@ jobs:
         shell: bash
         env:
           REGISTRY: ${{ env.REGISTRY }}
-          IMAGE: ${{ env.IMAGE_NAME }}
+          IMAGE: ${{ needs.prepare.outputs.image_name }}
           AMD64_DIGEST: ${{ needs.build-amd64.outputs.digest }}
           ARM64_DIGEST: ${{ needs.build-arm64.outputs.digest }}
         run: |
@@ -253,6 +255,6 @@ jobs:
         shell: bash
         env:
           REGISTRY: ${{ env.REGISTRY }}
-          IMAGE: ${{ env.IMAGE_NAME }}
+          IMAGE: ${{ needs.prepare.outputs.image_name }}
           SHA_SHORT: ${{ needs.prepare.outputs.source_sha_short }}
         run: docker buildx imagetools inspect "${REGISTRY}/${IMAGE}:sha-${SHA_SHORT}"
