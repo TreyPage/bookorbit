@@ -7,7 +7,7 @@ import { formatNumber } from '@/i18n/formatters'
 
 const props = defineProps<{
   modelValue: MissingResourceCategory
-  counts: Record<MissingResourceCategory, number>
+  counts: Record<MissingResourceCategory, number | null>
   sweepReady: boolean
   visibleCategories: MissingResourceCategory[]
 }>()
@@ -20,7 +20,7 @@ const tabs = computed(() =>
     value,
     label: t(`tools.missingResources.categories.${value}`),
     count: props.counts[value],
-    disabled: value !== 'missing_books' && !props.sweepReady,
+    disabled: value !== 'missing_books' && value !== 'sidecar_files' && !props.sweepReady,
   })),
 )
 
@@ -47,7 +47,7 @@ function handleSelect(value: MissingResourceCategory): void {
         class="rounded-full px-1.5 py-0.5 text-xs tabular-nums"
         :class="modelValue === tab.value ? 'bg-primary-foreground/15 text-primary-foreground' : 'bg-muted text-muted-foreground'"
       >
-        {{ tab.disabled ? '-' : formatNumber(tab.count) }}
+        {{ tab.disabled ? '-' : tab.count === null ? '—' : formatNumber(tab.count) }}
       </span>
     </button>
   </div>
