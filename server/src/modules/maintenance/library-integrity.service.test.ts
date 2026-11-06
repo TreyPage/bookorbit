@@ -57,6 +57,7 @@ describe('LibraryIntegrityService', () => {
       if (value === '/virtual/library') return [
         { name: 'known-book', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
         { name: 'orphan', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
+        { name: 'empty-untracked', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
         { name: 'locked', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
       ] as never;
       if (value === '/virtual/library/known-book') return [] as never;
@@ -70,7 +71,10 @@ describe('LibraryIntegrityService', () => {
     try {
       await expect(service.listFilesystemFindings({ id: 7 } as never)).resolves.toEqual({
         orphanedMetadataFiles: { items: [{ libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan/metadata.json' }], total: 1 },
-        emptyBookFolders: { items: [{ libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/known-book' }], total: 1 },
+        emptyBookFolders: { items: [
+          { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/empty-untracked' },
+          { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/known-book' },
+        ], total: 2 },
         unreadableDirectories: { items: [{ libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/locked' }], total: 1 },
         truncated: false,
         resultsTruncated: false,
