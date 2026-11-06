@@ -134,7 +134,11 @@ function openBookMerge(): void {
             <dd class="text-lg font-semibold tabular-nums text-foreground">{{ item.key === 'coverBytes' ? (item.value / 1024 / 1024).toFixed(2) + ' MB' : item.value }}</dd>
           </div>
         </dl>
-        <div class="border-t border-border pt-3">
+        <p v-if="scanStatus.summary?.sidecarScanTruncated || scanStatus.summary?.filesystemScanTruncated" class="text-sm text-warning">{{ t('tools.libraryIntegrity.scanStatus.truncated') }}</p>
+      </div>
+    </section>
+
+    <section class="rounded-xl border border-border bg-card p-5">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="space-y-1">
               <h3 class="text-sm font-semibold text-foreground">{{ t('tools.libraryIntegrity.findings.title') }}</h3>
@@ -169,9 +173,6 @@ function openBookMerge(): void {
             </section>
           </div>
           <p v-if="findings?.truncated || findings?.resultsTruncated" class="mt-2 text-xs text-warning">{{ t('tools.libraryIntegrity.findings.truncated') }}</p>
-        </div>
-        <p v-if="scanStatus.summary?.sidecarScanTruncated || scanStatus.summary?.filesystemScanTruncated" class="text-sm text-warning">{{ t('tools.libraryIntegrity.scanStatus.truncated') }}</p>
-      </div>
     </section>
 
     <section class="grid gap-4 md:grid-cols-2" :aria-label="t('tools.libraryIntegrity.checksLabel')">
