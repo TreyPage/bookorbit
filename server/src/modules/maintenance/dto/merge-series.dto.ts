@@ -7,7 +7,7 @@ export class MergeSeriesDto {
   @Min(1)
   targetSeriesId!: number;
 
-  @Transform(({ value }) => Array.isArray(value) ? value.map(Number) : value)
+  @Transform(({ value }) => (Array.isArray(value) ? value.map(Number) : value))
   @IsArray()
   @ArrayNotEmpty()
   @ArrayUnique()

@@ -157,5 +157,4 @@ export class LibraryIntegrityService {
         throw new NotFoundException('Series not found or not accessible');
     }
   }
-
 }
