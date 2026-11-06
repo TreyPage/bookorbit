@@ -116,8 +116,6 @@ export class HardcoverSeriesCatalogService {
       return this.toResult(books, catalogFound, expectedBookCount, ownedIndices);
     } catch (error) {
       this.logFailure(userId, seriesName, error);
-      const cached = key ? await this.cache.findByNormalizedName(key) : null;
-      if (cached) return this.toResult(cached.books, cached.catalogFound, cached.expectedBookCount, ownedIndices);
       return this.emptyResult(error instanceof HardcoverApiError && error.errorCode === 'insufficient_scope' ? 'insufficient_scope' : 'failed');
     }
   }
