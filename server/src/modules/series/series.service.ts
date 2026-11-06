@@ -228,11 +228,13 @@ export class SeriesService {
     if (!detail) throw new NotFoundException('Series not found');
     const result = await this.hardcoverSeriesCatalog.forceRefresh(user.id, detail.name, detail.indices);
     if (result.status === 'failed' || result.status === 'insufficient_scope' || result.status === 'not_configured') {
-      throw new BadRequestException(result.status === 'not_configured'
-        ? 'Hardcover is not connected'
-        : result.status === 'insufficient_scope'
-          ? 'The Hardcover API key needs read:catalog permission'
-          : 'Could not refresh the Hardcover series catalog');
+      throw new BadRequestException(
+        result.status === 'not_configured'
+          ? 'Hardcover is not connected'
+          : result.status === 'insufficient_scope'
+            ? 'The Hardcover API key needs read:catalog permission'
+            : 'Could not refresh the Hardcover series catalog',
+      );
     }
   }
 

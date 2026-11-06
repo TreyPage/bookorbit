@@ -156,9 +156,7 @@ export interface BookMoveSummary {
   cancelled: boolean;
 }
 
-export type BookMoveProgressEvent =
-  | { bookId: number; status: BookMoveBookStatus; reason?: string }
-  | ({ done: true } & BookMoveSummary);
+export type BookMoveProgressEvent = { bookId: number; status: BookMoveBookStatus; reason?: string } | ({ done: true } & BookMoveSummary);
 
 export const BOOK_MOVE_PREVIEW_SAMPLE_LIMIT = 50;
 export const BOOK_MOVE_DETAIL_LIMIT = 200;

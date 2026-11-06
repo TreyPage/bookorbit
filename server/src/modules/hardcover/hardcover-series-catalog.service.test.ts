@@ -19,14 +19,20 @@ describe('HardcoverSeriesCatalogService', () => {
     vi.resetAllMocks();
     cache.findByNormalizedName.mockResolvedValue(null);
     cache.upsert.mockResolvedValue(undefined);
-    service = new HardcoverSeriesCatalogService(client as unknown as HardcoverClientService, settings as unknown as HardcoverSettingsService, cache as any);
+    service = new HardcoverSeriesCatalogService(
+      client as unknown as HardcoverClientService,
+      settings as unknown as HardcoverSettingsService,
+      cache as any,
+    );
     settings.getMetadataToken.mockResolvedValue('catalog-token');
   });
 
-
   it('uses a fresh shared cache without calling Hardcover', async () => {
     cache.findByNormalizedName.mockResolvedValue({
-      books: [{ index: 1, title: 'Book One', authors: ['Author'] }, { index: 2, title: 'Book Two', authors: ['Author'] }],
+      books: [
+        { index: 1, title: 'Book One', authors: ['Author'] },
+        { index: 2, title: 'Book Two', authors: ['Author'] },
+      ],
       catalogFound: true,
       expectedBookCount: 2,
       fetchedAt: new Date(),
@@ -61,10 +67,15 @@ describe('HardcoverSeriesCatalogService', () => {
       fetchedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
     });
     client.query.mockResolvedValue({
-      series: [{ name: 'My Series', book_series: [
-        { position: 1, book: { title: 'Book One', canonical_id: null } },
-        { position: 2, book: { title: 'New Book', canonical_id: null } },
-      ] }],
+      series: [
+        {
+          name: 'My Series',
+          book_series: [
+            { position: 1, book: { title: 'Book One', canonical_id: null } },
+            { position: 2, book: { title: 'New Book', canonical_id: null } },
+          ],
+        },
+      ],
     });
 
     await expect(service.findMissingBooks(7, 'My Series', ['1'])).resolves.toMatchObject({
@@ -73,17 +84,22 @@ describe('HardcoverSeriesCatalogService', () => {
       expectedBookCount: 2,
       status: 'available',
     });
-    expect(cache.upsert).toHaveBeenCalledWith(expect.objectContaining({
-      normalizedName: 'my series',
-      catalogFound: true,
-      expectedBookCount: 2,
-      books: expect.arrayContaining([{ index: 2, title: 'New Book', authors: [] }]),
-    }));
+    expect(cache.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        normalizedName: 'my series',
+        catalogFound: true,
+        expectedBookCount: 2,
+        books: expect.arrayContaining([{ index: 2, title: 'New Book', authors: [] }]),
+      }),
+    );
   });
 
   it('serves stale cached data if an automatic refresh fails', async () => {
     cache.findByNormalizedName.mockResolvedValue({
-      books: [{ index: 1, title: 'Book One', authors: [] }, { index: 2, title: 'Book Two', authors: [] }],
+      books: [
+        { index: 1, title: 'Book One', authors: [] },
+        { index: 2, title: 'Book Two', authors: [] },
+      ],
       catalogFound: true,
       expectedBookCount: 2,
       fetchedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
@@ -203,38 +219,32 @@ describe('HardcoverSeriesCatalogService', () => {
   });
 
   it('falls back to a bounded name search when the exact Hardcover series name is absent', async () => {
-    client.query
-      .mockResolvedValueOnce({ series: [] })
-      .mockResolvedValueOnce({
-        series: [{
+    client.query.mockResolvedValueOnce({ series: [] }).mockResolvedValueOnce({
+      series: [
+        {
           name: 'Dungeon Crawler Carl Series',
           book_series: [
             { position: 1, book: { title: 'Dungeon Crawler Carl', canonical_id: null } },
             { position: 2, book: { title: "Carl's Doomsday Scenario", canonical_id: null } },
           ],
-        }],
-      });
+        },
+      ],
+    });
 
     await expect(service.findMissingBooks(7, 'Dungeon Crawler Carl', ['1'])).resolves.toMatchObject({
       status: 'available',
       missingPositions: [2],
       books: [{ index: 2, title: "Carl's Doomsday Scenario" }],
     });
-    expect(client.query).toHaveBeenNthCalledWith(
-      2,
-      7,
-      'catalog-token',
-      expect.stringContaining('name: { _ilike: $seriesName }'),
-      { seriesName: '%Dungeon Crawler Carl%' },
-    );
+    expect(client.query).toHaveBeenNthCalledWith(2, 7, 'catalog-token', expect.stringContaining('name: { _ilike: $seriesName }'), {
+      seriesName: '%Dungeon Crawler Carl%',
+    });
   });
 
   it('rejects interior substring matches from the fallback search', async () => {
-    client.query
-      .mockResolvedValueOnce({ series: [] })
-      .mockResolvedValueOnce({
-        series: [{ name: 'The Hobbit', book_series: [{ position: 1, book: { title: 'The Hobbit' } }] }],
-      });
+    client.query.mockResolvedValueOnce({ series: [] }).mockResolvedValueOnce({
+      series: [{ name: 'The Hobbit', book_series: [{ position: 1, book: { title: 'The Hobbit' } }] }],
+    });
 
     await expect(service.findMissingBooks(7, 'bit', [])).resolves.toMatchObject({
       catalogFound: false,
@@ -245,19 +255,13 @@ describe('HardcoverSeriesCatalogService', () => {
   });
 
   it('escapes LIKE wildcards in fallback series names', async () => {
-    client.query
-      .mockResolvedValueOnce({ series: [] })
-      .mockResolvedValueOnce({ series: [] });
+    client.query.mockResolvedValueOnce({ series: [] }).mockResolvedValueOnce({ series: [] });
 
     await service.findMissingBooks(7, 'A_B%', []);
 
-    expect(client.query).toHaveBeenNthCalledWith(
-      2,
-      7,
-      'catalog-token',
-      expect.stringContaining('name: { _ilike: $seriesName }'),
-      { seriesName: '%A\\_B\\%%' },
-    );
+    expect(client.query).toHaveBeenNthCalledWith(2, 7, 'catalog-token', expect.stringContaining('name: { _ilike: $seriesName }'), {
+      seriesName: '%A\\_B\\%%',
+    });
   });
 
   it('omits translated and duplicate catalog entries while retaining English originals', async () => {
@@ -343,7 +347,10 @@ describe('HardcoverSeriesCatalogService', () => {
     cache.findByNormalizedName.mockResolvedValue({
       normalizedName: 'dungeon crawler carl',
       seriesName: 'Dungeon Crawler Carl',
-      books: [{ index: 1, title: 'Dungeon Crawler Carl', authors: ['Matt Dinniman'] }, { index: 2, title: "Carl's Doomsday Scenario", authors: ['Matt Dinniman'] }],
+      books: [
+        { index: 1, title: 'Dungeon Crawler Carl', authors: ['Matt Dinniman'] },
+        { index: 2, title: "Carl's Doomsday Scenario", authors: ['Matt Dinniman'] },
+      ],
       catalogFound: true,
       expectedBookCount: 2,
       fetchedAt: new Date(),
@@ -364,7 +371,10 @@ describe('HardcoverSeriesCatalogService', () => {
     cache.findByNormalizedName.mockResolvedValue({
       normalizedName: 'dungeoncrawlercarl',
       seriesName: 'Dungeon Crawler Carl',
-      books: [{ index: 1, title: 'Dungeon Crawler Carl', authors: [] }, { index: 2, title: "Carl's Doomsday Scenario", authors: [] }],
+      books: [
+        { index: 1, title: 'Dungeon Crawler Carl', authors: [] },
+        { index: 2, title: "Carl's Doomsday Scenario", authors: [] },
+      ],
       catalogFound: true,
       expectedBookCount: 2,
       fetchedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),

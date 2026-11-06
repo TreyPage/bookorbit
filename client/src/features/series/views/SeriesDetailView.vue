@@ -624,8 +624,8 @@ defineOptions({ name: 'SeriesDetailView' })
                   type="button"
                   class="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 md:w-auto"
                   :disabled="refreshingCatalog"
-                   :aria-label="t('series.detail.refreshCatalog')"
-                   :title="t('series.detail.refreshCatalog')"
+                  :aria-label="t('series.detail.refreshCatalog')"
+                  :title="t('series.detail.refreshCatalog')"
                   @click="handleRefreshCatalog"
                 >
                   <RefreshCw :size="14" :class="{ 'animate-spin': refreshingCatalog }" />

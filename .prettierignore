@@ -1,3 +1,20 @@
-# pnpm writes this file in its own style. Formatting it rewrites the quoting of
-# every entry, turning a routine dependency bump into a ~19k line diff.
+# pnpm lockfile is maintained by pnpm
 pnpm-lock.yaml
+
+# Exclude this specific file
+src/metadata.ts
+server/src/metadata.ts
+
+# Common generated/dependency directories
+node_modules/
+dist/
+coverage/
+
+*.js
+*.jsx
+*.json
+*.css
+*.scss
+*.md
+*.yml
+*.yaml

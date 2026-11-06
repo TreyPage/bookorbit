@@ -107,11 +107,13 @@ describe('SeriesService', () => {
       });
 
       await expect(service.refreshCatalog(reqUser(), 42)).resolves.toBeUndefined();
-      expect(seriesRepo.findDetail).toHaveBeenCalledWith(expect.objectContaining({
-        seriesId: 42,
-        userId: 7,
-        libraryIds: [1, 2],
-      }));
+      expect(seriesRepo.findDetail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          seriesId: 42,
+          userId: 7,
+          libraryIds: [1, 2],
+        }),
+      );
       expect(hardcoverSeriesCatalog.forceRefresh).toHaveBeenCalledWith(7, 'Dungeon Crawler Carl', ['1']);
     });
 

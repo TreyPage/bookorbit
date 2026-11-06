@@ -66,13 +66,7 @@ export const METADATA_SCORE_FIELDS: Record<MetadataScoreField, MetadataScoreFiel
 };
 
 /** Display order for the groups. Not alphabetical: it runs from most to least weight by default. */
-export const METADATA_SCORE_GROUPS: readonly MetadataScoreGroup[] = [
-  "core",
-  "publishing",
-  "classification",
-  "enrichment",
-  "providers",
-];
+export const METADATA_SCORE_GROUPS: readonly MetadataScoreGroup[] = ["core", "publishing", "classification", "enrichment", "providers"];
 
 export type MetadataScoreWeights = Record<MetadataScoreField, number>;
 
