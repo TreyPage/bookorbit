@@ -51,6 +51,17 @@ describe('LibraryIntegrityService', () => {
     expect(repo.findDuplicateFormatGroups).toHaveBeenCalledWith([4, 8], 25, 25);
   });
 
+  it('passes accessible libraries to the transactional series merge', async () => {
+    const result = { status: 'merged', target: { id: 10, name: 'Cosmere' }, merged: [{ id: 11, name: 'The Cosmere' }], affectedBooks: 4, positionConflicts: 0 };
+    const repo = { mergeSeries: vi.fn().mockResolvedValue(result) };
+    const libraryService = { findAccessibleLibraryIds: vi.fn().mockResolvedValue([4, 8]) };
+    const service = new LibraryIntegrityService(repo as never, libraryService as never);
+    const dto = { targetSeriesId: 10, sourceSeriesIds: [11], confirmPositionConflicts: false };
+
+    await expect(service.mergeSeries({ id: 7 } as never, dto)).resolves.toEqual(result);
+    expect(repo.mergeSeries).toHaveBeenCalledWith([4, 8], 10, [11], false);
+  });
+
   it('returns no similar-series candidates when the user has no accessible libraries', async () => {
     const repo = { findSimilarSeriesPairs: vi.fn() };
     const libraryService = { findAccessibleLibraryIds: vi.fn().mockResolvedValue([]) };

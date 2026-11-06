@@ -165,4 +165,193 @@ export class LibraryIntegrityRepository {
       truncated: rows.length > 500,
     };
   }
+  async mergeSeries(
+    libraryIds: number[],
+    targetSeriesId: number,
+    sourceSeriesIds: number[],
+    confirmPositionConflicts: boolean,
+  ) {
+    if (libraryIds.length === 0) return { status: 'not_accessible' as const };
+    if (sourceSeriesIds.length === 0 || sourceSeriesIds.includes(targetSeriesId)) return { status: 'invalid_request' as const };
+
+    return this.db.transaction(async (tx) => {
+      const seriesResult = await tx.execute(sql`
+        SELECT id, name, expected_book_count, expected_book_count_source
+        FROM book_series
+        WHERE id = ANY(${[targetSeriesId, ...sourceSeriesIds]}::int[])
+        ORDER BY id FOR UPDATE
+      `);
+      const seriesRows = seriesResult.rows as Array<{
+        id: number; name: string; expected_book_count: number | null; expected_book_count_source: string | null;
+      }>;
+      if (seriesRows.length !== sourceSeriesIds.length + 1) return { status: 'not_found' as const };
+      const target = seriesRows.find((row) => row.id === targetSeriesId)!;
+      const sources = sourceSeriesIds.map((id) => seriesRows.find((row) => row.id === id)!);
+
+      const visibleTarget = await tx.execute(sql`
+        SELECT 1 FROM book_series_memberships membership
+        INNER JOIN books visible_book ON visible_book.id = membership.book_id
+        WHERE membership.series_id = ${targetSeriesId}
+          AND visible_book.library_id = ANY(${libraryIds}::int[]) LIMIT 1
+      `);
+      if (visibleTarget.rows.length === 0) return { status: 'not_accessible' as const };
+
+      const hiddenRefs = await tx.execute(sql`
+        SELECT count(DISTINCT visible_book.id)::int AS count
+        FROM books visible_book
+        LEFT JOIN book_series_memberships membership
+          ON membership.book_id = visible_book.id AND membership.series_id = ANY(${sourceSeriesIds}::int[])
+        LEFT JOIN book_metadata metadata ON metadata.book_id = visible_book.id
+        WHERE (membership.series_id IS NOT NULL OR metadata.series_id = ANY(${sourceSeriesIds}::int[]))
+          AND NOT (visible_book.library_id = ANY(${libraryIds}::int[]))
+      `);
+      const inaccessibleBookCount = Number((hiddenRefs.rows[0] as { count?: number } | undefined)?.count ?? 0);
+      if (inaccessibleBookCount > 0) return { status: 'inaccessible_books' as const, inaccessibleBookCount };
+
+      const conflictsResult = await tx.execute(sql`
+        WITH relevant AS (
+          SELECT membership.book_id, membership.series_id, membership.series_index
+          FROM book_series_memberships membership
+          INNER JOIN books visible_book ON visible_book.id = membership.book_id
+          WHERE membership.series_id = ANY(${[targetSeriesId, ...sourceSeriesIds]}::int[])
+            AND visible_book.library_id = ANY(${libraryIds}::int[])
+        )
+        SELECT book_id,
+          max(series_index) FILTER (WHERE series_id = ${targetSeriesId}) AS target_index,
+          array_agg(DISTINCT series_index) FILTER (WHERE series_id <> ${targetSeriesId} AND series_index IS NOT NULL) AS source_indices
+        FROM relevant
+        GROUP BY book_id
+        HAVING count(DISTINCT series_index) FILTER (WHERE series_index IS NOT NULL) > 1
+      `);
+      const conflicts = conflictsResult.rows as Array<{ book_id: number; target_index: string | null; source_indices: string[] }>;
+      if (conflicts.length > 0 && !confirmPositionConflicts) {
+        return {
+          status: 'position_conflicts' as const,
+          conflicts: conflicts.map((row) => ({ bookId: row.book_id, targetIndex: row.target_index, sourceIndices: row.source_indices ?? [] })),
+        };
+      }
+
+      const affectedResult = await tx.execute(sql`
+        SELECT DISTINCT visible_book.id AS book_id
+        FROM books visible_book
+        LEFT JOIN book_series_memberships membership ON membership.book_id = visible_book.id
+        LEFT JOIN book_metadata metadata ON metadata.book_id = visible_book.id
+        WHERE visible_book.library_id = ANY(${libraryIds}::int[])
+          AND (membership.series_id = ANY(${sourceSeriesIds}::int[]) OR metadata.series_id = ANY(${sourceSeriesIds}::int[]))
+      `);
+      const affectedBookIds = (affectedResult.rows as Array<{ book_id: number }>).map((row) => row.book_id);
+      const affectedBooks = affectedBookIds.length;
+
+      // Existing target memberships keep their position. If there is no target membership,
+      // retain one source membership (lowest display order, then series id) for that book.
+      await tx.execute(sql`
+        UPDATE book_series_memberships target_membership
+        SET series_index = COALESCE(
+          target_membership.series_index,
+          (SELECT source_membership.series_index
+           FROM book_series_memberships source_membership
+           WHERE source_membership.book_id = target_membership.book_id
+             AND source_membership.series_id = ANY(${sourceSeriesIds}::int[])
+             AND source_membership.series_index IS NOT NULL
+           ORDER BY source_membership.series_id LIMIT 1)
+        ), updated_at = now()
+        WHERE target_membership.series_id = ${targetSeriesId}
+          AND EXISTS (
+            SELECT 1 FROM book_series_memberships source_membership
+            WHERE source_membership.book_id = target_membership.book_id
+              AND source_membership.series_id = ANY(${sourceSeriesIds}::int[])
+          )
+          AND EXISTS (
+            SELECT 1 FROM books visible_book
+            WHERE visible_book.id = target_membership.book_id
+              AND visible_book.library_id = ANY(${libraryIds}::int[])
+          )
+      `);
+
+      await tx.execute(sql`
+        WITH ranked AS (
+          SELECT membership.ctid,
+            row_number() OVER (PARTITION BY membership.book_id ORDER BY membership.display_order, membership.series_id) AS position,
+            bool_or(membership.series_id = ${targetSeriesId}) OVER (PARTITION BY membership.book_id) AS has_target
+          FROM book_series_memberships membership
+          INNER JOIN books visible_book ON visible_book.id = membership.book_id
+          WHERE membership.series_id = ANY(${[targetSeriesId, ...sourceSeriesIds]}::int[])
+            AND visible_book.library_id = ANY(${libraryIds}::int[])
+        )
+        DELETE FROM book_series_memberships membership
+        USING ranked
+        WHERE membership.ctid = ranked.ctid
+          AND membership.series_id = ANY(${sourceSeriesIds}::int[])
+          AND (ranked.has_target OR ranked.position > 1)
+      `);
+
+      await tx.execute(sql`
+        UPDATE book_series_memberships membership
+        SET series_id = ${targetSeriesId}, updated_at = now()
+        FROM books visible_book
+        WHERE membership.book_id = visible_book.id
+          AND membership.series_id = ANY(${sourceSeriesIds}::int[])
+          AND visible_book.library_id = ANY(${libraryIds}::int[])
+      `);
+
+      await tx.execute(sql`
+        INSERT INTO book_series_memberships (book_id, series_id, series_index, display_order)
+        SELECT metadata.book_id, ${targetSeriesId}, metadata.series_index, 0
+        FROM book_metadata metadata
+        INNER JOIN books visible_book ON visible_book.id = metadata.book_id
+        WHERE metadata.series_id = ANY(${sourceSeriesIds}::int[])
+          AND visible_book.library_id = ANY(${libraryIds}::int[])
+          AND NOT EXISTS (
+            SELECT 1 FROM book_series_memberships membership
+            WHERE membership.book_id = metadata.book_id
+          )
+        ON CONFLICT DO NOTHING
+      `);
+
+      const sourceWithExpected = sources.find((row) => row.expected_book_count !== null);
+      if (target.expected_book_count === null && sourceWithExpected) {
+        await tx.execute(sql`
+          UPDATE book_series
+          SET expected_book_count = ${sourceWithExpected.expected_book_count},
+              expected_book_count_source = ${sourceWithExpected.expected_book_count_source},
+              expected_book_count_updated_at = now(), updated_at = now()
+          WHERE id = ${targetSeriesId}
+        `);
+      }
+
+      await tx.execute(sql`
+        WITH affected AS (
+          SELECT unnest(${affectedBookIds}::int[]) AS book_id
+        ), primary_membership AS (
+          SELECT DISTINCT ON (membership.book_id)
+            membership.book_id, membership.series_id, series.name, membership.series_index
+          FROM book_series_memberships membership
+          INNER JOIN book_series series ON series.id = membership.series_id
+          INNER JOIN affected ON affected.book_id = membership.book_id
+          ORDER BY membership.book_id, membership.display_order, membership.series_id
+        )
+        UPDATE book_metadata metadata
+        SET series_id = primary_membership.series_id,
+            series_name = primary_membership.name,
+            series_index = primary_membership.series_index,
+            updated_at = now()
+        FROM primary_membership
+        WHERE metadata.book_id = primary_membership.book_id
+      `);
+
+      await tx.execute(sql`
+        UPDATE books SET updated_at = now() WHERE id = ANY(${affectedBookIds}::int[])
+      `);
+      await tx.execute(sql`DELETE FROM book_series WHERE id = ANY(${sourceSeriesIds}::int[])`);
+
+      return {
+        status: 'merged' as const,
+        target: { id: targetSeriesId, name: target.name },
+        merged: sources.map((row) => ({ id: row.id, name: row.name })),
+        affectedBooks,
+        positionConflicts: conflicts.length,
+      };
+    });
+  }
+
 }
