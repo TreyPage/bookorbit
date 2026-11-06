@@ -76,7 +76,7 @@ onMounted(() => void load())
       </div>
       <Button variant="outline" size="sm" :disabled="loading" @click="load">
         <RefreshCw class="size-4" :class="{ 'animate-spin': loading }" aria-hidden="true" />
-        {{ t('common.refresh') }}
+        {{ t('tools.libraryIntegrity.duplicateFormats.refresh') }}
       </Button>
     </header>
 
