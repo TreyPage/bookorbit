@@ -114,7 +114,7 @@ onMounted(() => void load())
           <div class="flex shrink-0 flex-wrap items-center gap-2">
             <span class="rounded-md bg-muted px-2 py-1 text-xs font-medium uppercase">{{ group.format }}</span>
             <span class="rounded-md border border-border px-2 py-1 text-xs">{{ t('tools.libraryIntegrity.duplicateFormats.fileCount', { count: group.fileCount }) }}</span>
-            <span v-if="hasIdenticalContent(group)" class="rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-xs text-warning">{{ t('tools.libraryIntegrity.duplicateFormats.identical') }}</span>
+            <span v-if="hasIdenticalContent(group)" class="rounded-md border border-border bg-muted px-2 py-1 text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.duplicateFormats.identical') }}</span>
           </div>
         </div>
         <ul class="mt-3 space-y-2 border-t border-border pt-3">
