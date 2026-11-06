@@ -29,6 +29,7 @@ const scanMetrics = computed(() => {
     { key: 'sidecars', value: summary.sidecarEntries },
     { key: 'orphanedMetadata', value: summary.orphanedMetadataFiles },
     { key: 'emptyFolders', value: summary.emptyBookFolders },
+    { key: 'unreadableDirectories', value: summary.unreadableDirectories },
     { key: 'orphanedCovers', value: summary.orphanedCoverDirectories },
     { key: 'coverBytes', value: summary.orphanedCoverBytes },
   ]
@@ -166,6 +167,16 @@ function openBookMerge(): void {
               <p v-if="findings.emptyBookFolders.items.length === 0" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.none') }}</p>
               <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
                 <li v-for="item in findings.emptyBookFolders.items" :key="item.path" class="space-y-0.5 text-xs">
+                  <span class="block text-muted-foreground">{{ item.libraryName }}</span>
+                  <code class="block break-all text-foreground">{{ item.path }}</code>
+                </li>
+              </ul>
+            </section>
+            <section class="min-w-0 space-y-2">
+              <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.unreadableDirectories', { count: findings.unreadableDirectories.total }) }}</h4>
+              <p v-if="findings.unreadableDirectories.items.length === 0" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.none') }}</p>
+              <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
+                <li v-for="item in findings.unreadableDirectories.items" :key="item.path" class="space-y-0.5 text-xs">
                   <span class="block text-muted-foreground">{{ item.libraryName }}</span>
                   <code class="block break-all text-foreground">{{ item.path }}</code>
                 </li>

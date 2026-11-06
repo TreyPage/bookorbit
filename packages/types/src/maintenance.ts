@@ -163,6 +163,7 @@ export type LibraryIntegrityScanSummary = {
   orphanedCoverDirectories: number;
   orphanedCoverBytes: number;
   filesystemScanTruncated: boolean;
+  unreadableDirectories: number;
 };
 
 export type LibraryIntegrityScanStatus = {
@@ -183,6 +184,7 @@ export type LibraryFilesystemFinding = {
 export type LibraryFilesystemFindingsResult = {
   orphanedMetadataFiles: { items: LibraryFilesystemFinding[]; total: number };
   emptyBookFolders: { items: LibraryFilesystemFinding[]; total: number };
+  unreadableDirectories: { items: LibraryFilesystemFinding[]; total: number };
   truncated: boolean;
   resultsTruncated: boolean;
 };

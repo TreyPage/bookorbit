@@ -53,6 +53,7 @@ export class LibraryIntegrityService {
       orphanedCoverDirectories: filesystem.orphanedCoverDirectories,
       orphanedCoverBytes: filesystem.orphanedCoverBytes,
       filesystemScanTruncated: filesystem.truncated,
+      unreadableDirectories: filesystem.unreadableDirectories,
     };
   }
 
@@ -72,6 +73,7 @@ export class LibraryIntegrityService {
     let emptyBookFolders = 0;
     let scannedEntries = 0;
     let truncated = false;
+    let unreadableDirectories = 0;
 
     const inspect = async (directory: string, depth: number): Promise<void> => {
       if (depth > 40 || truncated) {
@@ -82,6 +84,7 @@ export class LibraryIntegrityService {
       try {
         children = await readdir(directory, { withFileTypes: true });
       } catch {
+        unreadableDirectories += 1;
         return;
       }
       if (knownFolderPaths.has(resolve(directory)) && children.length === 0) emptyBookFolders += 1;
@@ -131,7 +134,7 @@ export class LibraryIntegrityService {
       }
     }
 
-    return { orphanedMetadataFiles, emptyBookFolders, orphanedCoverDirectories, orphanedCoverBytes, truncated };
+    return { orphanedMetadataFiles, emptyBookFolders, orphanedCoverDirectories, orphanedCoverBytes, truncated, unreadableDirectories };
   }
 
 
@@ -147,6 +150,7 @@ export class LibraryIntegrityService {
         emptyBookFolders: { items: [], total: 0 },
         truncated: false,
         resultsTruncated: false,
+        unreadableDirectories: { items: [], total: 0 },
       };
     }
 
@@ -154,9 +158,11 @@ export class LibraryIntegrityService {
     const knownFolderPaths = new Set((await this.repo.findBookFolderPaths(libraryIds)).map((path) => resolve(path)));
     const orphanedMetadataFiles: LibraryFilesystemFinding[] = [];
     const emptyBookFolders: LibraryFilesystemFinding[] = [];
+    const unreadableDirectories: LibraryFilesystemFinding[] = [];
     const maxResults = 500;
     let orphanedMetadataTotal = 0;
     let emptyFolderTotal = 0;
+    let unreadableDirectoryTotal = 0;
     let scannedEntries = 0;
     let truncated = false;
     const visitedRoots = new Set<string>();
@@ -170,6 +176,8 @@ export class LibraryIntegrityService {
       try {
         children = await readdir(directory, { withFileTypes: true });
       } catch {
+        unreadableDirectoryTotal += 1;
+        if (unreadableDirectories.length < maxResults) unreadableDirectories.push({ libraryId, libraryName, path: resolve(directory) });
         return;
       }
 
@@ -212,11 +220,13 @@ export class LibraryIntegrityService {
       a.libraryName.localeCompare(b.libraryName) || a.path.localeCompare(b.path);
     orphanedMetadataFiles.sort(sort);
     emptyBookFolders.sort(sort);
+    unreadableDirectories.sort(sort);
     return {
       orphanedMetadataFiles: { items: orphanedMetadataFiles, total: orphanedMetadataTotal },
       emptyBookFolders: { items: emptyBookFolders, total: emptyFolderTotal },
+      unreadableDirectories: { items: unreadableDirectories, total: unreadableDirectoryTotal },
       truncated,
-      resultsTruncated: orphanedMetadataTotal > maxResults || emptyFolderTotal > maxResults,
+      resultsTruncated: orphanedMetadataTotal > maxResults || emptyFolderTotal > maxResults || unreadableDirectoryTotal > maxResults,
     };
   }
 

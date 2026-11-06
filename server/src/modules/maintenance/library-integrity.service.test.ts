@@ -34,6 +34,7 @@ describe('LibraryIntegrityService', () => {
       orphanedCoverDirectories: 0,
       orphanedCoverBytes: 0,
       filesystemScanTruncated: false,
+      unreadableDirectories: 0,
     });
     expect(libraryService.findAccessibleLibraryIds).toHaveBeenCalledWith(expect.objectContaining({ isSuperuser: true }));
     expect(sidecarSpy).toHaveBeenCalledWith(expect.objectContaining({ isSuperuser: true }), 1, 1);
@@ -68,6 +69,7 @@ describe('LibraryIntegrityService', () => {
       await expect(service.listFilesystemFindings({ id: 7 } as never)).resolves.toEqual({
         orphanedMetadataFiles: { items: [{ libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan/metadata.json' }], total: 1 },
         emptyBookFolders: { items: [{ libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/known-book' }], total: 1 },
+        unreadableDirectories: { items: [], total: 0 },
         truncated: false,
         resultsTruncated: false,
       });
