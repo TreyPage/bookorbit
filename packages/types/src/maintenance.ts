@@ -158,6 +158,11 @@ export type LibraryIntegrityScanSummary = {
   duplicateFormatFiles: number;
   sidecarEntries: number;
   sidecarScanTruncated: boolean;
+  orphanedMetadataFiles: number;
+  emptyBookFolders: number;
+  orphanedCoverDirectories: number;
+  orphanedCoverBytes: number;
+  filesystemScanTruncated: boolean;
 };
 
 export type LibraryIntegrityScanStatus = {
