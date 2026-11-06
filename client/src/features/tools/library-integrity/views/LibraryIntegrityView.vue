@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight, Copy, Files, FolderSearch, GitMerge, Merge, ShieldCheck } from '@lucide/vue'
+import { ArrowRight, Copy, Files, GitMerge, Merge, ShieldCheck } from '@lucide/vue'
+
+import MissingResourcesView from '@/features/tools/missing-resources/views/MissingResourcesView.vue'
 
 import { Button } from '@/components/ui/button'
 
 const router = useRouter()
 const { t } = useI18n()
-
-function openMissingResources(): void {
-  void router.push({ name: 'tools-missing-resources' })
-}
 
 function openDuplicateFormats(): void {
   void router.push({ name: 'tools-library-integrity-duplicate-formats' })
@@ -41,22 +39,6 @@ function openBookMerge(): void {
     </header>
 
     <section class="grid gap-4 md:grid-cols-2" :aria-label="t('tools.libraryIntegrity.checksLabel')">
-      <article class="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
-        <div class="flex items-start justify-between gap-3">
-          <div class="grid size-10 place-items-center rounded-lg bg-muted text-foreground">
-            <FolderSearch class="size-5" aria-hidden="true" />
-          </div>
-        </div>
-        <div class="space-y-1">
-          <h2 class="text-base font-semibold text-foreground">{{ t('tools.header.missingResources') }}</h2>
-          <p class="text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.missingDescription') }}</p>
-        </div>
-        <Button class="mt-auto self-start" variant="outline" size="sm" @click="openMissingResources">
-          {{ t('tools.libraryIntegrity.openCheck') }}
-          <ArrowRight class="size-4" aria-hidden="true" />
-        </Button>
-      </article>
-
       <article class="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
         <div class="flex items-start justify-between gap-3">
           <div class="grid size-10 place-items-center rounded-lg bg-muted text-foreground">
@@ -119,6 +101,14 @@ function openBookMerge(): void {
           <ArrowRight class="size-4" aria-hidden="true" />
         </Button>
       </article>
+    </section>
+
+    <section class="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
+      <header class="space-y-1">
+        <h2 class="text-lg font-semibold text-foreground">{{ t('tools.header.missingResources') }}</h2>
+        <p class="text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.missingDescription') }}</p>
+      </header>
+      <MissingResourcesView embedded />
     </section>
 
     <section class="rounded-xl border border-dashed border-border bg-card/30 p-5">

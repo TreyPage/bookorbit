@@ -698,8 +698,7 @@ export const routes: RouteRecordRaw[] = [
           {
             path: 'missing-resources',
             name: 'tools-missing-resources',
-            component: () => import('@/features/tools/missing-resources/views/MissingResourcesView.vue'),
-            meta: { title: () => t('titles.missingResources') },
+            redirect: { name: 'tools-library-integrity' },
           },
           {
             path: 'chapter-health',
