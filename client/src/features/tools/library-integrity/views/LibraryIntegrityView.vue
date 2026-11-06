@@ -205,7 +205,7 @@ function openBookMerge(): void {
           </div>
           <p v-if="findingsError" role="alert" class="mt-3 text-sm text-destructive">{{ t('tools.libraryIntegrity.findings.loadFailed') }}</p>
           <p v-if="cleanupError" role="alert" class="mt-2 text-sm text-destructive">{{ t('tools.libraryIntegrity.findings.cleanupFailed') }}</p>
-          <div v-else-if="findings" class="mt-3 grid gap-4 lg:grid-cols-2">
+          <div v-if="findings" class="mt-3 grid gap-4 lg:grid-cols-2">
             <section class="min-w-0 space-y-2">
               <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.orphanedMetadata', { count: findings.orphanedMetadataFiles.total }) }}</h4>
               <p v-if="findings.orphanedMetadataFiles.items.length === 0" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.none') }}</p>

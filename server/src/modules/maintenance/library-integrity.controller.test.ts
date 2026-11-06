@@ -34,6 +34,17 @@ describe('LibraryIntegrityController', () => {
     expect(service.listFilesystemFindings).toHaveBeenCalledWith(user);
   });
 
+  it('delegates empty book-folder cleanup with the current user and validated target', async () => {
+    const service = { cleanupEmptyBookFolder: vi.fn().mockResolvedValue({ removed: true }) };
+    const controller = new LibraryIntegrityController(service as never, { getLastScan: vi.fn() } as never);
+    const user = { id: 9 } as never;
+    const dto = { libraryId: 4, path: '/books/empty' };
+
+    await controller.cleanupEmptyBookFolder(dto as never, user);
+
+    expect(service.cleanupEmptyBookFolder).toHaveBeenCalledWith(user, 4, '/books/empty');
+  });
+
   it('delegates similar-series discovery with the current user', async () => {
     const service = { listSimilarSeries: vi.fn().mockResolvedValue({ items: [], truncated: false }) };
     const controller = new LibraryIntegrityController(service as never, { getLastScan: vi.fn() } as never);
