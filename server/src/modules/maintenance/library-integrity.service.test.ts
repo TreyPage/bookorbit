@@ -171,4 +171,116 @@ describe('LibraryIntegrityService', () => {
     });
     expect(repo.findDuplicateFormatGroups).not.toHaveBeenCalled();
   });
+
+
+  describe('cleanupEmptyBookFolder', () => {
+    async function createService(accessibleLibraryIds = [1]) {
+      const libraryService = {
+        findAccessibleLibraryIds: vi.fn().mockResolvedValue(accessibleLibraryIds),
+        findAll: vi.fn().mockResolvedValue([
+          { id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] },
+        ]),
+      };
+      return new LibraryIntegrityService({} as never, libraryService as never, { get: () => undefined } as never);
+    }
+
+    it('removes one untracked empty directory beneath an accessible library root', async () => {
+      const fs = await import('node:fs/promises');
+      const service = await createService();
+      const realpathSpy = vi.spyOn(fs, 'realpath').mockImplementation(async (path) => String(path));
+      const lstatSpy = vi.spyOn(fs, 'lstat').mockResolvedValue({ isDirectory: () => true, isSymbolicLink: () => false } as never);
+      const readdirSpy = vi.spyOn(fs, 'readdir').mockResolvedValue([] as never);
+      const rmdirSpy = vi.spyOn(fs, 'rmdir').mockResolvedValue(undefined);
+
+      try {
+        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library/untracked-empty'))
+          .resolves.toEqual({ removed: true });
+        expect(lstatSpy).toHaveBeenCalledWith('/virtual/library/untracked-empty');
+        expect(readdirSpy).toHaveBeenCalledWith('/virtual/library/untracked-empty');
+        expect(rmdirSpy).toHaveBeenCalledWith('/virtual/library/untracked-empty');
+      } finally {
+        realpathSpy.mockRestore();
+        lstatSpy.mockRestore();
+        readdirSpy.mockRestore();
+        rmdirSpy.mockRestore();
+      }
+    });
+
+    it('rejects the configured root and paths outside it before filesystem access', async () => {
+      const fs = await import('node:fs/promises');
+      const service = await createService();
+      const realpathSpy = vi.spyOn(fs, 'realpath');
+
+      try {
+        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library'))
+          .rejects.toMatchObject({ status: 404 });
+        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library-backup/empty'))
+          .rejects.toMatchObject({ status: 404 });
+        expect(realpathSpy).not.toHaveBeenCalled();
+      } finally {
+        realpathSpy.mockRestore();
+      }
+    });
+
+    it('rejects inaccessible libraries without touching the filesystem', async () => {
+      const fs = await import('node:fs/promises');
+      const service = await createService([]);
+      const realpathSpy = vi.spyOn(fs, 'realpath');
+
+      try {
+        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library/empty'))
+          .rejects.toMatchObject({ status: 404 });
+        expect(realpathSpy).not.toHaveBeenCalled();
+      } finally {
+        realpathSpy.mockRestore();
+      }
+    });
+
+    it('rejects a directory that became non-empty and never calls rmdir', async () => {
+      const fs = await import('node:fs/promises');
+      const service = await createService();
+      const realpathSpy = vi.spyOn(fs, 'realpath').mockImplementation(async (path) => String(path));
+      const lstatSpy = vi.spyOn(fs, 'lstat').mockResolvedValue({ isDirectory: () => true, isSymbolicLink: () => false } as never);
+      const readdirSpy = vi.spyOn(fs, 'readdir').mockResolvedValue(['new-file.epub'] as never);
+      const rmdirSpy = vi.spyOn(fs, 'rmdir');
+
+      try {
+        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library/changed'))
+          .rejects.toMatchObject({ status: 409 });
+        expect(rmdirSpy).not.toHaveBeenCalled();
+      } finally {
+        realpathSpy.mockRestore();
+        lstatSpy.mockRestore();
+        readdirSpy.mockRestore();
+        rmdirSpy.mockRestore();
+      }
+    });
+
+    it('rejects symlink targets and real paths that escape the library root', async () => {
+      const fs = await import('node:fs/promises');
+      const service = await createService();
+      const realpathSpy = vi.spyOn(fs, 'realpath').mockImplementation(async (path) =>
+        String(path) === '/virtual/library/linked' ? '/outside/secret' : String(path));
+      const lstatSpy = vi.spyOn(fs, 'lstat').mockResolvedValue({ isDirectory: () => true, isSymbolicLink: () => true } as never);
+      const readdirSpy = vi.spyOn(fs, 'readdir');
+      const rmdirSpy = vi.spyOn(fs, 'rmdir');
+
+      try {
+        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library/linked'))
+          .rejects.toMatchObject({ status: 404 });
+        expect(lstatSpy).not.toHaveBeenCalled();
+
+        realpathSpy.mockImplementation(async (path) => String(path));
+        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library/symlink'))
+          .rejects.toMatchObject({ status: 409 });
+        expect(readdirSpy).not.toHaveBeenCalled();
+        expect(rmdirSpy).not.toHaveBeenCalled();
+      } finally {
+        realpathSpy.mockRestore();
+        lstatSpy.mockRestore();
+        readdirSpy.mockRestore();
+        rmdirSpy.mockRestore();
+      }
+    });
+  });
 });
