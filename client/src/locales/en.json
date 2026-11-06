@@ -14367,7 +14367,7 @@
       "findings": {
           "removeEmptyFolder": "Remove empty folder",
           "cleaning": "Removing...",
-          "confirmEmptyFolder": "Remove this empty folder?\\n\\n{path}\\n\\nOnly the empty directory itself will be removed. No files will be deleted.",
+          "confirmEmptyFolder": "Remove this empty folder?\n\n{path}\n\nOnly the empty directory itself will be removed. No files will be deleted.",
           "cleanupFailed": "The folder could not be removed. It may have changed; reload findings and try again.",
         "title": "Filesystem findings",
         "description": "Review paths before making any changes. This check is read-only.",
