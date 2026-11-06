@@ -75,8 +75,8 @@ async function loadFilesystemFindings(append = false): Promise<void> {
   findingsLoading.value = true
   findingsError.value = false
   try {
-    const result = await getLibraryFilesystemFindings({ page: requestedPage, pageSize: findingsPageSize })
-    if (append && findings.value) {
+    const result = await getLibraryFilesystemFindings({ page: requestedPage, pageSize: findingsPageSize, snapshotId: append ? findings.value?.snapshotId : undefined })
+    if (append && findings.value && result.page === requestedPage) {
       findings.value = {
         ...result,
         orphanedMetadataFiles: { ...result.orphanedMetadataFiles, items: [...findings.value.orphanedMetadataFiles.items, ...result.orphanedMetadataFiles.items] },

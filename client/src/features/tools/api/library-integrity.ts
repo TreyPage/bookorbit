@@ -55,8 +55,9 @@ export async function startLibraryIntegrityScan(): Promise<LibraryIntegrityScanS
 }
 
 
-export async function getLibraryFilesystemFindings(params: { page: number; pageSize: number }): Promise<LibraryFilesystemFindingsResult> {
+export async function getLibraryFilesystemFindings(params: { page: number; pageSize: number; snapshotId?: string }): Promise<LibraryFilesystemFindingsResult> {
   const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize) })
+  if (params.snapshotId) query.set('snapshotId', params.snapshotId)
   const response = await api(`/api/v1/maintenance/library-integrity/filesystem-findings?${query.toString()}`)
   if (!response.ok) throw new Error('library_integrity_filesystem_findings_failed')
   return response.json() as Promise<LibraryFilesystemFindingsResult>

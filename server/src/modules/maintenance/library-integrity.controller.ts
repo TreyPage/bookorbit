@@ -30,7 +30,7 @@ export class LibraryIntegrityController {
 
   @Get('filesystem-findings')
   listFilesystemFindings(@Query() dto: ListLibraryIntegrityDto, @CurrentUser() user: RequestUser) {
-    return this.service.listFilesystemFindings(user, dto.page, dto.pageSize);
+    return this.service.listFilesystemFindings(user, dto.page, dto.pageSize, dto.snapshotId);
   }
 
   @Post('filesystem-findings/cleanup-empty-folder')
