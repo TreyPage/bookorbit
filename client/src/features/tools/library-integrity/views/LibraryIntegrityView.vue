@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight, Copy, Files, FolderSearch, GitMerge, ShieldCheck } from '@lucide/vue'
+import { ArrowRight, Copy, Files, FolderSearch, GitMerge, Merge, ShieldCheck } from '@lucide/vue'
 
 import { Button } from '@/components/ui/button'
 
@@ -22,6 +22,10 @@ function openSeriesCleanup(): void {
 
 function openDuplicateBooks(): void {
   void router.push({ name: 'tools-duplicate-books' })
+}
+
+function openBookMerge(): void {
+  void router.push({ name: 'tools-book-merge' })
 }
 </script>
 
@@ -59,13 +63,28 @@ function openDuplicateBooks(): void {
           <div class="grid size-10 place-items-center rounded-lg bg-muted text-foreground">
             <Copy class="size-5" aria-hidden="true" />
           </div>
-          <span class="rounded-full border border-border px-2 py-1 text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.existingCheck') }}</span>
         </div>
         <div class="space-y-1">
           <h2 class="text-base font-semibold text-foreground">{{ t('tools.header.duplicateBooks') }}</h2>
           <p class="text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.duplicateDescription') }}</p>
         </div>
         <Button class="mt-auto self-start" variant="outline" size="sm" @click="openDuplicateBooks">
+          {{ t('tools.libraryIntegrity.openCheck') }}
+          <ArrowRight class="size-4" aria-hidden="true" />
+        </Button>
+      </article>
+
+      <article class="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div class="grid size-10 place-items-center rounded-lg bg-muted text-foreground">
+            <Merge class="size-5" aria-hidden="true" />
+          </div>
+        </div>
+        <div class="space-y-1">
+          <h2 class="text-base font-semibold text-foreground">{{ t('tools.header.bookMerge') }}</h2>
+          <p class="text-sm text-muted-foreground">{{ t('tools.bookMerge.initial.description') }}</p>
+        </div>
+        <Button class="mt-auto self-start" variant="outline" size="sm" @click="openBookMerge">
           {{ t('tools.libraryIntegrity.openCheck') }}
           <ArrowRight class="size-4" aria-hidden="true" />
         </Button>
