@@ -8,69 +8,65 @@ export type MergeReadingAttempt = {
   external_id: string | null;
 };
 
+function conflicts(left: MergeReadingAttempt, right: MergeReadingAttempt): boolean {
+  const sameUser = left.user_id === right.user_id;
+  if (!sameUser) return false;
+
+  const bothActive =
+    left.outcome === null &&
+    left.deleted_at === null &&
+    right.outcome === null &&
+    right.deleted_at === null;
+
+  const sameExternalIdentity =
+    left.external_provider !== null &&
+    left.external_id !== null &&
+    left.external_provider === right.external_provider &&
+    left.external_id === right.external_id;
+
+  return bothActive || sameExternalIdentity;
+}
+
 /**
- * Resolve duplicate reading attempts to a single survivor before changing their book IDs.
+ * Resolve only attempts that would violate a reading_attempts unique constraint
+ * after the source books are reassigned to the target book.
  *
- * Active attempts are unique per user/book, while imported attempts can also be unique by
- * user/provider/external ID. Those two duplicate rules can overlap, so they must be reconciled
- * as connected groups rather than as independent pairwise matches.
+ * Do not collapse connected conflict groups: two attempts can each conflict with
+ * a third attempt while remaining valid alongside one another. Prefer existing
+ * target-book attempts, then the lowest ID, and map each discarded attempt
+ * directly to one retained conflicting attempt.
  */
-export function buildReadingAttemptSurvivors(attempts: readonly MergeReadingAttempt[], targetBookId: number): Map<number, number> {
-  const parent = new Map(attempts.map((attempt) => [attempt.id, attempt.id]));
+export function buildReadingAttemptSurvivors(
+  attempts: readonly MergeReadingAttempt[],
+  targetBookId: number,
+): Map<number, number> {
+  const ordered = [...attempts].sort((left, right) => {
+    const leftIsTarget = left.book_id === targetBookId;
+    const rightIsTarget = right.book_id === targetBookId;
+    if (leftIsTarget !== rightIsTarget) return leftIsTarget ? -1 : 1;
+    return left.id - right.id;
+  });
 
-  const find = (id: number): number => {
-    const current = parent.get(id);
-    if (current === undefined) return id;
-    if (current === id) return id;
-    const root = find(current);
-    parent.set(id, root);
-    return root;
-  };
-
-  const union = (left: number, right: number): void => {
-    const leftRoot = find(left);
-    const rightRoot = find(right);
-    if (leftRoot !== rightRoot) parent.set(rightRoot, leftRoot);
-  };
-
-  const activeByUser = new Map<number, number[]>();
-  const externalByIdentity = new Map<string, number[]>();
-  for (const attempt of attempts) {
-    if (attempt.outcome === null && attempt.deleted_at === null) {
-      const group = activeByUser.get(attempt.user_id) ?? [];
-      group.push(attempt.id);
-      activeByUser.set(attempt.user_id, group);
-    }
-    if (attempt.external_provider !== null && attempt.external_id !== null) {
-      const key = JSON.stringify([attempt.user_id, attempt.external_provider, attempt.external_id]);
-      const group = externalByIdentity.get(key) ?? [];
-      group.push(attempt.id);
-      externalByIdentity.set(key, group);
-    }
-  }
-
-  for (const group of [...activeByUser.values(), ...externalByIdentity.values()]) {
-    for (let index = 1; index < group.length; index += 1) union(group[0]!, group[index]!);
-  }
-
-  const components = new Map<number, MergeReadingAttempt[]>();
-  for (const attempt of attempts) {
-    const root = find(attempt.id);
-    const group = components.get(root) ?? [];
-    group.push(attempt);
-    components.set(root, group);
-  }
-
+  const retained: MergeReadingAttempt[] = [];
   const survivors = new Map<number, number>();
-  for (const group of components.values()) {
-    if (group.length < 2) continue;
-    const targetAttempt = group.find((attempt) => attempt.book_id === targetBookId);
-    const survivor = targetAttempt ?? group.reduce(
-      (lowest, attempt) => (attempt.id < lowest.id ? attempt : lowest),
-    );
-    for (const attempt of group) {
-      if (attempt.id !== survivor.id) survivors.set(attempt.id, survivor.id);
+
+  for (const attempt of ordered) {
+    const conflictingRetained = retained
+      .filter((candidate) => conflicts(attempt, candidate))
+      .sort((left, right) => {
+        const leftIsTarget = left.book_id === targetBookId;
+        const rightIsTarget = right.book_id === targetBookId;
+        if (leftIsTarget !== rightIsTarget) return leftIsTarget ? -1 : 1;
+        return left.id - right.id;
+      });
+
+    const survivor = conflictingRetained[0];
+    if (survivor) {
+      survivors.set(attempt.id, survivor.id);
+    } else {
+      retained.push(attempt);
     }
   }
+
   return survivors;
 }
