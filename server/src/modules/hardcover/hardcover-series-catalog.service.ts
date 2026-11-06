@@ -187,7 +187,7 @@ export class HardcoverSeriesCatalogService {
         }
       `;
       // Escape LIKE metacharacters so user-supplied '%' and '_' stay literal.
-      const escapedSeriesName = seriesName.replace(/[\\%_]/gu, '\\      data = await this.client.query<HardcoverSeriesResponse>(userId, token, fallbackQuery, { seriesName: `%${seriesName}%` });');
+      const escapedSeriesName = seriesName.replace(/[\\%_]/gu, '\\$&');
       data = await this.client.query<HardcoverSeriesResponse>(userId, token, fallbackQuery, { seriesName: `%${escapedSeriesName}%` });
       if (!Array.isArray(data?.series)) throw new Error('Hardcover fallback series lookup returned an invalid response');
     }
