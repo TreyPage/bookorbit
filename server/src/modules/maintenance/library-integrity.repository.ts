@@ -29,8 +29,8 @@ export class LibraryIntegrityRepository {
         libraryId: books.libraryId,
         libraryName: libraries.name,
         folderPath: books.folderPath,
-        format: sql<string>`lower(trim(${bookFiles.format}))`,
-        fileCount: count(bookFiles.id),
+        format: sql<string>`lower(trim(${bookFiles.format}))`.as('format'),
+        fileCount: count(bookFiles.id).as('fileCount'),
         files: sql<DuplicateFormatFileRow[]>`json_agg(
           json_build_object(
             'id', ${bookFiles.id},
@@ -38,7 +38,7 @@ export class LibraryIntegrityRepository {
             'sizeBytes', ${bookFiles.sizeBytes},
             'fileHash', ${bookFiles.fileHash}
           ) order by ${bookFiles.absolutePath}
-        )`,
+        )`.as('files'),
       })
       .from(bookFiles)
       .innerJoin(books, eq(books.id, bookFiles.bookId))
@@ -119,8 +119,13 @@ export class LibraryIntegrityRepository {
     `);
 
     const rows = result.rows as Array<{
-      left_id: number; left_name: string; left_book_count: number;
-      right_id: number; right_name: string; right_book_count: number; similarity: number;
+      left_id: number;
+      left_name: string;
+      left_book_count: number;
+      right_id: number;
+      right_name: string;
+      right_book_count: number;
+      similarity: number;
     }>;
     return {
       items: rows.slice(0, 500).map((row) => ({
@@ -131,5 +136,4 @@ export class LibraryIntegrityRepository {
       truncated: rows.length > 500,
     };
   }
-
 }
