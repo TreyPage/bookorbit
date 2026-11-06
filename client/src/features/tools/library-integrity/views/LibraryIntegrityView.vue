@@ -83,22 +83,6 @@ function openDuplicateBooks(): void {
           <ArrowRight class="size-4" aria-hidden="true" />
         </Button>
       </article>
-      <article class="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
-        <div class="flex items-start justify-between gap-3">
-          <div class="grid size-10 place-items-center rounded-lg bg-muted text-foreground">
-            <Files class="size-5" aria-hidden="true" />
-          </div>
-          <span class="rounded-full border border-border px-2 py-1 text-xs text-muted-foreground">New check</span>
-        </div>
-        <div class="space-y-1">
-          <h2 class="text-base font-semibold text-foreground">Sidecar and temporary files</h2>
-          <p class="text-sm text-muted-foreground">Find .txt files, temporary download files, and .chaptarr-conversions folders without changing anything.</p>
-        </div>
-        <Button class="mt-auto self-start" variant="outline" size="sm" @click="router.push({ name: 'tools-library-integrity-sidecar-files' })">
-          Review files
-          <ArrowRight class="size-4" aria-hidden="true" />
-        </Button>
-      </article>
     </section>
 
     <section class="rounded-xl border border-dashed border-border bg-card/30 p-5">
