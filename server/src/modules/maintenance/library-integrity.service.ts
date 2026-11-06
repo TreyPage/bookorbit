@@ -130,4 +130,24 @@ export class LibraryIntegrityService {
     if (libraryIds.length === 0) return { items: [], truncated: false };
     return this.repo.findSimilarSeriesPairs(libraryIds);
   }
+  async mergeSeries(user: RequestUser, dto: { targetSeriesId: number; sourceSeriesIds: number[]; confirmPositionConflicts: boolean }) {
+    if (dto.sourceSeriesIds.includes(dto.targetSeriesId)) {
+      throw new BadRequestException('Target series cannot also be a source series');
+    }
+    const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
+    const result = await this.repo.mergeSeries(libraryIds, dto.targetSeriesId, dto.sourceSeriesIds, dto.confirmPositionConflicts);
+    switch (result.status) {
+      case 'merged':
+        return result;
+      case 'position_conflicts':
+        throw new ConflictException({ code: 'series_position_conflicts', conflicts: result.conflicts });
+      case 'inaccessible_books':
+        throw new ConflictException({ code: 'series_has_inaccessible_books', inaccessibleBookCount: result.inaccessibleBookCount });
+      case 'invalid_request':
+        throw new BadRequestException('At least one source series is required and the target cannot be a source');
+      default:
+        throw new NotFoundException('Series not found or not accessible');
+    }
+  }
+
 }
