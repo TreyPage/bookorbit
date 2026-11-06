@@ -21,7 +21,12 @@ describe('buildReadingAttemptSurvivors', () => {
       attempt({ id: 30, book_id: 300, external_provider: 'hardcover', external_id: 'abc' }),
     ];
 
-    expect(buildReadingAttemptSurvivors(attempts, 200)).toEqual(new Map([[10, 20], [30, 20]]));
+    expect(buildReadingAttemptSurvivors(attempts, 200)).toEqual(
+      new Map([
+        [10, 20],
+        [30, 20],
+      ]),
+    );
   });
 
   it('does not collapse distinct attempts connected through overlapping conflict rules', () => {
@@ -60,10 +65,7 @@ describe('buildReadingAttemptSurvivors', () => {
   });
 
   it('does not apply active-attempt uniqueness to soft-deleted attempts', () => {
-    const attempts = [
-      attempt({ id: 10, book_id: 100, deleted_at: new Date('2025-01-01T00:00:00Z') }),
-      attempt({ id: 20, book_id: 200 }),
-    ];
+    const attempts = [attempt({ id: 10, book_id: 100, deleted_at: new Date('2025-01-01T00:00:00Z') }), attempt({ id: 20, book_id: 200 })];
 
     expect(buildReadingAttemptSurvivors(attempts, 200)).toEqual(new Map());
   });
