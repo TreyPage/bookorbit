@@ -26,7 +26,7 @@ export type DuplicateFormatPage = {
 
 import type { CoverMedium } from "./book";
 
-export const MISSING_RESOURCE_CATEGORIES = ["missing_books", "broken_covers", "orphaned_cover_dirs"] as const;
+export const MISSING_RESOURCE_CATEGORIES = ["missing_books", "broken_covers", "orphaned_cover_dirs", "sidecar_files"] as const;
 export type MissingResourceCategory = (typeof MISSING_RESOURCE_CATEGORIES)[number];
 
 export const COVER_SWEEP_STATUSES = ["running", "completed", "failed"] as const;
