@@ -8,6 +8,7 @@ import type { RequestUser } from '../../common/types/request-user';
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
 import { bookFiles, bookMergeSources, bookMetadata, books, libraries } from '../../db/schema';
+import { buildReadingAttemptSurvivors } from './book-merge.utils';
 
 type Db = NodePgDatabase<typeof schema>;
 type DbTransaction = Parameters<Parameters<Db['transaction']>[0]>[0];
@@ -590,10 +591,11 @@ export class BookMergeRepository {
   }
 
   private async mergeReadingAttempts(tx: DbTransaction, sourceIds: number[], targetId: number, allIds: ReturnType<typeof sqlIdList>): Promise<void> {
-    const result = await tx.execute(sql`
+    const result = await tx.execute(sql\`
       SELECT id, user_id, book_id, outcome, deleted_at, external_provider, external_id
-      FROM reading_attempts WHERE book_id IN ${allIds}
-    `);
+      FROM reading_attempts WHERE book_id IN \${allIds}
+      ORDER BY id
+    \`);
     const attempts = result.rows as {
       id: number;
       user_id: number;
@@ -603,43 +605,21 @@ export class BookMergeRepository {
       external_provider: string | null;
       external_id: string | null;
     }[];
-    await tx.execute(sql`
-      UPDATE reading_sessions SET book_id = ${targetId}
-      WHERE attempt_id IN (SELECT id FROM reading_attempts WHERE book_id IN ${sqlIdList(sourceIds)})
-    `);
+    await tx.execute(sql\`
+      UPDATE reading_sessions SET book_id = \${targetId}
+      WHERE attempt_id IN (SELECT id FROM reading_attempts WHERE book_id IN \${sqlIdList(sourceIds)})
+    \`);
 
-    const survivors = new Map<number, number>();
-    const attemptsByUser = new Map<number, typeof attempts>();
-    for (const attempt of attempts) {
-      const current = attemptsByUser.get(attempt.user_id) ?? [];
-      current.push(attempt);
-      attemptsByUser.set(attempt.user_id, current);
-    }
-    for (const userAttempts of attemptsByUser.values()) {
-      const duplicatePairs = new Map<number, number>();
-      const active = userAttempts.filter((attempt) => attempt.outcome === null && attempt.deleted_at === null);
-      if (active.length > 1) {
-        const keep = active.find((attempt) => attempt.book_id === targetId) ?? active[0]!;
-        for (const attempt of active) if (attempt.id !== keep.id) duplicatePairs.set(attempt.id, keep.id);
-      }
-      for (const attempt of userAttempts) {
-        if (attempt.external_provider == null || attempt.external_id == null) continue;
-        const match = userAttempts.find(
-          (other) => other.id !== attempt.id && other.external_provider === attempt.external_provider && other.external_id === attempt.external_id,
-        );
-        if (match) {
-          const keep = match.book_id === targetId ? match : attempt.book_id === targetId ? attempt : match.id < attempt.id ? match : attempt;
-          duplicatePairs.set(keep.id === attempt.id ? match.id : attempt.id, keep.id);
-        }
-      }
-      for (const [duplicateId, keepId] of duplicatePairs) survivors.set(duplicateId, keepId);
-    }
+    // Active-attempt uniqueness and external-provider uniqueness can overlap. Resolve
+    // connected duplicate groups once so every session is redirected straight to the
+    // final survivor, never through an attempt that is also scheduled for deletion.
+    const survivors = buildReadingAttemptSurvivors(attempts, targetId);
     for (const [duplicateId, keepId] of survivors) {
-      await tx.execute(sql`UPDATE reading_sessions SET attempt_id = ${keepId} WHERE attempt_id = ${duplicateId}`);
+      await tx.execute(sql\`UPDATE reading_sessions SET attempt_id = \${keepId} WHERE attempt_id = \${duplicateId}\`);
     }
     if (survivors.size > 0) await tx.delete(schema.readingAttempts).where(inArray(schema.readingAttempts.id, [...survivors.keys()]));
     await tx.execute(
-      sql`UPDATE reading_attempts SET book_id = ${targetId} WHERE book_id IN ${sqlIdList(sourceIds)} AND id NOT IN ${sqlIdList([...survivors.keys(), 0])}`,
+      sql\`UPDATE reading_attempts SET book_id = \${targetId} WHERE book_id IN \${sqlIdList(sourceIds)} AND id NOT IN \${sqlIdList([...survivors.keys(), 0])}\`,
     );
   }
 
