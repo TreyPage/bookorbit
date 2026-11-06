@@ -14357,7 +14357,6 @@
           "duplicateGroups": "Duplicate-format groups",
           "duplicateFiles": "Duplicate-format files",
           "sidecars": "Sidecar entries",
-          "orphanedMetadata": "Orphaned metadata files",
           "emptyFolders": "Empty directories",
           "unreadableDirectories": "Unreadable directories",
           "orphanedCovers": "Orphaned cover directories",
