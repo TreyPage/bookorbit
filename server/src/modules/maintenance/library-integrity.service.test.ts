@@ -3,6 +3,37 @@ import { describe, expect, it, vi } from 'vitest';
 import { LibraryIntegrityService } from './library-integrity.service';
 
 describe('LibraryIntegrityService', () => {
+  it('runs a read-only summary across all libraries and all duplicate-format pages', async () => {
+    const repo = {
+      findDuplicateFormatGroups: vi.fn()
+        .mockResolvedValueOnce({ items: [{ fileCount: 3 }], total: 101 })
+        .mockResolvedValueOnce({ items: [{ fileCount: 2 }], total: 101 }),
+    };
+    const libraryService = {
+      findAccessibleLibraryIds: vi.fn().mockResolvedValue([1, 2]),
+      findAll: vi.fn().mockResolvedValue([
+        { id: 1, name: 'Fiction', folders: [{ path: '/fiction' }] },
+        { id: 2, name: 'Audio', folders: [{ path: '/audio' }] },
+      ]),
+    };
+    const service = new LibraryIntegrityService(repo as never, libraryService as never);
+    const sidecarSpy = vi.spyOn(service, 'listSidecarFiles').mockResolvedValue({
+      items: [], total: 7, page: 1, pageSize: 1, truncated: true,
+    });
+
+    await expect(service.scanAllLibraries()).resolves.toEqual({
+      libraryCount: 2,
+      duplicateFormatGroups: 101,
+      duplicateFormatFiles: 5,
+      sidecarEntries: 7,
+      sidecarScanTruncated: true,
+    });
+    expect(libraryService.findAccessibleLibraryIds).toHaveBeenCalledWith(expect.objectContaining({ isSuperuser: true }));
+    expect(sidecarSpy).toHaveBeenCalledWith(expect.objectContaining({ isSuperuser: true }), 1, 1);
+    expect(repo.findDuplicateFormatGroups).toHaveBeenNthCalledWith(1, [1, 2], 0, 100);
+    expect(repo.findDuplicateFormatGroups).toHaveBeenNthCalledWith(2, [1, 2], 100, 100);
+  });
+
   it('scopes duplicate-format results to libraries the user can access', async () => {
     const repo = {
       findDuplicateFormatGroups: vi.fn().mockResolvedValue({
