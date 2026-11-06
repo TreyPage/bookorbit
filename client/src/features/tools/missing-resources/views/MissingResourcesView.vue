@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { AlertCircle, Loader2, PackageCheck, ScanSearch, Trash2 } from '@lucide/vue'
+import { AlertCircle, Loader2, PackageCheck, RefreshCw, ScanSearch, Trash2 } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import type { MissingResourceCategory } from '@bookorbit/types'
 
@@ -132,6 +132,12 @@ function handleNextPage(): void {
         <p class="text-sm text-muted-foreground" aria-live="polite">
           {{ t(`tools.missingResources.found.${resources.category.value}`, { count: resources.total.value }) }}
         </p>
+        <div class="flex items-center gap-2">
+          <Button v-if="resources.category.value === 'sidecar_files'" variant="outline" size="sm" :disabled="resources.loading.value" @click="resources.setPage(1)">
+            <RefreshCw class="size-4" aria-hidden="true" />
+            {{ t('tools.missingResources.sidecar.rescan') }}
+          </Button>
+        </div>
         <div v-if="resources.hasSelection.value" class="flex items-center gap-2">
           <Button variant="ghost" size="sm" @click="handleClearSelection">
             {{ t('tools.missingResources.clearSelection') }}
