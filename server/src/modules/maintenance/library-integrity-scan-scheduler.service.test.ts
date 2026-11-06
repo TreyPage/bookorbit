@@ -27,7 +27,16 @@ describe('LibraryIntegrityScanSchedulerService', () => {
 
     expect(result).toMatchObject({
       status: 'completed',
-      summary: { libraryCount: 2, duplicateFormatGroups: 3, duplicateFormatFiles: 6, sidecarEntries: 4, orphanedMetadataFiles: 2, orphanedBookFolders: 1, orphanedFiles: 3, emptyBookFolders: 1, orphanedCoverDirectories: 3, orphanedCoverBytes: 2048 },
+      summary: {
+        libraryCount: 2,
+        duplicateFormatGroups: 3,
+        duplicateFormatFiles: 6,
+        sidecarEntries: 4,
+        orphanedMetadataFiles: 2,
+        emptyBookFolders: 1,
+        orphanedCoverDirectories: 3,
+        orphanedCoverBytes: 2048,
+      },
       errorMessage: null,
     });
     expect(integrityService.scanAllLibraries).toHaveBeenCalledOnce();
@@ -36,8 +45,14 @@ describe('LibraryIntegrityScanSchedulerService', () => {
 
   it('does not start a second scan while one is running', async () => {
     let finish!: (value: never) => void;
-    const integrityService = { scanAllLibraries: vi.fn().mockReturnValue(new Promise((resolve) => { finish = resolve; })) };
-    const service = new LibraryIntegrityScanSchedulerService(integrityService as never, { saveLibraryIntegrityScanStatus: vi.fn().mockResolvedValue(undefined) } as never);
+    const integrityService = {
+      scanAllLibraries: vi.fn().mockReturnValue(
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      ),
+    };
+    const service = new LibraryIntegrityScanSchedulerService(integrityService as never);
     vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
 
     const first = service.runNow();
@@ -46,8 +61,16 @@ describe('LibraryIntegrityScanSchedulerService', () => {
     expect(integrityService.scanAllLibraries).toHaveBeenCalledOnce();
     expect(second).toMatchObject({ status: 'running' });
     finish({
-      libraryCount: 0, duplicateFormatGroups: 0, duplicateFormatFiles: 0, sidecarEntries: 0, sidecarScanTruncated: false,
-      orphanedMetadataFiles: 0, orphanedBookFolders: 0, orphanedFiles: 0, emptyBookFolders: 0, orphanedCoverDirectories: 0, orphanedCoverBytes: 0, filesystemScanTruncated: false,
+      libraryCount: 0,
+      duplicateFormatGroups: 0,
+      duplicateFormatFiles: 0,
+      sidecarEntries: 0,
+      sidecarScanTruncated: false,
+      orphanedMetadataFiles: 0,
+      emptyBookFolders: 0,
+      orphanedCoverDirectories: 0,
+      orphanedCoverBytes: 0,
+      filesystemScanTruncated: false,
     } as never);
     await first;
   });

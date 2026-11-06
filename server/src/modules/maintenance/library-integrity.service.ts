@@ -64,7 +64,6 @@ export class LibraryIntegrityService {
     };
   }
 
-
   /**
    * Read-only filesystem checks. Non-empty subdirectories with files but no recognized
    * book formats are orphaned regardless of database ownership. Text files are also
@@ -72,9 +71,7 @@ export class LibraryIntegrityService {
    */
   private async scanFilesystemAnomalies(systemUser: RequestUser, libraryIds: number[]) {
     const libraries = await this.libraryService.findAll(systemUser);
-    const knownFolderPaths = new Set(
-      (await this.repo.findBookFolderPaths(libraryIds)).map((path) => resolve(path)),
-    );
+    const knownFolderPaths = new Set((await this.repo.findBookFolderPaths(libraryIds)).map((path) => resolve(path)));
     const visitedRoots = new Set<string>();
     let orphanedMetadataFiles = 0;
     let orphanedBookFolders = 0;

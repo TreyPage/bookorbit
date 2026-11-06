@@ -16,6 +16,13 @@ import { MissingResourcesService } from './missing-resources.service';
 @Module({
   imports: [BookModule, BookCoverStoreModule, LibraryModule, ReadingAttemptEventsModule],
   controllers: [MissingResourcesController, LibraryIntegrityController],
-  providers: [MissingResourcesService, MissingResourcesRepository, CoverSweepStore, LibraryIntegrityRepository, LibraryIntegrityService, LibraryIntegrityScanSchedulerService],
+  providers: [
+    MissingResourcesService,
+    MissingResourcesRepository,
+    CoverSweepStore,
+    LibraryIntegrityRepository,
+    LibraryIntegrityService,
+    LibraryIntegrityScanSchedulerService,
+  ],
 })
 export class MaintenanceModule {}

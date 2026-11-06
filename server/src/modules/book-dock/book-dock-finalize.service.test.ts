@@ -1363,10 +1363,7 @@ describe('BookDockFinalizeService', () => {
         status: 'ready',
         destPath: '/library/Book/track01.mp3',
         library: { id: 5 },
-        placement: [
-          { destPath: '/library/Book/track01.mp3' },
-          { destPath: '/library/Book/track02.mp3' },
-        ],
+        placement: [{ destPath: '/library/Book/track01.mp3' }, { destPath: '/library/Book/track02.mp3' }],
       };
       const existing = new Map([
         ['5\u0000/library/Book/track01.mp3', 88],
@@ -1387,10 +1384,7 @@ describe('BookDockFinalizeService', () => {
         status: 'ready',
         destPath: '/library/Book/track01.mp3',
         library: { id: 5 },
-        placement: [
-          { destPath: '/library/Book/track01.mp3' },
-          { destPath: '/library/Book/track02.mp3' },
-        ],
+        placement: [{ destPath: '/library/Book/track01.mp3' }, { destPath: '/library/Book/track02.mp3' }],
       };
       const existing = new Map([
         ['5\u0000/library/Book/track01.mp3', 88],

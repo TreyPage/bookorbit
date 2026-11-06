@@ -7,7 +7,8 @@ describe('LibraryIntegrityService', () => {
     const repo = {
       findBookFolderPaths: vi.fn().mockResolvedValue([]),
       findExistingBookIds: vi.fn().mockResolvedValue([]),
-      findDuplicateFormatGroups: vi.fn()
+      findDuplicateFormatGroups: vi
+        .fn()
         .mockResolvedValueOnce({ items: [{ fileCount: 3 }], total: 101 })
         .mockResolvedValueOnce({ items: [{ fileCount: 2 }], total: 101 }),
     };
@@ -20,7 +21,11 @@ describe('LibraryIntegrityService', () => {
     };
     const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => '/nonexistent-appdata' } as never);
     const sidecarSpy = vi.spyOn(service, 'listSidecarFiles').mockResolvedValue({
-      items: [], total: 7, page: 1, pageSize: 1, truncated: true,
+      items: [],
+      total: 7,
+      page: 1,
+      pageSize: 1,
+      truncated: true,
     });
 
     await expect(service.scanAllLibraries()).resolves.toEqual({
