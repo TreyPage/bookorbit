@@ -239,15 +239,16 @@ export function useMissingResources() {
     selectAllMatching.value = true
   }
 
-  function cleanerFor(target: MissingResourceCategory) {
+  function cleanerFor(target: Exclude<MissingResourceCategory, 'sidecar_files'>) {
     if (target === 'missing_books') return cleanMissingBooks
     if (target === 'broken_covers') return cleanBrokenCovers
     return cleanOrphanedCoverDirs
   }
 
   async function cleanSelected(): Promise<boolean> {
-    if (!hasSelection.value || cleaning.value || category.value === 'sidecar_files') return false
+    if (!hasSelection.value || cleaning.value) return false
     const target = category.value
+    if (target === 'sidecar_files') return false
     const cleaner = cleanerFor(target)
     cleaning.value = true
     error.value = null

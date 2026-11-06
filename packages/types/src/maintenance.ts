@@ -26,8 +26,10 @@ export type DuplicateFormatPage = {
 
 import type { CoverMedium } from "./book";
 
-export const MISSING_RESOURCE_CATEGORIES = ["missing_books", "broken_covers", "orphaned_cover_dirs", "sidecar_files"] as const;
-export type MissingResourceCategory = (typeof MISSING_RESOURCE_CATEGORIES)[number];
+export const MISSING_RESOURCE_CATEGORIES = ["missing_books", "broken_covers", "orphaned_cover_dirs"] as const;
+export type MissingResourceCleanupCategory = (typeof MISSING_RESOURCE_CATEGORIES)[number];
+export const MISSING_RESOURCE_VIEW_CATEGORIES = [...MISSING_RESOURCE_CATEGORIES, "sidecar_files"] as const;
+export type MissingResourceCategory = (typeof MISSING_RESOURCE_VIEW_CATEGORIES)[number];
 
 export const COVER_SWEEP_STATUSES = ["running", "completed", "failed"] as const;
 export type CoverSweepStatus = (typeof COVER_SWEEP_STATUSES)[number];
@@ -100,7 +102,7 @@ export type MissingResourceCleanupRequest = {
 };
 
 export type MissingResourceCleanupResult = {
-  category: MissingResourceCategory;
+  category: MissingResourceCleanupCategory;
   requested: number;
   cleaned: number;
   /** Entries that no longer qualified when the cleanup re-verified them. */
