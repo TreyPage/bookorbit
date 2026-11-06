@@ -142,6 +142,11 @@ describe('RequestListTable pairs', () => {
         sortBy: 'createdAt',
         sortDir: 'desc',
         selectedIds,
+        columnLayout: [
+          { name: 'requester', visible: true, width: 180 },
+          { name: 'title', visible: true, width: 250 },
+          { name: 'status', visible: true, width: 120 },
+        ],
       },
       global: {
         stubs: {
