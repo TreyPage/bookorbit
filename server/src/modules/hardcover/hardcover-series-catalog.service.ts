@@ -73,7 +73,8 @@ export class HardcoverSeriesCatalogService {
     }
     // Avoid repeatedly hitting Hardcover during an outage. The successful cache remains
     // stale, but a failed refresh is retried at most once per hour per series per process.
-    const lastAttempt = this.lastRefreshAttempt.get(key);
+    const refreshKey = `${userId}:${key}`;
+    const lastAttempt = this.lastRefreshAttempt.get(refreshKey);
     if (cached && lastAttempt != null && Date.now() - lastAttempt < this.RETRY_COOLDOWN_MS) {
       return this.toResult(cached.books, cached.catalogFound, cached.expectedBookCount, ownedIndices);
     }
@@ -129,15 +130,17 @@ export class HardcoverSeriesCatalogService {
   }
 
   private async refreshCatalog(userId: number, token: string, seriesName: string, key: string): Promise<MissingSeriesBook[]> {
-    const existing = this.refreshes.get(key);
+    // Credentials are user-scoped even though the resulting public catalog is shared.
+    const refreshKey = `${userId}:${key}`;
+    const existing = this.refreshes.get(refreshKey);
     if (existing) return existing;
-    this.lastRefreshAttempt.set(key, Date.now());
+    this.lastRefreshAttempt.set(refreshKey, Date.now());
     const pending = this.fetchCatalog(userId, token, seriesName);
-    this.refreshes.set(key, pending);
+    this.refreshes.set(refreshKey, pending);
     try {
       return await pending;
     } finally {
-      if (this.refreshes.get(key) === pending) this.refreshes.delete(key);
+      if (this.refreshes.get(refreshKey) === pending) this.refreshes.delete(refreshKey);
     }
   }
 
