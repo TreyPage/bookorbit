@@ -14299,7 +14299,8 @@
         "unknownSize": "Size unknown",
         "untitled": "Untitled book",
         "fileCount": "{count} files",
-        "identical": "Identical content"
+        "identical": "Identical content",
+        "refresh": "Refresh"
       }
     }
   },
