@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { computed, ref } from 'vue'
-import type { MissingBookEntry, MissingResourcesSummary } from '@bookorbit/types'
+import type { MissingBookEntry, MissingResourcesSummary, SidecarFileEntry } from '@bookorbit/types'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const permissions = ref<string[]>(['library_delete_books', 'library_edit_metadata', 'manage_libraries'])
@@ -28,12 +28,19 @@ vi.mock('../../api/missing-resources', () => ({
   startCoverSweep: vi.fn<(...args: unknown[]) => unknown>(),
 }))
 
+vi.mock('../../api/library-integrity', () => ({ getSidecarFileIssues: vi.fn<(...args: unknown[]) => unknown>() }))
+
 vi.mock('vue-sonner', () => ({ toast: { success: vi.fn<(...args: unknown[]) => void>(), error: vi.fn<(...args: unknown[]) => void>() } }))
 
 import * as api from '../../api/missing-resources'
+import * as integrityApi from '../../api/library-integrity'
 import MissingResourcesView from './MissingResourcesView.vue'
 
 const summary: MissingResourcesSummary = { missingBooks: 2, sweep: null }
+
+function sidecarFile(): SidecarFileEntry {
+  return { libraryId: 1, libraryName: 'Main', path: '/library/book/notes.txt', kind: 'text_file', sizeBytes: 128, fileCount: 1 }
+}
 
 function missingBook(id: number): MissingBookEntry {
   return {
@@ -62,6 +69,7 @@ describe('MissingResourcesView', () => {
     vi.mocked(api.getMissingBooks).mockResolvedValue({ items: [missingBook(1), missingBook(2)], total: 2, page: 1, pageSize: 50 })
     vi.mocked(api.getBrokenCovers).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50 })
     vi.mocked(api.getOrphanedCoverDirs).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50 })
+    vi.mocked(integrityApi.getSidecarFileIssues).mockResolvedValue({ items: [sidecarFile()], total: 1, page: 1, pageSize: 50, truncated: false })
   })
 
   afterEach(() => {
@@ -79,7 +87,7 @@ describe('MissingResourcesView', () => {
   it('lists the missing books with a tab per permitted category', async () => {
     const wrapper = await mountView()
 
-    expect(wrapper.findAll('[role="tab"]')).toHaveLength(3)
+    expect(wrapper.findAll('[role="tab"]')).toHaveLength(4)
     expect(wrapper.text()).toContain('2 books with missing files')
     expect(wrapper.text()).toContain('Book 1')
   })
@@ -89,8 +97,9 @@ describe('MissingResourcesView', () => {
     const wrapper = await mountView()
 
     const tabs = wrapper.findAll('[role="tab"]').map((tab) => tab.text())
-    expect(tabs).toHaveLength(1)
+    expect(tabs).toHaveLength(2)
     expect(tabs[0]).toContain('Missing books')
+    expect(tabs[1]).toContain('Sidecar and temporary files')
   })
 
   it('disables the cover tabs until a sweep has completed', async () => {
@@ -99,6 +108,22 @@ describe('MissingResourcesView', () => {
     const tabs = wrapper.findAll('[role="tab"]')
     expect((tabs[1]!.element as HTMLButtonElement).disabled).toBe(true)
     expect((tabs[2]!.element as HTMLButtonElement).disabled).toBe(true)
+    expect((tabs[3]!.element as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('shows sidecar findings as a read-only category in the shared results view', async () => {
+    const wrapper = await mountView()
+    const sidecarTab = wrapper.findAll('[role="tab"]').find((tab) => tab.text().includes('Sidecar and temporary files'))
+
+    await sidecarTab!.trigger('click')
+    await flushPromises()
+
+    expect(integrityApi.getSidecarFileIssues).toHaveBeenCalledWith({ page: 1, pageSize: 50 })
+    expect(wrapper.text()).toContain('/library/book/notes.txt')
+    expect(wrapper.text()).toContain('Text file (.txt)')
+    expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Clean 1 selected')
+    wrapper.unmount()
   })
 
   it('confirms before cleaning the selected books', async () => {
