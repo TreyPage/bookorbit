@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight, Copy, Files, FolderSearch, ShieldCheck } from '@lucide/vue'
+import { ArrowRight, Copy, Files, FolderSearch, GitMerge, Merge, ShieldCheck } from '@lucide/vue'
 
 import { Button } from '@/components/ui/button'
 
@@ -16,8 +16,16 @@ function openDuplicateFormats(): void {
   void router.push({ name: 'tools-library-integrity-duplicate-formats' })
 }
 
+function openSeriesCleanup(): void {
+  void router.push({ name: 'tools-library-integrity-series-cleanup' })
+}
+
 function openDuplicateBooks(): void {
   void router.push({ name: 'tools-duplicate-books' })
+}
+
+function openBookMerge(): void {
+  void router.push({ name: 'tools-book-merge' })
 }
 </script>
 
@@ -38,7 +46,6 @@ function openDuplicateBooks(): void {
           <div class="grid size-10 place-items-center rounded-lg bg-muted text-foreground">
             <FolderSearch class="size-5" aria-hidden="true" />
           </div>
-          <span class="rounded-full border border-border px-2 py-1 text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.existingCheck') }}</span>
         </div>
         <div class="space-y-1">
           <h2 class="text-base font-semibold text-foreground">{{ t('tools.header.missingResources') }}</h2>
@@ -55,7 +62,6 @@ function openDuplicateBooks(): void {
           <div class="grid size-10 place-items-center rounded-lg bg-muted text-foreground">
             <Copy class="size-5" aria-hidden="true" />
           </div>
-          <span class="rounded-full border border-border px-2 py-1 text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.existingCheck') }}</span>
         </div>
         <div class="space-y-1">
           <h2 class="text-base font-semibold text-foreground">{{ t('tools.header.duplicateBooks') }}</h2>
@@ -70,15 +76,45 @@ function openDuplicateBooks(): void {
       <article class="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
         <div class="flex items-start justify-between gap-3">
           <div class="grid size-10 place-items-center rounded-lg bg-muted text-foreground">
+            <Merge class="size-5" aria-hidden="true" />
+          </div>
+        </div>
+        <div class="space-y-1">
+          <h2 class="text-base font-semibold text-foreground">{{ t('tools.header.bookMerge') }}</h2>
+          <p class="text-sm text-muted-foreground">{{ t('tools.bookMerge.initial.description') }}</p>
+        </div>
+        <Button class="mt-auto self-start" variant="outline" size="sm" @click="openBookMerge">
+          {{ t('tools.libraryIntegrity.openCheck') }}
+          <ArrowRight class="size-4" aria-hidden="true" />
+        </Button>
+      </article>
+
+      <article class="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div class="grid size-10 place-items-center rounded-lg bg-muted text-foreground">
             <Files class="size-5" aria-hidden="true" />
           </div>
-          <span class="rounded-full border border-border px-2 py-1 text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.newCheck') }}</span>
         </div>
         <div class="space-y-1">
           <h2 class="text-base font-semibold text-foreground">{{ t('tools.libraryIntegrity.duplicateFormats.title') }}</h2>
           <p class="text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.duplicateFormats.description') }}</p>
         </div>
         <Button class="mt-auto self-start" variant="outline" size="sm" @click="openDuplicateFormats">
+          {{ t('tools.libraryIntegrity.openCheck') }}
+          <ArrowRight class="size-4" aria-hidden="true" />
+        </Button>
+      </article>
+      <article class="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div class="grid size-10 place-items-center rounded-lg bg-muted text-foreground">
+            <GitMerge class="size-5" aria-hidden="true" />
+          </div>
+        </div>
+        <div class="space-y-1">
+          <h2 class="text-base font-semibold text-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.title') }}</h2>
+          <p class="text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.description') }}</p>
+        </div>
+        <Button class="mt-auto self-start" variant="outline" size="sm" @click="openSeriesCleanup">
           {{ t('tools.libraryIntegrity.openCheck') }}
           <ArrowRight class="size-4" aria-hidden="true" />
         </Button>
