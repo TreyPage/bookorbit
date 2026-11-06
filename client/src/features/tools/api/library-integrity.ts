@@ -1,4 +1,4 @@
-import type { DuplicateFormatPage, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types'
+import type { DuplicateFormatPage, LibraryIntegrityScanStatus, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types'
 
 import { api } from '@/lib/api'
 
@@ -40,4 +40,16 @@ export async function mergeSimilarSeries(params: {
     error.body = (await response.json().catch(() => ({}))) as Record<string, unknown>
     throw error
   }
+}
+
+export async function getLibraryIntegrityScanStatus(): Promise<LibraryIntegrityScanStatus | null> {
+  const response = await api('/api/v1/maintenance/library-integrity/scan-status')
+  if (!response.ok) throw new Error('library_integrity_scan_status_failed')
+  return response.json() as Promise<LibraryIntegrityScanStatus | null>
+}
+
+export async function startLibraryIntegrityScan(): Promise<LibraryIntegrityScanStatus | null> {
+  const response = await api('/api/v1/maintenance/library-integrity/scan-now', { method: 'POST' })
+  if (!response.ok) throw new Error('library_integrity_scan_start_failed')
+  return response.json() as Promise<LibraryIntegrityScanStatus | null>
 }

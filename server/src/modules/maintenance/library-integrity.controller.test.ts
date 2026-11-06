@@ -18,6 +18,14 @@ describe('LibraryIntegrityController', () => {
     expect(scanScheduler.getLastScan).toHaveBeenCalledOnce();
   });
 
+  it('starts a manual scan through the scheduler', () => {
+    const status = { status: 'running' };
+    const scanScheduler = { getLastScan: vi.fn(), startScan: vi.fn().mockReturnValue(status) };
+    const controller = new LibraryIntegrityController({} as never, scanScheduler as never);
+    expect(controller.startScan()).toEqual(status);
+    expect(scanScheduler.startScan).toHaveBeenCalledOnce();
+  });
+
   it('delegates similar-series discovery with the current user', async () => {
     const service = { listSimilarSeries: vi.fn().mockResolvedValue({ items: [], truncated: false }) };
     const controller = new LibraryIntegrityController(service as never, { getLastScan: vi.fn() } as never);
