@@ -14358,19 +14358,23 @@
           "duplicateFiles": "Duplicate-format files",
           "sidecars": "Sidecar entries",
           "orphanedMetadata": "Orphaned metadata files",
-          "emptyFolders": "Empty book folders",
+          "emptyFolders": "Empty directories",
           "unreadableDirectories": "Unreadable directories",
           "orphanedCovers": "Orphaned cover directories",
           "coverBytes": "Orphaned cover storage"
         }
       },
       "findings": {
+          "removeEmptyFolder": "Remove empty directory",
+          "cleaning": "Removing...",
+          "confirmEmptyFolder": "Remove this empty directory?\n\n{path}\n\nOnly this empty directory will be removed. No files or parent directories will be deleted.",
+          "cleanupFailed": "The directory could not be removed. It may have changed; reload findings and try again.",
         "title": "Filesystem findings",
         "description": "Review paths before making any changes. This check is read-only.",
         "load": "Load findings",
         "loadFailed": "Could not load filesystem findings.",
         "orphanedMetadata": "Orphaned metadata files ({count})",
-        "emptyFolders": "Empty book folders ({count})",
+        "emptyFolders": "Empty directories ({count})",
         "unreadableDirectories": "Unreadable directories ({count})",
         "none": "No findings in this category.",
         "truncated": "The scan reached a safety limit or more than 500 results in a category. The list may be incomplete."
