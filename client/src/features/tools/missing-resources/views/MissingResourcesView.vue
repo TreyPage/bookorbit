@@ -189,7 +189,7 @@ function handleNextPage(): void {
           :select-all-matching="resources.selectAllMatching.value"
           :all-on-page-selected="resources.allOnPageSelected.value"
           :disabled="resources.cleaning.value"
-          :selectable="resources.loadedCategory.value !== 'sidecar_files'"
+          :selectable="resources.category.value !== 'sidecar_files'"
           @toggle="handleToggle"
           @toggle-page="handleTogglePage"
         />
