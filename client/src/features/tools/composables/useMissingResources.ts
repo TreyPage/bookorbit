@@ -170,7 +170,7 @@ export function useMissingResources() {
               : await getSidecarFileIssues(params)
       if (requestId !== listRequestId || disposed) return
       items.value = result.items
-      if (requested === 'sidecar_files') {
+      if ('truncated' in result) {
         sidecarFilesTotal.value = result.total
         sidecarTruncated.value = result.truncated
       }
