@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { readdir, stat } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { lstat, readdir, realpath, rmdir, stat } from 'node:fs/promises';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import type { DuplicateFormatGroup, DuplicateFormatPage, LibraryFilesystemFinding, LibraryFilesystemFindingsResult, SidecarFileEntry, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types';
 
 import type { RequestUser } from '../../common/types/request-user';
@@ -228,6 +228,47 @@ export class LibraryIntegrityService {
       truncated,
       resultsTruncated: orphanedMetadataTotal > maxResults || emptyFolderTotal > maxResults || unreadableDirectoryTotal > maxResults,
     };
+  }
+
+  /** Remove one currently empty, database-backed book folder after re-validating scope and disk state. */
+  async cleanupEmptyBookFolder(user: RequestUser, libraryId: number, folderPath: string): Promise<{ removed: boolean }> {
+    const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
+    if (!libraryIds.includes(libraryId)) throw new NotFoundException('Book folder not found or not accessible');
+
+    const libraries = await this.libraryService.findAll(user);
+    const library = libraries.find((item) => item.id === libraryId);
+    if (!library) throw new NotFoundException('Book folder not found or not accessible');
+
+    const target = resolve(folderPath);
+    const knownFolderPaths = new Set((await this.repo.findBookFolderPaths([libraryId])).map((path) => resolve(path)));
+    if (!knownFolderPaths.has(target)) throw new ConflictException('Folder is no longer a known book folder');
+
+    const roots = library.folders.map((folder) => resolve(folder.path));
+    const containingRoot = roots.find((root) => {
+      const rel = relative(root, target);
+      return rel === '' || (!rel.startsWith('..' + sep) && rel !== '..' && !isAbsolute(rel));
+    });
+    if (!containingRoot || containingRoot === target) throw new NotFoundException('Book folder is outside the accessible library roots');
+
+    try {
+      const [realRoot, realTarget] = await Promise.all([realpath(containingRoot), realpath(target)]);
+      const realRelative = relative(realRoot, realTarget);
+      if (realRelative === '' || realRelative === '..' || realRelative.startsWith('..' + sep) || isAbsolute(realRelative)) {
+        throw new NotFoundException('Book folder is outside the accessible library roots');
+      }
+      const info = await lstat(target);
+      if (!info.isDirectory() || info.isSymbolicLink()) throw new ConflictException('Folder is no longer a regular directory');
+      const children = await readdir(target);
+      if (children.length !== 0) throw new ConflictException('Folder is no longer empty');
+      await rmdir(target);
+      return { removed: true };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ConflictException) throw error;
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT' || (error as NodeJS.ErrnoException).code === 'ENOTEMPTY' || (error as NodeJS.ErrnoException).code === 'EEXIST') {
+        throw new ConflictException('Folder changed before cleanup; refresh findings and try again');
+      }
+      throw error;
+    }
   }
 
   async listSidecarFiles(user: RequestUser, page: number, pageSize: number): Promise<SidecarFilePage> {

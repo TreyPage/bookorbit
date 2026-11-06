@@ -60,3 +60,12 @@ export async function getLibraryFilesystemFindings(): Promise<LibraryFilesystemF
   if (!response.ok) throw new Error('library_integrity_filesystem_findings_failed')
   return response.json() as Promise<LibraryFilesystemFindingsResult>
 }
+
+export async function cleanupEmptyBookFolder(params: { libraryId: number; path: string }): Promise<void> {
+  const response = await api('/api/v1/maintenance/library-integrity/filesystem-findings/cleanup-empty-folder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
+  if (!response.ok) throw new Error('library_integrity_empty_folder_cleanup_failed')
+}

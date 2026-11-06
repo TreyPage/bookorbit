@@ -6,7 +6,7 @@ import { ArrowRight, Copy, Files, GitMerge, Merge, RefreshCw, ShieldCheck } from
 
 import type { LibraryFilesystemFindingsResult, LibraryIntegrityScanStatus } from '@bookorbit/types'
 
-import { getLibraryFilesystemFindings, getLibraryIntegrityScanStatus, startLibraryIntegrityScan } from '@/features/tools/api/library-integrity'
+import { cleanupEmptyBookFolder, getLibraryFilesystemFindings, getLibraryIntegrityScanStatus, startLibraryIntegrityScan } from '@/features/tools/api/library-integrity'
 import MissingResourcesView from '@/features/tools/missing-resources/views/MissingResourcesView.vue'
 
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,8 @@ const scanError = ref(false)
 const findings = ref<LibraryFilesystemFindingsResult | null>(null)
 const findingsLoading = ref(false)
 const findingsError = ref(false)
+const cleaningFolder = ref<string | null>(null)
+const cleanupError = ref(false)
 let scanPollInterval: ReturnType<typeof setInterval> | null = null
 let scanPollInFlight = false
 
@@ -73,6 +75,20 @@ async function loadFilesystemFindings(): Promise<void> {
     findingsError.value = true
   } finally {
     findingsLoading.value = false
+  }
+}
+
+async function removeEmptyFolder(item: { libraryId: number; path: string }): Promise<void> {
+  if (!window.confirm(t('tools.libraryIntegrity.findings.confirmEmptyFolder', { path: item.path }))) return
+  cleaningFolder.value = item.path
+  cleanupError.value = false
+  try {
+    await cleanupEmptyBookFolder({ libraryId: item.libraryId, path: item.path })
+    await loadFilesystemFindings()
+  } catch {
+    cleanupError.value = true
+  } finally {
+    cleaningFolder.value = null
   }
 }
 
@@ -188,6 +204,7 @@ function openBookMerge(): void {
             </Button>
           </div>
           <p v-if="findingsError" role="alert" class="mt-3 text-sm text-destructive">{{ t('tools.libraryIntegrity.findings.loadFailed') }}</p>
+          <p v-if="cleanupError" role="alert" class="mt-2 text-sm text-destructive">{{ t('tools.libraryIntegrity.findings.cleanupFailed') }}</p>
           <div v-else-if="findings" class="mt-3 grid gap-4 lg:grid-cols-2">
             <section class="min-w-0 space-y-2">
               <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.orphanedMetadata', { count: findings.orphanedMetadataFiles.total }) }}</h4>
@@ -203,9 +220,14 @@ function openBookMerge(): void {
               <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.emptyFolders', { count: findings.emptyBookFolders.total }) }}</h4>
               <p v-if="findings.emptyBookFolders.items.length === 0" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.none') }}</p>
               <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
-                <li v-for="item in findings.emptyBookFolders.items" :key="item.path" class="space-y-0.5 text-xs">
-                  <span class="block text-muted-foreground">{{ item.libraryName }}</span>
-                  <code class="block break-all text-foreground">{{ item.path }}</code>
+                <li v-for="item in findings.emptyBookFolders.items" :key="item.path" class="flex items-start justify-between gap-2 text-xs">
+                  <div class="min-w-0 space-y-0.5">
+                    <span class="block text-muted-foreground">{{ item.libraryName }}</span>
+                    <code class="block break-all text-foreground">{{ item.path }}</code>
+                  </div>
+                  <Button size="sm" variant="outline" :disabled="cleaningFolder !== null" @click="removeEmptyFolder(item)">
+                    {{ cleaningFolder === item.path ? t('tools.libraryIntegrity.findings.cleaning') : t('tools.libraryIntegrity.findings.removeEmptyFolder') }}
+                  </Button>
                 </li>
               </ul>
             </section>
