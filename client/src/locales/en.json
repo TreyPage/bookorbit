@@ -14292,7 +14292,7 @@
     },
     "libraryIntegrity": {
       "eyebrow": "Tools",
-      "description": "Review library health from one place. Existing maintenance and duplicate-book checks remain separate workflows while they are brought under a shared integrity system.",
+      "description": "Review library health, identify orphaned content, and clean up confirmed filesystem anomalies alongside duplicate-book and series checks.",
       "checksLabel": "Library integrity tools",
       "existingCheck": "Existing check",
       "missingDescription": "Check for books with missing files, broken cover references, and cover folders left behind by deleted books.",
@@ -14361,23 +14361,33 @@
           "emptyFolders": "Empty directories",
           "unreadableDirectories": "Unreadable directories",
           "orphanedCovers": "Orphaned cover directories",
-          "coverBytes": "Orphaned cover storage"
+          "coverBytes": "Orphaned cover storage",
+          "orphanedBookFolders": "Book folders without book formats",
+          "orphanedFiles": "Orphaned files"
         }
       },
       "findings": {
-          "removeEmptyFolder": "Remove empty directory",
-          "cleaning": "Removing...",
-          "confirmEmptyFolder": "Remove this empty directory?\n\n{path}\n\nOnly this empty directory will be removed. No files or parent directories will be deleted.",
-          "cleanupFailed": "The directory could not be removed. It may have changed; reload findings and try again.",
+        "removeEmptyFolder": "Remove empty directory",
+        "cleaning": "Removing...",
+        "confirmEmptyFolder": "Remove this empty directory?\n\n{path}\n\nOnly this empty directory will be removed. No files or parent directories will be deleted.",
+        "cleanupFailed": "The item could not be removed. It may have changed; reload findings and try again.",
         "title": "Filesystem findings",
-        "description": "Review paths before making any changes. This check is read-only.",
+        "description": "Review orphaned folders and files. Cleanup is always explicit, and each target is rechecked before removal.",
         "load": "Load findings",
         "loadFailed": "Could not load filesystem findings.",
         "orphanedMetadata": "Orphaned metadata files ({count})",
         "emptyFolders": "Empty directories ({count})",
         "unreadableDirectories": "Unreadable directories ({count})",
         "none": "No findings in this category.",
-        "truncated": "The scan reached a safety limit or more than 500 results in a category. The list may be incomplete."
+        "truncated": "The scan reached a safety limit or more than 500 results in a category. The list may be incomplete.",
+        "orphanedBookFolders": "Folders without book formats ({count})",
+        "orphanedFiles": "Orphaned files ({count})",
+        "fileReasons": {
+          "folder_without_format": "Folder contains no book formats",
+          "text_file": "Text file inside library"
+        },
+        "removeOrphanedFile": "Remove file",
+        "confirmOrphanedFile": "Permanently remove this orphaned file?\n\n{path}\n\nOnly this file will be removed. The file will be checked again before deletion."
       }
     }
   },

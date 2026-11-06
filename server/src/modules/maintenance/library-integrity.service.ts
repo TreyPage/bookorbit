@@ -1,7 +1,8 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { lstat, readdir, realpath, rmdir, stat } from 'node:fs/promises';
-import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { lstat, readdir, realpath, rmdir, stat, unlink } from 'node:fs/promises';
+import { extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { isBookFormat } from '@bookorbit/types';
 import type { DuplicateFormatGroup, DuplicateFormatPage, LibraryFilesystemFinding, LibraryFilesystemFindingsResult, SidecarFileEntry, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types';
 
 import type { RequestUser } from '../../common/types/request-user';
@@ -49,6 +50,8 @@ export class LibraryIntegrityService {
       sidecarEntries: sidecars.total,
       sidecarScanTruncated: sidecars.truncated,
       orphanedMetadataFiles: filesystem.orphanedMetadataFiles,
+      orphanedBookFolders: filesystem.orphanedBookFolders,
+      orphanedFiles: filesystem.orphanedFiles,
       emptyBookFolders: filesystem.emptyBookFolders,
       orphanedCoverDirectories: filesystem.orphanedCoverDirectories,
       orphanedCoverBytes: filesystem.orphanedCoverBytes,
@@ -70,6 +73,8 @@ export class LibraryIntegrityService {
     );
     const visitedRoots = new Set<string>();
     let orphanedMetadataFiles = 0;
+    let orphanedBookFolders = 0;
+    let orphanedFiles = 0;
     let emptyBookFolders = 0;
     let scannedEntries = 0;
     let truncated = false;
@@ -88,6 +93,12 @@ export class LibraryIntegrityService {
         return;
       }
       if (depth > 0 && children.length === 0) emptyBookFolders += 1;
+      const directFiles = children.filter((child) => child.isFile());
+      const hasBookFormat = directFiles.some((child) => isBookFormat(extname(child.name).slice(1)));
+      if (depth > 0 && directFiles.length > 0 && !hasBookFormat) {
+        orphanedBookFolders += 1;
+        orphanedFiles += directFiles.length;
+      }
 
       for (const child of children) {
         if (child.isSymbolicLink()) continue;
@@ -99,8 +110,10 @@ export class LibraryIntegrityService {
         if (child.isDirectory()) {
           await inspect(resolve(directory, child.name), depth + 1);
           if (truncated) return;
-        } else if (child.isFile() && child.name.toLowerCase() === 'metadata.json') {
-          if (!knownFolderPaths.has(resolve(directory))) orphanedMetadataFiles += 1;
+        } else if (child.isFile()) {
+          const lowerName = child.name.toLowerCase();
+          if (lowerName === 'metadata.json' && !knownFolderPaths.has(resolve(directory))) orphanedMetadataFiles += 1;
+          if (lowerName.endsWith('.txt') && hasBookFormat) orphanedFiles += 1;
         }
       }
     };
@@ -134,7 +147,7 @@ export class LibraryIntegrityService {
       }
     }
 
-    return { orphanedMetadataFiles, emptyBookFolders, orphanedCoverDirectories, orphanedCoverBytes, truncated, unreadableDirectories };
+    return { orphanedMetadataFiles, orphanedBookFolders, orphanedFiles, emptyBookFolders, orphanedCoverDirectories, orphanedCoverBytes, truncated, unreadableDirectories };
   }
 
 
@@ -147,6 +160,8 @@ export class LibraryIntegrityService {
     if (libraryIds.length === 0) {
       return {
         orphanedMetadataFiles: { items: [], total: 0 },
+        orphanedBookFolders: { items: [], total: 0 },
+        orphanedFiles: { items: [], total: 0 },
         emptyBookFolders: { items: [], total: 0 },
         truncated: false,
         resultsTruncated: false,
@@ -157,10 +172,14 @@ export class LibraryIntegrityService {
     const libraries = await this.libraryService.findAll(user);
     const knownFolderPaths = new Set((await this.repo.findBookFolderPaths(libraryIds)).map((path) => resolve(path)));
     const orphanedMetadataFiles: LibraryFilesystemFinding[] = [];
+    const orphanedBookFolders: LibraryFilesystemFinding[] = [];
+    const orphanedFiles: Array<LibraryFilesystemFinding & { reason: 'folder_without_format' | 'text_file' }> = [];
     const emptyBookFolders: LibraryFilesystemFinding[] = [];
     const unreadableDirectories: LibraryFilesystemFinding[] = [];
     const maxResults = 500;
     let orphanedMetadataTotal = 0;
+    let orphanedBookFolderTotal = 0;
+    let orphanedFileTotal = 0;
     let emptyFolderTotal = 0;
     let unreadableDirectoryTotal = 0;
     let scannedEntries = 0;
@@ -185,6 +204,13 @@ export class LibraryIntegrityService {
         emptyFolderTotal += 1;
         if (emptyBookFolders.length < maxResults) emptyBookFolders.push({ libraryId, libraryName, path: resolve(directory) });
       }
+      const directFiles = children.filter((child) => child.isFile());
+      const hasBookFormat = directFiles.some((child) => isBookFormat(extname(child.name).slice(1)));
+      const filesWithoutFormat = depth > 0 && directFiles.length > 0 && !hasBookFormat;
+      if (filesWithoutFormat) {
+        orphanedBookFolderTotal += 1;
+        if (orphanedBookFolders.length < maxResults) orphanedBookFolders.push({ libraryId, libraryName, path: resolve(directory) });
+      }
 
       for (const child of children) {
         if (child.isSymbolicLink()) continue;
@@ -197,9 +223,17 @@ export class LibraryIntegrityService {
         if (child.isDirectory()) {
           await inspect(childPath, libraryId, libraryName, depth + 1);
           if (truncated) return;
-        } else if (child.isFile() && child.name.toLowerCase() === 'metadata.json' && !knownFolderPaths.has(resolve(directory))) {
-          orphanedMetadataTotal += 1;
-          if (orphanedMetadataFiles.length < maxResults) orphanedMetadataFiles.push({ libraryId, libraryName, path: childPath });
+        } else if (child.isFile()) {
+          const lowerName = child.name.toLowerCase();
+          if (lowerName === 'metadata.json' && !knownFolderPaths.has(resolve(directory))) {
+            orphanedMetadataTotal += 1;
+            if (orphanedMetadataFiles.length < maxResults) orphanedMetadataFiles.push({ libraryId, libraryName, path: childPath });
+          }
+          const reason = filesWithoutFormat ? 'folder_without_format' : lowerName.endsWith('.txt') ? 'text_file' : null;
+          if (reason) {
+            orphanedFileTotal += 1;
+            if (orphanedFiles.length < maxResults) orphanedFiles.push({ libraryId, libraryName, path: childPath, reason });
+          }
         }
       }
     };
@@ -219,14 +253,18 @@ export class LibraryIntegrityService {
     const sort = (a: LibraryFilesystemFinding, b: LibraryFilesystemFinding) =>
       a.libraryName.localeCompare(b.libraryName) || a.path.localeCompare(b.path);
     orphanedMetadataFiles.sort(sort);
+    orphanedBookFolders.sort(sort);
+    orphanedFiles.sort(sort);
     emptyBookFolders.sort(sort);
     unreadableDirectories.sort(sort);
     return {
       orphanedMetadataFiles: { items: orphanedMetadataFiles, total: orphanedMetadataTotal },
+      orphanedBookFolders: { items: orphanedBookFolders, total: orphanedBookFolderTotal },
+      orphanedFiles: { items: orphanedFiles, total: orphanedFileTotal },
       emptyBookFolders: { items: emptyBookFolders, total: emptyFolderTotal },
       unreadableDirectories: { items: unreadableDirectories, total: unreadableDirectoryTotal },
       truncated,
-      resultsTruncated: orphanedMetadataTotal > maxResults || emptyFolderTotal > maxResults || unreadableDirectoryTotal > maxResults,
+      resultsTruncated: orphanedMetadataTotal > maxResults || orphanedBookFolderTotal > maxResults || orphanedFileTotal > maxResults || emptyFolderTotal > maxResults || unreadableDirectoryTotal > maxResults,
     };
   }
 
@@ -268,6 +306,38 @@ export class LibraryIntegrityService {
     }
   }
 
+  /** Delete one reviewed orphaned file after rechecking its classification and safe path. */
+  async cleanupOrphanedFile(user: RequestUser, libraryId: number, filePath: string): Promise<{ removed: boolean }> {
+    const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
+    if (!libraryIds.includes(libraryId)) throw new NotFoundException('File not found or not accessible');
+    const libraries = await this.libraryService.findAll(user);
+    const library = libraries.find((item) => item.id === libraryId);
+    if (!library) throw new NotFoundException('File not found or not accessible');
+    const target = resolve(filePath);
+    const roots = library.folders.map((folder) => resolve(folder.path));
+    const containingRoot = roots.find((root) => {
+      const rel = relative(root, target);
+      return !rel.startsWith('..' + sep) && rel !== '..' && rel !== '' && !isAbsolute(rel);
+    });
+    if (!containingRoot) throw new NotFoundException('File is outside the accessible library roots');
+    try {
+      const [realRoot, realTarget] = await Promise.all([realpath(containingRoot), realpath(target)]);
+      const realRelative = relative(realRoot, realTarget);
+      if (realRelative === '..' || realRelative.startsWith('..' + sep) || realRelative === '' || isAbsolute(realRelative)) throw new NotFoundException('File is outside the accessible library roots');
+      const info = await lstat(target);
+      if (!info.isFile() || info.isSymbolicLink()) throw new ConflictException('File is no longer a regular file');
+      if (isBookFormat(extname(target).slice(1))) throw new ConflictException('Book-format files cannot be removed as orphaned files');
+      const siblings = await readdir(resolve(target, '..'), { withFileTypes: true });
+      const hasBookFormat = siblings.some((entry) => entry.isFile() && isBookFormat(extname(entry.name).slice(1)));
+      if (!target.toLowerCase().endsWith('.txt') && hasBookFormat) throw new ConflictException('File is no longer classified as orphaned');
+      await unlink(target);
+      return { removed: true };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ConflictException) throw error;
+      if (['ENOENT', 'EISDIR', 'EPERM'].includes((error as NodeJS.ErrnoException).code ?? '')) throw new ConflictException('File changed before cleanup; refresh findings and try again');
+      throw error;
+    }
+  }
   async listSidecarFiles(user: RequestUser, page: number, pageSize: number): Promise<SidecarFilePage> {
     const libraries = await this.libraryService.findAll(user);
     const entries: SidecarFileEntry[] = [];

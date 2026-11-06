@@ -27,7 +27,7 @@ describe('LibraryIntegrityController', () => {
   });
 
   it('delegates filesystem findings with the current user', async () => {
-    const service = { listFilesystemFindings: vi.fn().mockResolvedValue({ orphanedMetadataFiles: { items: [], total: 0 }, emptyBookFolders: { items: [], total: 0 }, truncated: false, resultsTruncated: false }) };
+    const service = { listFilesystemFindings: vi.fn().mockResolvedValue({ orphanedMetadataFiles: { items: [], total: 0 }, orphanedBookFolders: { items: [], total: 0 }, orphanedFiles: { items: [], total: 0 }, emptyBookFolders: { items: [], total: 0 }, truncated: false, resultsTruncated: false }) };
     const controller = new LibraryIntegrityController(service as never, { getLastScan: vi.fn() } as never);
     const user = { id: 9 } as never;
     await controller.listFilesystemFindings(user);
@@ -43,6 +43,17 @@ describe('LibraryIntegrityController', () => {
     await controller.cleanupEmptyBookFolder(dto as never, user);
 
     expect(service.cleanupEmptyBookFolder).toHaveBeenCalledWith(user, 4, '/books/empty');
+  });
+
+  it('delegates orphaned-file cleanup with the current user and validated target', async () => {
+    const service = { cleanupOrphanedFile: vi.fn().mockResolvedValue({ removed: true }) };
+    const controller = new LibraryIntegrityController(service as never, { getLastScan: vi.fn() } as never);
+    const user = { id: 9 } as never;
+    const dto = { libraryId: 4, path: '/books/orphan/metadata.json' };
+
+    await controller.cleanupOrphanedFile(dto as never, user);
+
+    expect(service.cleanupOrphanedFile).toHaveBeenCalledWith(user, 4, '/books/orphan/metadata.json');
   });
 
   it('delegates similar-series discovery with the current user', async () => {

@@ -30,6 +30,8 @@ describe('LibraryIntegrityService', () => {
       sidecarEntries: 7,
       sidecarScanTruncated: true,
       orphanedMetadataFiles: 0,
+      orphanedBookFolders: 0,
+      orphanedFiles: 0,
       emptyBookFolders: 0,
       orphanedCoverDirectories: 0,
       orphanedCoverBytes: 0,
@@ -58,9 +60,14 @@ describe('LibraryIntegrityService', () => {
         { name: 'known-book', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
         { name: 'orphan', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
         { name: 'empty-untracked', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
+        { name: 'valid-book', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
         { name: 'locked', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
       ] as never;
       if (value === '/virtual/library/known-book') return [] as never;
+      if (value === '/virtual/library/valid-book') return [
+        { name: 'novel.epub', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
+        { name: 'notes.txt', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
+      ] as never;
       if (value === '/virtual/library/locked') throw new Error('EACCES');
       if (value === '/virtual/library/orphan') return [
         { name: 'metadata.json', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
@@ -71,6 +78,11 @@ describe('LibraryIntegrityService', () => {
     try {
       await expect(service.listFilesystemFindings({ id: 7 } as never)).resolves.toEqual({
         orphanedMetadataFiles: { items: [{ libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan/metadata.json' }], total: 1 },
+        orphanedBookFolders: { items: [{ libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan' }], total: 1 },
+        orphanedFiles: { items: [
+          { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan/metadata.json', reason: 'folder_without_format' },
+          { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/valid-book/notes.txt', reason: 'text_file' },
+        ], total: 2 },
         emptyBookFolders: { items: [
           { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/empty-untracked' },
           { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/known-book' },
@@ -283,4 +295,63 @@ describe('LibraryIntegrityService', () => {
       }
     });
   });
+
+  describe('cleanupOrphanedFile', () => {
+    async function createService() {
+      const libraryService = {
+        findAccessibleLibraryIds: vi.fn().mockResolvedValue([1]),
+        findAll: vi.fn().mockResolvedValue([{ id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] }]),
+      };
+      return new LibraryIntegrityService({} as never, libraryService as never, { get: () => undefined } as never);
+    }
+
+    it('removes a reviewed sidecar file from a folder without book formats', async () => {
+      const fs = await import('node:fs/promises');
+      const service = await createService();
+      const realpathSpy = vi.spyOn(fs, 'realpath').mockImplementation(async (path) => String(path));
+      const lstatSpy = vi.spyOn(fs, 'lstat').mockResolvedValue({ isFile: () => true, isSymbolicLink: () => false } as never);
+      const readdirSpy = vi.spyOn(fs, 'readdir').mockResolvedValue([
+        { name: 'metadata.json', isFile: () => true },
+        { name: 'cover.jpg', isFile: () => true },
+      ] as never);
+      const unlinkSpy = vi.spyOn(fs, 'unlink').mockResolvedValue(undefined);
+
+      try {
+        await expect(service.cleanupOrphanedFile({ id: 7 } as never, 1, '/virtual/library/orphan/metadata.json'))
+          .resolves.toEqual({ removed: true });
+        expect(unlinkSpy).toHaveBeenCalledWith('/virtual/library/orphan/metadata.json');
+      } finally {
+        realpathSpy.mockRestore();
+        lstatSpy.mockRestore();
+        readdirSpy.mockRestore();
+        unlinkSpy.mockRestore();
+      }
+    });
+
+    it('never removes book-format files or non-text sidecars from a valid book folder', async () => {
+      const fs = await import('node:fs/promises');
+      const service = await createService();
+      const realpathSpy = vi.spyOn(fs, 'realpath').mockImplementation(async (path) => String(path));
+      const lstatSpy = vi.spyOn(fs, 'lstat').mockResolvedValue({ isFile: () => true, isSymbolicLink: () => false } as never);
+      const readdirSpy = vi.spyOn(fs, 'readdir').mockResolvedValue([
+        { name: 'book.epub', isFile: () => true },
+        { name: 'metadata.json', isFile: () => true },
+      ] as never);
+      const unlinkSpy = vi.spyOn(fs, 'unlink');
+
+      try {
+        await expect(service.cleanupOrphanedFile({ id: 7 } as never, 1, '/virtual/library/book.epub'))
+          .rejects.toMatchObject({ status: 409 });
+        await expect(service.cleanupOrphanedFile({ id: 7 } as never, 1, '/virtual/library/metadata.json'))
+          .rejects.toMatchObject({ status: 409 });
+        expect(unlinkSpy).not.toHaveBeenCalled();
+      } finally {
+        realpathSpy.mockRestore();
+        lstatSpy.mockRestore();
+        readdirSpy.mockRestore();
+        unlinkSpy.mockRestore();
+      }
+    });
+  });
+
 });
