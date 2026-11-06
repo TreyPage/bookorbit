@@ -1,4 +1,4 @@
-import type { DuplicateFormatPage } from '@bookorbit/types'
+import type { DuplicateFormatPage, SidecarFilePage } from '@bookorbit/types'
 
 import { api } from '@/lib/api'
 
@@ -9,23 +9,6 @@ export async function getDuplicateFormatIssues(params: { page: number; pageSize:
   return response.json() as Promise<DuplicateFormatPage>
 }
 
-
-export type SidecarFileEntry = {
-  libraryId: number;
-  libraryName: string;
-  path: string;
-  kind: 'text_file' | 'temporary_file' | 'conversion_directory';
-  sizeBytes: number;
-  fileCount: number;
-};
-
-export type SidecarFilePage = {
-  items: SidecarFileEntry[];
-  total: number;
-  page: number;
-  pageSize: number;
-  truncated: boolean;
-};
 
 export async function getSidecarFileIssues(params: { page: number; pageSize: number }): Promise<SidecarFilePage> {
   const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize) });

@@ -9,6 +9,7 @@ import type {
   MissingResourceCleanupResult,
   MissingResourcesSummary,
   OrphanedCoverDirEntry,
+  SidecarFileEntry,
 } from '@bookorbit/types'
 
 import {
@@ -22,8 +23,9 @@ import {
   getOrphanedCoverDirs,
   startCoverSweep,
 } from '../api/missing-resources'
+import { getSidecarFileIssues } from '../api/library-integrity'
 
-export type MissingResourceEntry = MissingBookEntry | BrokenCoverEntry | OrphanedCoverDirEntry
+export type MissingResourceEntry = MissingBookEntry | BrokenCoverEntry | OrphanedCoverDirEntry | SidecarFileEntry
 
 const POLL_INTERVAL_MS = 1000
 const PAGE_SIZE = 50
@@ -31,7 +33,7 @@ const PAGE_SIZE = 50
 const MAX_CLEAN_PASSES = 40
 
 export function entryId(entry: MissingResourceEntry): number {
-  return 'bookId' in entry ? entry.bookId : entry.id
+  return 'path' in entry ? -1 : 'bookId' in entry ? entry.bookId : entry.id
 }
 
 export function useMissingResources() {
@@ -50,6 +52,8 @@ export function useMissingResources() {
   const error = ref<string | null>(null)
   const selectedIds = ref(new Set<number>())
   const selectAllMatching = ref(false)
+  const sidecarFilesTotal = ref<number | null>(null)
+  const sidecarTruncated = ref(false)
 
   let pollTimer: ReturnType<typeof setTimeout> | null = null
   let active = true
@@ -60,15 +64,16 @@ export function useMissingResources() {
   const sweeping = computed(() => sweep.value?.status === 'running')
   const sweepReady = computed(() => sweep.value?.status === 'completed')
   const totalPages = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
-  const needsSweep = computed(() => category.value !== 'missing_books' && !sweepReady.value)
+  const needsSweep = computed(() => (category.value === 'broken_covers' || category.value === 'orphaned_cover_dirs') && !sweepReady.value)
   const selectionCount = computed(() => (selectAllMatching.value ? total.value : selectedIds.value.size))
   const hasSelection = computed(() => selectionCount.value > 0)
-  const allOnPageSelected = computed(() => items.value.length > 0 && items.value.every((item) => selectedIds.value.has(entryId(item))))
+  const allOnPageSelected = computed(() => category.value !== 'sidecar_files' && items.value.length > 0 && items.value.every((item) => selectedIds.value.has(entryId(item))))
 
   const counts = computed(() => ({
     missing_books: summary.value?.missingBooks ?? 0,
     broken_covers: sweep.value?.brokenCovers ?? 0,
     orphaned_cover_dirs: sweep.value?.orphanedCoverDirs ?? 0,
+    sidecar_files: sidecarFilesTotal.value,
   }))
 
   onActivated(() => {
@@ -160,9 +165,15 @@ export function useMissingResources() {
           ? await getMissingBooks(params)
           : requested === 'broken_covers'
             ? await getBrokenCovers(params)
-            : await getOrphanedCoverDirs(params)
+            : requested === 'orphaned_cover_dirs'
+              ? await getOrphanedCoverDirs(params)
+              : await getSidecarFileIssues(params)
       if (requestId !== listRequestId || disposed) return
       items.value = result.items
+      if ('truncated' in result) {
+        sidecarFilesTotal.value = result.total
+        sidecarTruncated.value = result.truncated
+      }
       loadedCategory.value = requested
       total.value = result.total
       page.value = result.page
@@ -171,6 +182,10 @@ export function useMissingResources() {
       items.value = []
       loadedCategory.value = category.value
       total.value = 0
+      if (category.value === 'sidecar_files') {
+        sidecarFilesTotal.value = 0
+        sidecarTruncated.value = false
+      }
       error.value = t('tools.missingResources.errors.list')
     } finally {
       if (requestId === listRequestId) {
@@ -186,6 +201,7 @@ export function useMissingResources() {
     // Drop the previous category's rows now; they do not match the shape the new category renders.
     items.value = []
     total.value = 0
+    sidecarTruncated.value = false
     clearSelection()
     await loadPage(1)
   }
@@ -230,7 +246,7 @@ export function useMissingResources() {
   }
 
   async function cleanSelected(): Promise<boolean> {
-    if (!hasSelection.value || cleaning.value) return false
+    if (!hasSelection.value || cleaning.value || category.value === 'sidecar_files') return false
     const target = category.value
     const cleaner = cleanerFor(target)
     cleaning.value = true
@@ -285,6 +301,7 @@ export function useMissingResources() {
     selectionCount,
     hasSelection,
     allOnPageSelected,
+    sidecarTruncated,
     initialize,
     refreshSummary,
     runSweep,

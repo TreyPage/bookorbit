@@ -1,6 +1,6 @@
 import { defineComponent, h } from 'vue'
 import { mount } from '@vue/test-utils'
-import type { CoverSweep, MissingBookEntry, MissingResourcesSummary } from '@bookorbit/types'
+import type { CoverSweep, MissingBookEntry, MissingResourcesSummary, SidecarFileEntry } from '@bookorbit/types'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../api/missing-resources', () => ({
@@ -15,9 +15,12 @@ vi.mock('../../api/missing-resources', () => ({
   startCoverSweep: vi.fn<(...args: unknown[]) => unknown>(),
 }))
 
+vi.mock('../../api/library-integrity', () => ({ getSidecarFileIssues: vi.fn<(...args: unknown[]) => unknown>() }))
+
 vi.mock('vue-sonner', () => ({ toast: { success: vi.fn<(...args: unknown[]) => void>(), error: vi.fn<(...args: unknown[]) => void>() } }))
 
 import * as api from '../../api/missing-resources'
+import * as integrityApi from '../../api/library-integrity'
 import { useMissingResources } from '../useMissingResources'
 
 const runningSweep: CoverSweep = {
@@ -47,6 +50,10 @@ const completedSweep: CoverSweep = {
 
 function summary(overrides: Partial<MissingResourcesSummary> = {}): MissingResourcesSummary {
   return { missingBooks: 3, sweep: null, ...overrides }
+}
+
+function sidecarFile(): SidecarFileEntry {
+  return { libraryId: 1, libraryName: 'Main', path: '/library/book/notes.txt', kind: 'text_file', sizeBytes: 128, fileCount: 1 }
 }
 
 function missingBook(id: number): MissingBookEntry {
@@ -82,6 +89,7 @@ describe('useMissingResources', () => {
     vi.mocked(api.getMissingBooks).mockResolvedValue({ items: [missingBook(1), missingBook(2)], total: 2, page: 1, pageSize: 50 })
     vi.mocked(api.getBrokenCovers).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50 })
     vi.mocked(api.getOrphanedCoverDirs).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50 })
+    vi.mocked(integrityApi.getSidecarFileIssues).mockResolvedValue({ items: [sidecarFile()], total: 1, page: 1, pageSize: 50, truncated: true })
   })
 
   afterEach(() => {
@@ -199,6 +207,21 @@ describe('useMissingResources', () => {
 
     expect(resources.loadedCategory.value).toBe('missing_books')
     expect(resources.total.value).toBe(0)
+  })
+
+  it('loads sidecar files without requiring a cover sweep and keeps them read-only', async () => {
+    const { resources } = mountComposable()
+    await resources.initialize()
+
+    await resources.setCategory('sidecar_files')
+
+    expect(resources.needsSweep.value).toBe(false)
+    expect(integrityApi.getSidecarFileIssues).toHaveBeenCalledWith({ page: 1, pageSize: 50 })
+    expect(resources.items.value).toEqual([sidecarFile()])
+    expect(resources.counts.value.sidecar_files).toBe(1)
+    expect(resources.sidecarTruncated.value).toBe(true)
+    expect(resources.allOnPageSelected.value).toBe(false)
+    expect(await resources.cleanSelected()).toBe(false)
   })
 
   it('cleans the explicitly selected ids', async () => {

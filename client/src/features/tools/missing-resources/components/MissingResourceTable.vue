@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { BrokenCoverEntry, MissingBookEntry, MissingResourceCategory, OrphanedCoverDirEntry } from '@bookorbit/types'
+import type { BrokenCoverEntry, MissingBookEntry, MissingResourceCategory, OrphanedCoverDirEntry, SidecarFileEntry } from '@bookorbit/types'
 
 import { entryId, type MissingResourceEntry } from '../../composables/useMissingResources'
 import BrokenCoverRow from './BrokenCoverRow.vue'
 import MissingBookRow from './MissingBookRow.vue'
 import OrphanedCoverRow from './OrphanedCoverRow.vue'
+import SidecarFileRow from './SidecarFileRow.vue'
 
 const props = defineProps<{
   category: MissingResourceCategory
@@ -15,6 +16,7 @@ const props = defineProps<{
   selectAllMatching: boolean
   allOnPageSelected: boolean
   disabled: boolean
+  selectable: boolean
 }>()
 const emit = defineEmits<{ toggle: [id: number]; togglePage: [] }>()
 
@@ -23,6 +25,7 @@ const { t } = useI18n()
 const missingBooks = computed(() => (props.category === 'missing_books' ? (props.items as MissingBookEntry[]) : []))
 const brokenCovers = computed(() => (props.category === 'broken_covers' ? (props.items as BrokenCoverEntry[]) : []))
 const orphanedDirs = computed(() => (props.category === 'orphaned_cover_dirs' ? (props.items as OrphanedCoverDirEntry[]) : []))
+const sidecarFiles = computed(() => (props.category === 'sidecar_files' ? (props.items as SidecarFileEntry[]) : []))
 
 function isSelected(entry: MissingResourceEntry): boolean {
   return props.selectAllMatching || props.selectedIds.has(entryId(entry))
@@ -39,7 +42,7 @@ function handleToggle(id: number): void {
 
 <template>
   <div class="overflow-hidden rounded-lg border border-border">
-    <div class="flex items-center gap-3 border-b border-border bg-muted/30 px-4 py-2.5">
+    <div v-if="selectable" class="flex items-center gap-3 border-b border-border bg-muted/30 px-4 py-2.5">
       <label class="flex items-center gap-2 text-sm text-muted-foreground">
         <input
           type="checkbox"
@@ -74,7 +77,7 @@ function handleToggle(id: number): void {
       />
     </ul>
 
-    <ul v-else class="divide-y divide-border">
+    <ul v-else-if="category === 'orphaned_cover_dirs'" class="divide-y divide-border">
       <OrphanedCoverRow
         v-for="entry in orphanedDirs"
         :key="entry.bookId"
@@ -83,6 +86,10 @@ function handleToggle(id: number): void {
         :disabled="disabled"
         @toggle="handleToggle"
       />
+    </ul>
+
+    <ul v-else class="divide-y divide-border">
+      <SidecarFileRow v-for="entry in sidecarFiles" :key="entry.libraryId + ':' + entry.path" :entry="entry" />
     </ul>
   </div>
 </template>
