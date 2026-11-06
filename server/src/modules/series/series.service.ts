@@ -216,6 +216,26 @@ export class SeriesService {
     return { items, total: bookPage.total, page, size, seriesInfo };
   }
 
+  async refreshCatalog(user: RequestUser, seriesId: number): Promise<void> {
+    const libraryIds = await this.resolveLibraryIds(user);
+    if (libraryIds.length === 0) throw new NotFoundException('Series not found');
+    const detail = await this.seriesRepo.findDetail({
+      seriesId,
+      userId: user.id,
+      libraryIds,
+      contentFilters: user.isSuperuser ? undefined : user.contentFilters,
+    });
+    if (!detail) throw new NotFoundException('Series not found');
+    const result = await this.hardcoverSeriesCatalog.forceRefresh(user.id, detail.name, detail.indices);
+    if (result.status === 'failed' || result.status === 'insufficient_scope' || result.status === 'not_configured') {
+      throw new BadRequestException(result.status === 'not_configured'
+        ? 'Hardcover is not connected'
+        : result.status === 'insufficient_scope'
+          ? 'The Hardcover API key needs read:catalog permission'
+          : 'Could not refresh the Hardcover series catalog');
+    }
+  }
+
   /**
    * Backs the reader's end-of-book handoff. A neighbour the user cannot see, a book with no
    * readable file, and a book outside any series all resolve to null rather than an error, so

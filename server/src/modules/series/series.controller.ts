@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { RequestUser } from '../../common/types/request-user';
@@ -19,6 +19,11 @@ export class SeriesController {
   @Get(':seriesId/books')
   findBooks(@CurrentUser() user: RequestUser, @Param('seriesId', ParseIntPipe) seriesId: number, @Query() dto: ListSeriesBooksDto) {
     return this.seriesService.findBooks(user, seriesId, dto);
+  }
+
+  @Post(':seriesId/refresh-catalog')
+  refreshCatalog(@CurrentUser() user: RequestUser, @Param('seriesId', ParseIntPipe) seriesId: number) {
+    return this.seriesService.refreshCatalog(user, seriesId);
   }
 
   @Get(':seriesId/books/:bookId/next')

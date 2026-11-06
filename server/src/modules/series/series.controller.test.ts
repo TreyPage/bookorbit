@@ -29,6 +29,7 @@ function makeController() {
     findAll: vi.fn(),
     findBooks: vi.fn(),
     findNextBook: vi.fn(),
+    refreshCatalog: vi.fn(),
   };
 
   const controller = new SeriesController(seriesService as any);
@@ -67,6 +68,14 @@ describe('SeriesController', () => {
     expect(seriesService.findBooks).toHaveBeenCalledWith(user, 42, dto);
     expect(result).toBe(expected);
   });
+  it('refreshCatalog delegates to service with numeric series id', async () => {
+    const { controller, seriesService } = makeController();
+    const user = makeUser();
+    seriesService.refreshCatalog.mockResolvedValue(undefined);
+    await expect(controller.refreshCatalog(user, 42)).resolves.toBeUndefined();
+    expect(seriesService.refreshCatalog).toHaveBeenCalledWith(user, 42);
+  });
+
   it('findNextBook delegates to service with numeric series and book ids', async () => {
     const { controller, seriesService } = makeController();
     const user = makeUser();
