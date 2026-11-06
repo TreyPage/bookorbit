@@ -208,6 +208,23 @@ export class LibraryIntegrityRepository {
       const inaccessibleBookCount = Number((hiddenRefs.rows[0] as { count?: number } | undefined)?.count ?? 0);
       if (inaccessibleBookCount > 0) return { status: 'inaccessible_books' as const, inaccessibleBookCount };
 
+      await tx.execute(sql`
+        SELECT membership.book_id
+        FROM book_series_memberships membership
+        INNER JOIN books visible_book ON visible_book.id = membership.book_id
+        WHERE membership.series_id = ANY(${[targetSeriesId, ...sourceSeriesIds]}::int[])
+          AND visible_book.library_id = ANY(${libraryIds}::int[])
+        FOR UPDATE OF membership, visible_book
+      `);
+      await tx.execute(sql`
+        SELECT metadata.book_id
+        FROM book_metadata metadata
+        INNER JOIN books visible_book ON visible_book.id = metadata.book_id
+        WHERE metadata.series_id = ANY(${sourceSeriesIds}::int[])
+          AND visible_book.library_id = ANY(${libraryIds}::int[])
+        FOR UPDATE OF metadata
+      `);
+
       const conflictsResult = await tx.execute(sql`
         WITH relevant AS (
           SELECT membership.book_id, membership.series_id, membership.series_index
@@ -253,7 +270,7 @@ export class LibraryIntegrityRepository {
            WHERE source_membership.book_id = target_membership.book_id
              AND source_membership.series_id = ANY(${sourceSeriesIds}::int[])
              AND source_membership.series_index IS NOT NULL
-           ORDER BY source_membership.series_id LIMIT 1)
+           ORDER BY source_membership.display_order, source_membership.series_id LIMIT 1)
         ), updated_at = now()
         WHERE target_membership.series_id = ${targetSeriesId}
           AND EXISTS (
