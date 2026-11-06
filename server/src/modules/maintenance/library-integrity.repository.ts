@@ -52,7 +52,7 @@ export class LibraryIntegrityRepository {
           isNotNull(bookFiles.format),
         ),
       )
-      .groupBy(books.id, bookMetadata.title, libraries.name)
+      .groupBy(books.id, bookMetadata.title, libraries.name, sql`lower(trim(${bookFiles.format}))`)
       .having(sql`count(${bookFiles.id}) > 1`)
       .as('duplicate_format_groups');
 
