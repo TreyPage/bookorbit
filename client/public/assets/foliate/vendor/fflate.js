@@ -121,7 +121,7 @@ var y = b(s, 9, 1),
           var J = p(G),
             K = (1 << J) - 1,
             L = b(G, J, 1)
-          for (H = 0; H < B; ) {
+          for (H = 0; H < B;) {
             var N,
               P = L[k(a, E, K)]
             if (((E += 15 & P), (N = P >> 4) < 16)) C[H++] = N

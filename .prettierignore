@@ -1,20 +1,11 @@
 # pnpm lockfile is maintained by pnpm
 pnpm-lock.yaml
 
-# Exclude this specific file
+# Metadata files
 src/metadata.ts
 server/src/metadata.ts
 
-# Common generated/dependency directories
+# Generated and dependency directories
 node_modules/
 dist/
 coverage/
-
-*.js
-*.jsx
-*.json
-*.css
-*.scss
-*.md
-*.yml
-*.yaml

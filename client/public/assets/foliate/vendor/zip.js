@@ -65,16 +65,16 @@ function d() {
     for (S = v, z < v && (z = v), k = u; 0 !== k && 0 === r[k]; k--);
     for (y = k, z > k && (z = k), w[0] = z, F = 1 << v; v < k; v++, F <<= 1) if ((F -= r[v]) < 0) return t
     if ((F -= r[k]) < 0) return t
-    for (r[k] += F, f[1] = v = 0, U = 1, T = 2; 0 != --k; ) ((f[T] = v += r[U]), T++, U++)
+    for (r[k] += F, f[1] = v = 0, U = 1, T = 2; 0 != --k;) ((f[T] = v += r[U]), T++, U++)
     ;((k = 0), (U = 0))
     do {
       ;(0 !== (v = e[i + U]) && (p[f[v]++] = k), U++)
     } while (++k < s)
     for (s = f[y], f[0] = k = 0, U = 0, x = -1, E = -z, d[0] = 0, D = 0, O = 0; S <= y; S++)
-      for (m = r[S]; 0 != m--; ) {
-        for (; S > E + z; ) {
+      for (m = r[S]; 0 != m--;) {
+        for (; S > E + z;) {
           if ((x++, (E += z), (O = y - E), (O = O > z ? z : O), (g = 1 << (v = S - E)) > m + 1 && ((g -= m + 1), (T = S), v < O)))
-            for (; ++v < O && !((g <<= 1) <= r[++T]); ) g -= r[T]
+            for (; ++v < O && !((g <<= 1) <= r[++T]);) g -= r[T]
           if (((O = 1 << v), b[0] + O > 1440)) return t
           ;((d[x] = D = b[0]),
             (b[0] += O),
@@ -94,7 +94,7 @@ function d() {
         )
           _.set(a, 3 * (D + v))
         for (v = 1 << (S - 1); k & v; v >>>= 1) k ^= v
-        for (k ^= v, A = (1 << E) - 1; (k & A) != f[x]; ) (x--, (E -= z), (A = (1 << E) - 1))
+        for (k ^= v, A = (1 << E) - 1; (k & A) != f[x];) (x--, (E -= z), (A = (1 << E) - 1))
       }
     return 0 !== F && 1 != y ? n : 0
   }
@@ -175,14 +175,14 @@ function f() {
       (y = i[e]),
       (x = i[n]))
     do {
-      for (; _ < 20; ) (p--, (w |= (255 & c.read_byte(b++)) << _), (_ += 8))
+      for (; _ < 20;) (p--, (w |= (255 & c.read_byte(b++)) << _), (_ += 8))
       if (((u = w & y), (d = r), (f = a), (z = 3 * (f + u)), 0 !== (h = d[z])))
         for (;;) {
           if (((w >>= d[z + 1]), (_ -= d[z + 1]), 16 & h)) {
-            for (h &= 15, k = d[z + 2] + (w & i[h]), w >>= h, _ -= h; _ < 15; ) (p--, (w |= (255 & c.read_byte(b++)) << _), (_ += 8))
-            for (u = w & x, d = s, f = o, z = 3 * (f + u), h = d[z]; ; ) {
+            for (h &= 15, k = d[z + 2] + (w & i[h]), w >>= h, _ -= h; _ < 15;) (p--, (w |= (255 & c.read_byte(b++)) << _), (_ += 8))
+            for (u = w & x, d = s, f = o, z = 3 * (f + u), h = d[z]; ;) {
               if (((w >>= d[z + 1]), (_ -= d[z + 1]), 16 & h)) {
-                for (h &= 15; _ < h; ) (p--, (w |= (255 & c.read_byte(b++)) << _), (_ += 8))
+                for (h &= 15; _ < h;) (p--, (w |= (255 & c.read_byte(b++)) << _), (_ += 8))
                 if (((v = d[z + 2] + (w & i[h])), (w >>= h), (_ -= h), (g -= k), m >= v))
                   ((S = m - v),
                     m - S > 0 && 2 > m - S
@@ -292,7 +292,7 @@ function f() {
         D = 0,
         E = 0,
         T = 0
-      for (T = g.next_in_index, S = g.avail_in, D = n.bitb, E = n.bitk, z = n.write, A = z < n.read ? n.read - z - 1 : n.end - z; ; )
+      for (T = g.next_in_index, S = g.avail_in, D = n.bitb, E = n.bitk, z = n.write, A = z < n.read ? n.read - z - 1 : n.end - z; ;)
         switch (r) {
           case 0:
             if (
@@ -318,7 +318,7 @@ function f() {
             }
             ;((u = w), (a = s), (c = b), (r = 1))
           case 1:
-            for (x = u; E < x; ) {
+            for (x = u; E < x;) {
               if (0 === S)
                 return (
                   (n.bitb = D),
@@ -360,7 +360,7 @@ function f() {
               n.inflate_flush(g, y)
             )
           case 2:
-            for (x = f; E < x; ) {
+            for (x = f; E < x;) {
               if (0 === S)
                 return (
                   (n.bitb = D),
@@ -375,7 +375,7 @@ function f() {
             }
             ;((l += D & i[x]), (D >>= x), (E -= x), (u = _), (a = o), (c = p), (r = 3))
           case 3:
-            for (x = u; E < x; ) {
+            for (x = u; E < x;) {
               if (0 === S)
                 return (
                   (n.bitb = D),
@@ -409,7 +409,7 @@ function f() {
               n.inflate_flush(g, y)
             )
           case 4:
-            for (x = f; E < x; ) {
+            for (x = f; E < x;) {
               if (0 === S)
                 return (
                   (n.bitb = D),
@@ -424,8 +424,8 @@ function f() {
             }
             ;((h += D & i[x]), (D >>= x), (E -= x), (r = 5))
           case 5:
-            for (U = z - h; U < 0; ) U += n.end
-            for (; 0 !== l; ) {
+            for (U = z - h; U < 0;) U += n.end
+            for (; 0 !== l;) {
               if (
                 0 === A &&
                 (z == n.end && 0 !== n.read && ((z = 0), (A = z < n.read ? n.read - z - 1 : n.end - z)),
@@ -584,11 +584,11 @@ function w(r, a) {
     }),
     (s.proc = function (n, r) {
       let a, f, x, k, v, S, z, A
-      for (k = n.next_in_index, v = n.avail_in, f = s.bitb, x = s.bitk, S = s.write, z = S < s.read ? s.read - S - 1 : s.end - S; ; ) {
+      for (k = n.next_in_index, v = n.avail_in, f = s.bitb, x = s.bitk, S = s.write, z = S < s.read ? s.read - S - 1 : s.end - S; ;) {
         let U, D, E, T, F, O, C, W
         switch (l) {
           case 0:
-            for (; x < 3; ) {
+            for (; x < 3;) {
               if (0 === v)
                 return (
                   (s.bitb = f),
@@ -637,7 +637,7 @@ function w(r, a) {
             }
             break
           case 1:
-            for (; x < 32; ) {
+            for (; x < 32;) {
               if (0 === v)
                 return (
                   (s.bitb = f),
@@ -712,7 +712,7 @@ function w(r, a) {
             l = 0 !== m ? 7 : 0
             break
           case 3:
-            for (; x < 14; ) {
+            for (; x < 14;) {
               if (0 === v)
                 return (
                   (s.bitb = f),
@@ -742,8 +742,8 @@ function w(r, a) {
             else for (A = 0; A < a; A++) o[A] = 0
             ;((f >>>= 14), (x -= 14), (w = 0), (l = 4))
           case 4:
-            for (; w < 4 + (u >>> 10); ) {
-              for (; x < 3; ) {
+            for (; w < 4 + (u >>> 10);) {
+              for (; x < 3;) {
                 if (0 === v)
                   return (
                     (s.bitb = f),
@@ -758,7 +758,7 @@ function w(r, a) {
               }
               ;((o[h[w++]] = 7 & f), (f >>>= 3), (x -= 3))
             }
-            for (; w < 19; ) o[h[w++]] = 0
+            for (; w < 19;) o[h[w++]] = 0
             if (((_[0] = 7), (a = y.inflate_trees_bits(o, _, b, g, n)), 0 != a))
               return (
                 (r = a) == t && ((o = null), (l = 9)),
@@ -772,9 +772,9 @@ function w(r, a) {
               )
             ;((w = 0), (l = 5))
           case 5:
-            for (; (a = u), !(w >= 258 + (31 & a) + ((a >> 5) & 31)); ) {
+            for (; (a = u), !(w >= 258 + (31 & a) + ((a >> 5) & 31));) {
               let e, c
-              for (a = _[0]; x < a; ) {
+              for (a = _[0]; x < a;) {
                 if (0 === v)
                   return (
                     (s.bitb = f),
@@ -789,7 +789,7 @@ function w(r, a) {
               }
               if (((a = g[3 * (b[0] + (f & i[a])) + 1]), (c = g[3 * (b[0] + (f & i[a])) + 2]), c < 16)) ((f >>>= a), (x -= a), (o[w++] = c))
               else {
-                for (A = 18 == c ? 7 : c - 14, e = 18 == c ? 11 : 3; x < a + A; ) {
+                for (A = 18 == c ? 7 : c - 14, e = 18 == c ? 11 : 3; x < a + A;) {
                   if (0 === v)
                     return (
                       (s.bitb = f),
@@ -967,7 +967,7 @@ function p() {
       let a, s
       if (!i || !i.istate || !i.next_in) return e
       const o = i.istate
-      for (r = 4 == r ? n : 0, a = n; ; )
+      for (r = 4 == r ? n : 0, a = n; ;)
         switch (o.mode) {
           case 0:
             if (0 === i.avail_in) return a
@@ -1031,7 +1031,7 @@ function p() {
       if (!i || !i.istate) return e
       const u = i.istate
       if ((u.mode != _ && ((u.mode = _), (u.marker = 0)), 0 === (a = i.avail_in))) return n
-      for (s = i.next_in_index, o = u.marker; 0 !== a && o < 4; ) (i.read_byte(s) == b[o] ? o++ : (o = 0 !== i.read_byte(s) ? 0 : 4 - o), s++, a--)
+      for (s = i.next_in_index, o = u.marker; 0 !== a && o < 4;) (i.read_byte(s) == b[o] ? o++ : (o = 0 !== i.read_byte(s) ? 0 : 4 - o), s++, a--)
       return (
         (i.total_in += s - i.next_in_index),
         (i.next_in_index = s),
@@ -1271,7 +1271,7 @@ const M = {
         const n = e._h
         t = M.concat(t, [M.partial(1, 1)])
         for (let e = t.length + 2; 15 & e; e++) t.push(0)
-        for (t.push(Math.floor(e._length / 4294967296)), t.push(0 | e._length); t.length; ) e._block(t.splice(0, 16))
+        for (t.push(Math.floor(e._length / 4294967296)), t.push(0 | e._length); t.length;) e._block(t.splice(0, 16))
         return (e.reset(), n)
       }
       _f(e, t, n, i) {
@@ -2190,7 +2190,7 @@ class ht extends ct {
       s = n
     ;-1 == s && (s = r.length - 1)
     let o = e
-    for (; o >= r[s].size; ) ((o -= r[s].size), s++)
+    for (; o >= r[s].size;) ((o -= r[s].size), s++)
     const l = r[s],
       c = l.size
     if (o + t <= c) a = await pt(l, o, t)
@@ -2588,7 +2588,7 @@ async function Gt(e, t, n, i, r) {
     o = rn(new Uint8Array(a))
   let l = 0
   try {
-    for (; l < a.length; ) {
+    for (; l < a.length;) {
       const e = en(o, l),
         t = en(o, l + 2)
       ;(s.set(e, { type: e, data: a.slice(l + 4, l + 4 + t) }), (l += 4 + t))
@@ -2632,7 +2632,7 @@ async function Gt(e, t, n, i, r) {
       let i,
         r = 4
       try {
-        for (; r < e.data.length && !i; ) {
+        for (; r < e.data.length && !i;) {
           const t = en(n, r),
             a = en(n, r + 2)
           ;(1 == t && (i = e.data.slice(r + 4, r + 4 + a)), (r += 4 + a))

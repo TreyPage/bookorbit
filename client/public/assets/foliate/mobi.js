@@ -402,7 +402,7 @@ const huffcdic = async (mobi, loadRecord) => {
   const decompress = (byteArray) => {
     let output = new Uint8Array()
     const bitLength = byteArray.byteLength * 8
-    for (let i = 0; i < bitLength; ) {
+    for (let i = 0; i < bitLength;) {
       const bits = Number(read32Bits(byteArray, i))
       let [found, codeLength, value] = table1[bits >>> 24]
       if (!found) {
@@ -443,7 +443,7 @@ const getIndexData = async (indxIndex, loadRecord) => {
   for (let i = 0; i < indx.numCncx; i++) {
     const record = await loadRecord(indxIndex + indx.numRecords + i + 1)
     const array = new Uint8Array(record)
-    for (let pos = 0; pos < array.byteLength; ) {
+    for (let pos = 0; pos < array.byteLength;) {
       const index = pos
       const { value, length } = getVarLen(array, pos)
       pos += length

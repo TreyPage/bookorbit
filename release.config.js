@@ -112,11 +112,13 @@ function finalizeContext(ctx) {
           "curl",
           [
             "-s",
-            "-H", `Authorization: Bearer ${ghToken}`,
-            "-H", "X-GitHub-Api-Version: 2022-11-28",
-            `https://api.github.com/repos/${ctx.owner}/${ctx.repository}/commits?per_page=100`
+            "-H",
+            `Authorization: Bearer ${ghToken}`,
+            "-H",
+            "X-GitHub-Api-Version: 2022-11-28",
+            `https://api.github.com/repos/${ctx.owner}/${ctx.repository}/commits?per_page=100`,
           ],
-          { encoding: "utf8" }
+          { encoding: "utf8" },
         );
         if (curlResult.status === 0) {
           const apiCommits = JSON.parse(curlResult.stdout);
