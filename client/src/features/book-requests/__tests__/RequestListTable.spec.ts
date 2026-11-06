@@ -169,24 +169,24 @@ describe('RequestListTable pairs', () => {
 
     expect(wrapper.findAll('tbody tr')).toHaveLength(1)
     const lanes = wrapper
-      .get('table')
+      .get('ul')
       .findAll('.status-badge')
       .map((badge) => badge.text())
     expect(lanes).toEqual(['pending', 'downloading'])
-    expect(wrapper.find('table').text()).toContain('E-book and audiobook')
+    expect(wrapper.get('ul').text()).toContain('E-book and audiobook')
   })
 
   it('hands a row press on to the page with exactly the halves it applies to', async () => {
     const wrapper = renderPair()
 
-    await wrapper.get('table .pair-approve').trigger('click')
+    await wrapper.get('ul .pair-approve').trigger('click')
 
     expect(wrapper.emitted('pair-approve')?.[0]?.[0]).toEqual([expect.objectContaining({ id: 10 }), expect.objectContaining({ id: 11 })])
   })
 
   it('ticks the row only when every half a bulk action can reach is selected', () => {
     // Only the pending ebook can be acted on in bulk; the downloading audiobook cannot.
-    expect((renderPair([10]).get('table tbody input[type="checkbox"]').element as HTMLInputElement).checked).toBe(true)
-    expect((renderPair([]).get('table tbody input[type="checkbox"]').element as HTMLInputElement).checked).toBe(false)
+    expect((renderPair([10]).get('ul input[type="checkbox"]').element as HTMLInputElement).checked).toBe(true)
+    expect((renderPair([]).get('ul input[type="checkbox"]').element as HTMLInputElement).checked).toBe(false)
   })
 })
