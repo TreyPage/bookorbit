@@ -188,6 +188,47 @@ describe('HardcoverSeriesCatalogService', () => {
     });
   });
 
+  it('uses a fresh persistent catalog without calling Hardcover', async () => {
+    cache.findByNormalizedName.mockResolvedValue({
+      normalizedName: 'dungeoncrawlercarl',
+      seriesName: 'Dungeon Crawler Carl',
+      books: [{ index: 1, title: 'Dungeon Crawler Carl', authors: ['Matt Dinniman'] }, { index: 2, title: "Carl's Doomsday Scenario", authors: ['Matt Dinniman'] }],
+      catalogFound: true,
+      expectedBookCount: 2,
+      fetchedAt: new Date(),
+    });
+
+    await expect(service.findMissingBooks(7, 'Dungeon Crawler Carl', ['1'])).resolves.toEqual({
+      books: [{ index: 2, title: "Carl's Doomsday Scenario", authors: ['Matt Dinniman'] }],
+      missingPositions: [2],
+      expectedBookCount: 2,
+      catalogFound: true,
+      status: 'available',
+    });
+    expect(settings.getMetadataToken).not.toHaveBeenCalled();
+    expect(client.query).not.toHaveBeenCalled();
+  });
+
+  it('falls back to stale cached data when Hardcover refresh fails', async () => {
+    cache.findByNormalizedName.mockResolvedValue({
+      normalizedName: 'dungeoncrawlercarl',
+      seriesName: 'Dungeon Crawler Carl',
+      books: [{ index: 1, title: 'Dungeon Crawler Carl', authors: [] }, { index: 2, title: "Carl's Doomsday Scenario", authors: [] }],
+      catalogFound: true,
+      expectedBookCount: 2,
+      fetchedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
+    });
+    client.query.mockRejectedValue(new Error('Hardcover unavailable'));
+
+    await expect(service.findMissingBooks(7, 'Dungeon Crawler Carl', ['1'])).resolves.toMatchObject({
+      missingPositions: [2],
+      books: [{ index: 2, title: "Carl's Doomsday Scenario" }],
+      catalogFound: true,
+      status: 'available',
+    });
+    expect(cache.upsert).not.toHaveBeenCalled();
+  });
+
   it('reports an unconfigured Hardcover connection without hiding the state', async () => {
     settings.getMetadataToken.mockResolvedValue(null);
 
