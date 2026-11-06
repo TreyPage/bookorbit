@@ -56,6 +56,8 @@ function seriesNameMatchRank(actualName: string, requestedName: string): number 
 export class HardcoverSeriesCatalogService {
   private readonly logger = new Logger(HardcoverSeriesCatalogService.name);
   private readonly refreshes = new Map<string, Promise<MissingSeriesBook[]>>();
+  private readonly lastRefreshAttempt = new Map<string, number>();
+  private readonly RETRY_COOLDOWN_MS = 60 * 60 * 1000;
 
   constructor(
     private readonly client: HardcoverClientService,
@@ -67,6 +69,12 @@ export class HardcoverSeriesCatalogService {
     const key = normalizeSeriesName(seriesName);
     const cached = key ? await this.cache.findByNormalizedName(key) : null;
     if (cached && Date.now() - cached.fetchedAt.getTime() < CACHE_TTL_MS) {
+      return this.toResult(cached.books, cached.catalogFound, cached.expectedBookCount, ownedIndices);
+    }
+    // Avoid repeatedly hitting Hardcover during an outage. The successful cache remains
+    // stale, but a failed refresh is retried at most once per hour per series per process.
+    const lastAttempt = this.lastRefreshAttempt.get(key);
+    if (cached && lastAttempt != null && Date.now() - lastAttempt < this.RETRY_COOLDOWN_MS) {
       return this.toResult(cached.books, cached.catalogFound, cached.expectedBookCount, ownedIndices);
     }
 
@@ -123,6 +131,7 @@ export class HardcoverSeriesCatalogService {
   private async refreshCatalog(userId: number, token: string, seriesName: string, key: string): Promise<MissingSeriesBook[]> {
     const existing = this.refreshes.get(key);
     if (existing) return existing;
+    this.lastRefreshAttempt.set(key, Date.now());
     const pending = this.fetchCatalog(userId, token, seriesName);
     this.refreshes.set(key, pending);
     try {
