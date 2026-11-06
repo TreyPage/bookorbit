@@ -23,6 +23,89 @@ describe('HardcoverSeriesCatalogService', () => {
     settings.getMetadataToken.mockResolvedValue('catalog-token');
   });
 
+
+  it('uses a fresh shared cache without calling Hardcover', async () => {
+    cache.findByNormalizedName.mockResolvedValue({
+      books: [{ index: 1, title: 'Book One', authors: ['Author'] }, { index: 2, title: 'Book Two', authors: ['Author'] }],
+      catalogFound: true,
+      expectedBookCount: 2,
+      fetchedAt: new Date(),
+    });
+
+    await expect(service.findMissingBooks(7, 'My Series', ['1'])).resolves.toEqual({
+      books: [{ index: 2, title: 'Book Two', authors: ['Author'] }],
+      missingPositions: [2],
+      expectedBookCount: 2,
+      catalogFound: true,
+      status: 'available',
+    });
+    expect(settings.getMetadataToken).not.toHaveBeenCalled();
+    expect(client.query).not.toHaveBeenCalled();
+  });
+
+  it('refreshes an expired cache and replaces it after a successful lookup', async () => {
+    cache.findByNormalizedName.mockResolvedValue({
+      books: [{ index: 1, title: 'Book One', authors: [] }],
+      catalogFound: true,
+      expectedBookCount: 1,
+      fetchedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
+    });
+    client.query.mockResolvedValue({
+      series: [{ name: 'My Series', book_series: [
+        { position: 1, book: { title: 'Book One', canonical_id: null } },
+        { position: 2, book: { title: 'New Book', canonical_id: null } },
+      ] }],
+    });
+
+    await expect(service.findMissingBooks(7, 'My Series', ['1'])).resolves.toMatchObject({
+      books: [{ index: 2, title: 'New Book' }],
+      missingPositions: [2],
+      expectedBookCount: 2,
+      status: 'available',
+    });
+    expect(cache.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      normalizedName: 'myseries',
+      catalogFound: true,
+      expectedBookCount: 2,
+      books: expect.arrayContaining([{ index: 2, title: 'New Book', authors: [] }]),
+    }));
+  });
+
+  it('serves stale cached data if an automatic refresh fails', async () => {
+    cache.findByNormalizedName.mockResolvedValue({
+      books: [{ index: 1, title: 'Book One', authors: [] }, { index: 2, title: 'Book Two', authors: [] }],
+      catalogFound: true,
+      expectedBookCount: 2,
+      fetchedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
+    });
+    client.query.mockRejectedValue(new Error('Hardcover unavailable'));
+
+    await expect(service.findMissingBooks(7, 'My Series', ['1'])).resolves.toMatchObject({
+      books: [{ index: 2, title: 'Book Two', authors: [] }],
+      missingPositions: [2],
+      expectedBookCount: 2,
+      catalogFound: true,
+      status: 'available',
+    });
+    expect(cache.upsert).not.toHaveBeenCalled();
+  });
+
+  it('does not claim a manual refresh succeeded when Hardcover fails', async () => {
+    cache.findByNormalizedName.mockResolvedValue({
+      books: [{ index: 1, title: 'Book One', authors: [] }],
+      catalogFound: true,
+      expectedBookCount: 1,
+      fetchedAt: new Date(),
+    });
+    client.query.mockRejectedValue(new Error('Hardcover unavailable'));
+
+    await expect(service.forceRefresh(7, 'My Series', ['1'])).resolves.toMatchObject({
+      status: 'failed',
+      catalogFound: false,
+    });
+    expect(cache.upsert).not.toHaveBeenCalled();
+  });
+
   it('discovers missing titles and the expected total from the full Hardcover catalog', async () => {
     client.query.mockResolvedValue({
       series: [
