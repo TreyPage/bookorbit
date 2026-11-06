@@ -18,7 +18,8 @@ const truncated = ref(false)
 const error = ref<string | null>(null)
 
 const keyOf = (pair: SimilarSeriesPair) => `${pair.left.id}-${pair.right.id}`
-const sourceOf = (pair: SimilarSeriesPair) => (targets.value[keyOf(pair)] === pair.left.id ? pair.right.id : pair.left.id)
+const targetOf = (pair: SimilarSeriesPair): number => targets.value[keyOf(pair)] ?? pair.left.id
+const sourceOf = (pair: SimilarSeriesPair) => (targetOf(pair) === pair.left.id ? pair.right.id : pair.left.id)
 
 async function load() {
   loading.value = true
@@ -46,7 +47,7 @@ async function merge(pair: SimilarSeriesPair, confirmPositionConflicts = false) 
   error.value = null
   try {
     await mergeSimilarSeries({
-      targetSeriesId: targets.value[key],
+      targetSeriesId: targetOf(pair),
       sourceSeriesIds: [sourceOf(pair)],
       confirmPositionConflicts,
     })
