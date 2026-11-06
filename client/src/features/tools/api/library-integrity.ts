@@ -1,4 +1,4 @@
-import type { DuplicateFormatPage, SidecarFilePage } from '@bookorbit/types'
+import type { DuplicateFormatPage, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types'
 
 import { api } from '@/lib/api'
 
@@ -15,4 +15,26 @@ export async function getSidecarFileIssues(params: { page: number; pageSize: num
   const response = await api(`/api/v1/maintenance/library-integrity/sidecar-files?${query.toString()}`);
   if (!response.ok) throw new Error('library_integrity_sidecar_files_failed');
   return response.json() as Promise<SidecarFilePage>;
+}
+
+export type SeriesMergeError = Error & { status: number; body: Record<string, unknown> };
+
+export async function getSimilarSeriesCandidates(): Promise<SimilarSeriesCandidatesResult> {
+  const response = await api('/api/v1/maintenance/library-integrity/series-name-candidates');
+  if (!response.ok) throw new Error('library_integrity_series_candidates_failed');
+  return response.json() as Promise<SimilarSeriesCandidatesResult>;
+}
+
+export async function mergeSimilarSeries(params: { targetSeriesId: number; sourceSeriesIds: number[]; confirmPositionConflicts: boolean }): Promise<void> {
+  const response = await api('/api/v1/maintenance/library-integrity/series-name-merge', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  if (!response.ok) {
+    const error = new Error('library_integrity_series_merge_failed') as SeriesMergeError;
+    error.status = response.status;
+    error.body = await response.json().catch(() => ({})) as Record<string, unknown>;
+    throw error;
+  }
 }

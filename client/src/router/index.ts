@@ -684,6 +684,12 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: () => t('titles.libraryIntegrity') },
           },
           {
+            path: 'library-integrity/series-cleanup',
+            name: 'tools-library-integrity-series-cleanup',
+            component: () => import('@/features/tools/library-integrity/views/SeriesCleanupView.vue'),
+            meta: { title: () => t('tools.libraryIntegrity.seriesCleanup.title') },
+          },
+          {
             path: 'library-integrity/duplicate-formats',
             name: 'tools-library-integrity-duplicate-formats',
             component: () => import('@/features/tools/library-integrity/views/DuplicateFormatsView.vue'),

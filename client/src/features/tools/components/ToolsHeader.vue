@@ -25,8 +25,6 @@ const sections = computed<ToolSection[]>(() => {
 
   if (hasPermission('library_delete_books')) {
     result.push({ label: t('tools.header.libraryIntegrity'), routeName: 'tools-library-integrity' })
-    result.push({ label: t('tools.header.duplicateBooks'), routeName: 'tools-duplicate-books' })
-    result.push({ label: t('tools.header.bookMerge'), routeName: 'tools-book-merge' })
   }
 
   if (hasPermission('library_edit_metadata')) {

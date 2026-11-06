@@ -1,10 +1,11 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { Permission } from '@bookorbit/types';
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import type { RequestUser } from '../../common/types/request-user';
 import { ListLibraryIntegrityDto } from './dto/library-integrity.dto';
+import { MergeSeriesDto } from './dto/merge-series.dto';
 import { LibraryIntegrityService } from './library-integrity.service';
 
 @Controller('maintenance/library-integrity')
@@ -24,5 +25,10 @@ export class LibraryIntegrityController {
   @Get('series-name-candidates')
   listSimilarSeries(@CurrentUser() user: RequestUser) {
     return this.service.listSimilarSeries(user);
+  }
+
+  @Post('series-name-merge')
+  mergeSeries(@Body() dto: MergeSeriesDto, @CurrentUser() user: RequestUser) {
+    return this.service.mergeSeries(user, dto);
   }
 }
