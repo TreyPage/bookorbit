@@ -12,11 +12,14 @@ describe('HardcoverSeriesCatalogService', () => {
   const settings = {
     getMetadataToken: vi.fn<HardcoverSettingsService['getMetadataToken']>(),
   };
+  const cache = { findByNormalizedName: vi.fn(), upsert: vi.fn() };
   let service: HardcoverSeriesCatalogService;
 
   beforeEach(() => {
     vi.resetAllMocks();
-    service = new HardcoverSeriesCatalogService(client as unknown as HardcoverClientService, settings as unknown as HardcoverSettingsService);
+    cache.findByNormalizedName.mockResolvedValue(null);
+    cache.upsert.mockResolvedValue(undefined);
+    service = new HardcoverSeriesCatalogService(client as unknown as HardcoverClientService, settings as unknown as HardcoverSettingsService, cache as any);
     settings.getMetadataToken.mockResolvedValue('catalog-token');
   });
 
