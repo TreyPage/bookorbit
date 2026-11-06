@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { readdir, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import type { DuplicateFormatGroup, DuplicateFormatPage, SidecarFileEntry, SidecarFilePage } from '@bookorbit/types';
+import type { DuplicateFormatGroup, DuplicateFormatPage, SidecarFileEntry, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types';
 
 import type { RequestUser } from '../../common/types/request-user';
 import { LibraryService } from '../library/library.service';
@@ -125,8 +125,9 @@ export class LibraryIntegrityService {
       pageSize,
     };
   }
-  async listSimilarSeries(user: RequestUser) {
+  async listSimilarSeries(user: RequestUser): Promise<SimilarSeriesCandidatesResult> {
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
+    if (libraryIds.length === 0) return { items: [], truncated: false };
     return this.repo.findSimilarSeriesPairs(libraryIds);
   }
 }

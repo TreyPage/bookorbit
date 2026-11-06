@@ -51,6 +51,15 @@ describe('LibraryIntegrityService', () => {
     expect(repo.findDuplicateFormatGroups).toHaveBeenCalledWith([4, 8], 25, 25);
   });
 
+  it('returns no similar-series candidates when the user has no accessible libraries', async () => {
+    const repo = { findSimilarSeriesPairs: vi.fn() };
+    const libraryService = { findAccessibleLibraryIds: vi.fn().mockResolvedValue([]) };
+    const service = new LibraryIntegrityService(repo as never, libraryService as never);
+
+    await expect(service.listSimilarSeries({ id: 7 } as never)).resolves.toEqual({ items: [], truncated: false });
+    expect(repo.findSimilarSeriesPairs).not.toHaveBeenCalled();
+  });
+
   it('returns an empty page when the user has no accessible libraries', async () => {
     const repo = { findDuplicateFormatGroups: vi.fn() };
     const libraryService = { findAccessibleLibraryIds: vi.fn().mockResolvedValue([]) };

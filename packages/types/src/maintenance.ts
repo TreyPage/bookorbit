@@ -131,3 +131,23 @@ export type SidecarFilePage = {
   /** True when the scan reached its safety cap before every folder was visited. */
   truncated: boolean;
 };
+
+export type SeriesNameCandidate = {
+  id: number;
+  name: string;
+  bookCount: number;
+  inaccessibleBookCount: number;
+};
+
+export type SimilarSeriesPair = {
+  left: SeriesNameCandidate;
+  right: SeriesNameCandidate;
+  similarity: number;
+  /** False when either series also contains books in libraries outside the current user's access. */
+  mergeAllowed: boolean;
+};
+
+export type SimilarSeriesCandidatesResult = {
+  items: SimilarSeriesPair[];
+  truncated: boolean;
+};

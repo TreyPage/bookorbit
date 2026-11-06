@@ -79,64 +79,90 @@ export class LibraryIntegrityRepository {
   async findSimilarSeriesPairs(libraryIds: number[]) {
     if (libraryIds.length === 0) return { items: [], truncated: false };
 
+    // Series are global records, while library access is user-scoped. Keep both counts so
+    // the UI can explain when a merge would also affect books outside the user's libraries.
     const result = await this.db.execute(sql`
+      WITH series_scope AS (
+        SELECT
+          membership.series_id,
+          count(DISTINCT visible_book.id)::int AS total_book_count,
+          count(DISTINCT visible_book.id) FILTER (
+            WHERE visible_book.library_id = ANY(${libraryIds}::int[])
+          )::int AS accessible_book_count
+        FROM book_series_memberships membership
+        INNER JOIN books visible_book ON visible_book.id = membership.book_id
+        GROUP BY membership.series_id
+      ),
+      normalized_series AS (
+        SELECT
+          series.id,
+          series.name,
+          lower(public.bookorbit_unaccent(btrim(series.name))) AS normalized_name,
+          regexp_replace(lower(public.bookorbit_unaccent(btrim(series.name))), '^the\\s+', '') AS article_free_name,
+          regexp_replace(lower(public.bookorbit_unaccent(btrim(series.name))), '\\s+(universe|world|saga)$', '') AS suffix_free_name,
+          scope.total_book_count,
+          scope.accessible_book_count
+        FROM book_series series
+        INNER JOIN series_scope scope ON scope.series_id = series.id
+        WHERE scope.accessible_book_count > 0
+      )
       SELECT
         left_series.id AS left_id,
         left_series.name AS left_name,
-        (
-          SELECT count(DISTINCT visible_book.id)::int
-          FROM book_series_memberships membership
-          INNER JOIN books visible_book ON visible_book.id = membership.book_id
-          WHERE membership.series_id = left_series.id
-            AND visible_book.library_id = ANY(${libraryIds}::int[])
-        ) AS left_book_count,
+        left_series.accessible_book_count AS left_book_count,
+        left_series.total_book_count AS left_total_book_count,
         right_series.id AS right_id,
         right_series.name AS right_name,
-        (
-          SELECT count(DISTINCT visible_book.id)::int
-          FROM book_series_memberships membership
-          INNER JOIN books visible_book ON visible_book.id = membership.book_id
-          WHERE membership.series_id = right_series.id
-            AND visible_book.library_id = ANY(${libraryIds}::int[])
-        ) AS right_book_count,
-        similarity(lower(left_series.name), lower(right_series.name))::real AS similarity
-      FROM book_series left_series
-      INNER JOIN book_series right_series ON right_series.id > left_series.id
+        right_series.accessible_book_count AS right_book_count,
+        right_series.total_book_count AS right_total_book_count,
+        GREATEST(
+          similarity(left_series.normalized_name, right_series.normalized_name),
+          similarity(left_series.article_free_name, right_series.article_free_name),
+          similarity(left_series.suffix_free_name, right_series.suffix_free_name)
+        )::real AS similarity
+      FROM normalized_series left_series
+      INNER JOIN normalized_series right_series ON right_series.id > left_series.id
       WHERE (
-        similarity(lower(left_series.name), lower(right_series.name)) >= 0.3
-        OR regexp_replace(lower(left_series.name), '^(the\\s+)', '') =
-           regexp_replace(lower(right_series.name), '^(the\\s+)', '')
-        OR regexp_replace(lower(left_series.name), '\\s+(universe|world|saga), '') =
-           regexp_replace(lower(right_series.name), '\\s+(universe|world|saga), '')
-      )
-      AND EXISTS (
-        SELECT 1 FROM book_series_memberships membership
-        INNER JOIN books visible_book ON visible_book.id = membership.book_id
-        WHERE membership.series_id = left_series.id
-          AND visible_book.library_id = ANY(${libraryIds}::int[])
-      )
-      AND EXISTS (
-        SELECT 1 FROM book_series_memberships membership
-        INNER JOIN books visible_book ON visible_book.id = membership.book_id
-        WHERE membership.series_id = right_series.id
-          AND visible_book.library_id = ANY(${libraryIds}::int[])
+        similarity(left_series.normalized_name, right_series.normalized_name) >= 0.3
+        OR left_series.article_free_name = right_series.article_free_name
+        OR left_series.suffix_free_name = right_series.suffix_free_name
+        OR left_series.article_free_name = right_series.suffix_free_name
+        OR left_series.suffix_free_name = right_series.article_free_name
       )
       ORDER BY similarity DESC, left_series.name, right_series.name
       LIMIT 501
     `);
 
     const rows = result.rows as Array<{
-      left_id: number; left_name: string; left_book_count: number;
-      right_id: number; right_name: string; right_book_count: number; similarity: number;
+      left_id: number;
+      left_name: string;
+      left_book_count: number;
+      left_total_book_count: number;
+      right_id: number;
+      right_name: string;
+      right_book_count: number;
+      right_total_book_count: number;
+      similarity: number;
     }>;
+
     return {
       items: rows.slice(0, 500).map((row) => ({
-        left: { id: row.left_id, name: row.left_name, bookCount: row.left_book_count },
-        right: { id: row.right_id, name: row.right_name, bookCount: row.right_book_count },
+        left: {
+          id: row.left_id,
+          name: row.left_name,
+          bookCount: row.left_book_count,
+          inaccessibleBookCount: row.left_total_book_count - row.left_book_count,
+        },
+        right: {
+          id: row.right_id,
+          name: row.right_name,
+          bookCount: row.right_book_count,
+          inaccessibleBookCount: row.right_total_book_count - row.right_book_count,
+        },
         similarity: Number(row.similarity),
+        mergeAllowed: row.left_total_book_count === row.left_book_count && row.right_total_book_count === row.right_book_count,
       })),
       truncated: rows.length > 500,
     };
   }
-
 }
