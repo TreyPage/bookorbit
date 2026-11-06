@@ -14276,6 +14276,17 @@
         "cancel": "The lookups could not be changed.",
         "dismiss": "The review could not be dismissed."
       }
+    },
+    "libraryIntegrity": {
+      "eyebrow": "Tools",
+      "description": "Review library health from one place. Existing maintenance and duplicate-book checks remain separate workflows while they are brought under a shared integrity system.",
+      "checksLabel": "Library integrity tools",
+      "existingCheck": "Existing check",
+      "missingDescription": "Check for books with missing files, broken cover references, and cover folders left behind by deleted books.",
+      "duplicateDescription": "Find duplicate book records using file hashes, ISBNs, and metadata matches. Review the candidates before removing records.",
+      "openCheck": "Open check",
+      "futureTitle": "Additional integrity checks",
+      "futureDescription": "Duplicate files within a book, unwanted sidecar files, orphaned book files, and invalid file paths will be added here. Detection will be separated from repair so ambiguous files are never deleted automatically."
     }
   },
   "views": {
@@ -14567,7 +14578,8 @@
     "bookRequestReleases": "Pick a release",
     "tts": "Text-to-Speech",
     "chapterHealth": "Chapter Health",
-    "readingHistory": "Reading History"
+    "readingHistory": "Reading History",
+    "libraryIntegrity": "Library Integrity"
   },
   "tts": {
     "readerControls": {
