@@ -28,6 +28,8 @@ const props = defineProps<{
   libraryName: string | null
   targetLabel: string
   conflict?: BookDockConflict
+  absolutePath?: string
+  unassigned?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -148,8 +150,20 @@ function onRetry() {
       >
         <span class="block truncate text-[13px] font-medium tracking-tight text-foreground">{{ title }}</span>
         <span class="mt-0.5 block truncate text-[11.5px] text-muted-foreground">{{ subtitle }}</span>
-        <span class="mt-0.5 block truncate text-[10.5px]" :class="unassigned ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'">
-          {{ props.targetLabel }}
+        <span class="mt-0.5 flex items-center gap-2 truncate" :class="unassigned ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'">
+          <span v-if="props.unassigned || (isUnit && !libraryName)" class="font-medium">
+            {{ t('bookDock.fileList.targetUnassigned') }}
+          </span>
+          <span v-else>{{ props.libraryName ?? t('bookDock.fileList.unknownLibrary') }}</span>
+
+          <!-- Current source location -->
+          <span
+            v-if="props.absolutePath"
+            class="inline-flex items-center gap-1.5 rounded-md bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground ml-2"
+          >
+            <Files class="size-2.5 shrink-0" aria-hidden="true" />
+            <span class="truncate">{{ props.absolutePath }}</span>
+          </span>
         </span>
       </button>
 

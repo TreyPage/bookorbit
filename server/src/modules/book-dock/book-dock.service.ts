@@ -580,6 +580,7 @@ function toDto(row: BookDockFileRow, unitFiles: BookDockUnitFileRow[] = []): Boo
       role: file.role as BookDockUnitFile['role'],
       sortOrder: file.sortOrder,
     })),
+    absolutePath: row.absolutePath,
   };
 }
 
