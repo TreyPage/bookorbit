@@ -16,6 +16,13 @@ export class ListLibraryIntegrityDto {
   pageSize = 50;
 
   @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(70)
+  @Max(100)
+  similarityPercent?: number;
+
+  @IsOptional()
   @IsString()
   @MaxLength(64)
   snapshotId?: string;
