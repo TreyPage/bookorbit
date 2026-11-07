@@ -392,7 +392,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
 
   private async finalizePreparedCandidate(
     preparedAnalysis: FinalizeCandidateAnalysis,
-    existingDestinations: Map<string, number>,
+    existingDestinations: Map<string, number> = new Map(),
   ): Promise<BookDockFinalizeFileResult> {
     const row = preparedAnalysis.row;
     try {
