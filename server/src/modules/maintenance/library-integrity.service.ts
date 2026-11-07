@@ -592,7 +592,7 @@ export class LibraryIntegrityService {
       pageSize,
     };
   }
-  async listSimilarSeries(user: RequestUser, similarityPercent = 30): Promise<SimilarSeriesCandidatesResult> {
+  async listSimilarSeries(user: RequestUser, similarityPercent = 85): Promise<SimilarSeriesCandidatesResult> {
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
     if (libraryIds.length === 0) return { items: [], ignoredSeries: [], truncated: false };
     return this.repo.findSimilarSeriesPairs(libraryIds, similarityPercent);
