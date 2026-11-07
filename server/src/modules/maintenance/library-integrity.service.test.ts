@@ -132,6 +132,7 @@ describe('LibraryIntegrityService', () => {
             { name: 'orphan', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
             { name: 'empty-untracked', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
             { name: 'valid-book', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
+            { name: 'metadata', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
             { name: 'locked', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
           ] as never;
         if (value === '/virtual/library/known-book') return [] as never;
@@ -177,6 +178,7 @@ describe('LibraryIntegrityService', () => {
         snapshotId: expect.any(String),
       });
     } finally {
+      expect(readdirSpy).not.toHaveBeenCalledWith('/virtual/library/metadata', expect.anything());
       readdirSpy.mockReset();
     }
   });
