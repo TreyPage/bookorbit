@@ -907,6 +907,20 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
       }
     }
 
+    // A folder-organized destination can already be occupied by unrelated
+    // sidecars even when the exact target format file is absent.
+    if (occupiedPaths.length === 0 && analysis.library.organizationMode === 'book_per_folder' && analysis.bookFolderPath) {
+      try {
+        await fsAccess(analysis.bookFolderPath);
+        occupiedPaths.push(analysis.bookFolderPath);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          this.logFinalizeFailure(analysis.fileId, 'destination_folder_check', error);
+          return { ...analysis, status: 'error', message: resolveFinalizeErrorMessage(error) };
+        }
+      }
+    }
+
     if (occupiedPaths.length === 0) return analysis;
 
     const existingBookId = existingDestinations.get(this.destinationKey(analysis.library.id, analysis.destPath));
