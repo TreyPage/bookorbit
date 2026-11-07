@@ -322,7 +322,7 @@ describe('LibraryIntegrityService', () => {
     const libraryService = { findAccessibleLibraryIds: vi.fn().mockResolvedValue([]) };
     const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => '/nonexistent-appdata' } as never);
 
-    await expect(service.listSimilarSeries({ id: 7 } as never)).resolves.toEqual({ items: [], truncated: false });
+    await expect(service.listSimilarSeries({ id: 7 } as never)).resolves.toEqual({ items: [], ignoredSeries: [], truncated: false });
     expect(repo.findSimilarSeriesPairs).not.toHaveBeenCalled();
   });
 
