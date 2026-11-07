@@ -536,10 +536,18 @@ describe('BookDockFinalizeService', () => {
 
     it('fails when target file already exists at resolved destination', async () => {
       const { service, validator } = makeService();
-      vi.spyOn(service as never, 'findLibraryOrFail').mockResolvedValue({ id: 5, allowedFormats: ['epub'], fileNamingPattern: null } as never);
+      vi.spyOn(service as never, 'findLibraryOrFail').mockResolvedValue({
+        id: 5,
+        allowedFormats: ['epub'],
+        fileNamingPattern: null,
+        organizationMode: 'book_per_file',
+      } as never);
       vi.spyOn(service as never, 'findFolderOrFail').mockResolvedValue({ id: 9, libraryId: 5, path: '/library' } as never);
       vi.spyOn(service as never, 'resolveDestination').mockResolvedValue('/library/existing.epub' as never);
-      mockAccess.mockResolvedValueOnce(undefined as never);
+      mockAccess.mockImplementation(async (path) => {
+        if (path === '/library/existing.epub') return;
+        throw Object.assign(new Error('not found'), { code: 'ENOENT' });
+      });
 
       const result = await (service as any).finalizeFile(
         makeRow({ targetLibraryId: 5, targetFolderId: 9 }),
@@ -1211,8 +1219,12 @@ describe('BookDockFinalizeService', () => {
       } as never);
       vi.spyOn(service as never, 'findFolderOrFail').mockResolvedValue({ id: 9, libraryId: 5, path: '/library' } as never);
       vi.spyOn(service as never, 'resolveDestination').mockResolvedValue('/library/Unknown Author/1/1.epub' as never);
-      // 1_alt.epub also already exists
-      mockAccess.mockResolvedValueOnce(undefined as never);
+      // 1_alt.epub also already exists. Every collision probe for the suffixed
+      // destination should see ENOENT so the allocator can reserve it.
+      mockAccess.mockImplementation(async (path) => {
+        if (path === '/library/Unknown Author/1/1_alt.epub') return;
+        throw Object.assign(new Error('not found'), { code: 'ENOENT' });
+      });
 
       const overrideMap = new Map([[1, { libraryId: 5, folderId: 9, targetFileName: '1_alt' }]]);
       const result = await (service as any).finalizeFile(
