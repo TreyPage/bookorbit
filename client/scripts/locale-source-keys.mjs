@@ -26,7 +26,7 @@ export async function collectSourceMessageKeys(sourceDirectory = path.join(clien
 
   for (const file of files) {
     const source = await readFile(file, 'utf8')
-    for (const match of source.matchAll(/(?<![\w$])(?:\$?t|\$?tc|\$?te)\(\s*(['"])([A-Za-z0-9_.-]+)\1/g)) {
+    for (const match of source.matchAll(/(?<![\w$])(?:\$?t|\$?tc|\$?te)\(\s*(['"])([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*)\1/g)) {
       keys.add(match[2])
     }
     for (const match of source.matchAll(/<i18n-t\b[^>]*\bkeypath\s*=\s*(['"])([A-Za-z0-9_.-]+)\1/g)) {
