@@ -116,6 +116,31 @@ export class LibraryIntegrityRepository {
   ): Promise<'removed' | 'not_found' | 'not_duplicate'> {
     if (libraryIds.length === 0) return 'not_found';
     return this.db.transaction(async (tx) => {
+      // Resolve the owning book first, then lock that parent row before checking the
+      // duplicate count. This serializes deletes for different files on the same book,
+      // so concurrent requests cannot both observe two files and remove both.
+      const [candidate] = await tx
+        .select({ bookId: bookFiles.bookId })
+        .from(bookFiles)
+        .innerJoin(books, eq(books.id, bookFiles.bookId))
+        .where(and(
+          eq(bookFiles.id, fileId),
+          eq(bookFiles.role, 'content'),
+          isNotNull(bookFiles.format),
+          inArray(books.libraryId, libraryIds),
+          eq(books.status, 'present'),
+        ));
+      if (!candidate) return 'not_found';
+
+      const [lockedBook] = await tx
+        .select({ id: books.id })
+        .from(books)
+        .where(and(eq(books.id, candidate.bookId), inArray(books.libraryId, libraryIds), eq(books.status, 'present')))
+        .for('update');
+      if (!lockedBook) return 'not_found';
+
+      // Re-read and lock the selected file after acquiring the book lock. It may have
+      // been removed by a request that held the same book lock first.
       const [file] = await tx
         .select({
           id: bookFiles.id,
