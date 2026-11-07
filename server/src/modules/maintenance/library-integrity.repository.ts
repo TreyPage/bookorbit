@@ -227,13 +227,11 @@ export class LibraryIntegrityRepository {
         )::real AS similarity
       FROM normalized_series left_series
       INNER JOIN normalized_series right_series ON right_series.id > left_series.id
-      WHERE (
-        similarity(left_series.normalized_name, right_series.normalized_name) >= ${similarityPercent / 100}
-        OR left_series.article_free_name = right_series.article_free_name
-        OR left_series.suffix_free_name = right_series.suffix_free_name
-        OR left_series.article_free_name = right_series.suffix_free_name
-        OR left_series.suffix_free_name = right_series.article_free_name
-      )
+      WHERE GREATEST(
+        similarity(left_series.normalized_name, right_series.normalized_name),
+        similarity(left_series.article_free_name, right_series.article_free_name),
+        similarity(left_series.suffix_free_name, right_series.suffix_free_name)
+      ) >= ${similarityPercent / 100}
       ORDER BY similarity DESC, left_series.name, right_series.name
       LIMIT 501
     `);
