@@ -607,9 +607,17 @@ export class LibraryIntegrityService {
       case 'merged':
         return result;
       case 'position_conflicts':
-        throw new ConflictException({ code: 'series_position_conflicts', conflicts: result.conflicts });
+        throw new ConflictException({
+          message: 'Series memberships have conflicting book positions',
+          errorCode: 'series_position_conflicts',
+          errorMeta: { conflictCount: result.conflicts.length },
+        });
       case 'inaccessible_books':
-        throw new ConflictException({ code: 'series_has_inaccessible_books', inaccessibleBookCount: result.inaccessibleBookCount });
+        throw new ConflictException({
+          message: 'The source series contains books outside your accessible libraries',
+          errorCode: 'series_has_inaccessible_books',
+          errorMeta: { inaccessibleBookCount: result.inaccessibleBookCount },
+        });
       case 'invalid_request':
         throw new BadRequestException('At least one source series is required and the target cannot be a source');
       default:
