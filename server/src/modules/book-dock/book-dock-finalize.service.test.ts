@@ -535,7 +535,10 @@ describe('BookDockFinalizeService', () => {
     });
 
     it('fails when target file already exists at resolved destination', async () => {
-      const { service, validator } = makeService();
+      const { service, validator, db } = makeService();
+      db.update.mockReturnValue({
+        set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+      } as never);
       vi.spyOn(service as never, 'findLibraryOrFail').mockResolvedValue({
         id: 5,
         allowedFormats: ['epub'],
@@ -1211,7 +1214,10 @@ describe('BookDockFinalizeService', () => {
     });
 
     it('automatically suffixes a targetFileName when its destination is occupied', async () => {
-      const { service } = makeService();
+      const { service, db } = makeService();
+      db.update.mockReturnValue({
+        set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+      } as never);
       vi.spyOn(service as never, 'findLibraryOrFail').mockResolvedValue({
         id: 5,
         allowedFormats: ['epub'],
