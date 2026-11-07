@@ -52,7 +52,7 @@ describe('LibraryIntegrityService', () => {
         { name: 'notes.txt', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
         { name: 'partial.tmp', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
       ] as never;
-    });
+    }));
     const statSpy = vi.spyOn(fs, 'stat').mockResolvedValue({ size: 12 } as never);
     const libraryService = {
       findAll: vi.fn().mockResolvedValue([
