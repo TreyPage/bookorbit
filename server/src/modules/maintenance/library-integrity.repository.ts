@@ -178,14 +178,16 @@ export class LibraryIntegrityRepository {
       const [countRow] = await tx
         .select({ total: count() })
         .from(bookFiles)
-        .where(and(
-          eq(bookFiles.bookId, file.bookId),
-          eq(bookFiles.role, 'content'),
-          sql`lower(trim(${bookFiles.format})) = ${file.format}`,
-          sql`${selectedPartNumber} IS NOT DISTINCT FROM (
-            SELECT (regexp_match(regexp_replace(${file.absolutePath}, '^.*/', ''), '(?i)(?:[-_ .]part[-_ .]?([0-9]+))'))[1]
-          )`,
-        ));
+        .where(
+          and(
+            eq(bookFiles.bookId, file.bookId),
+            eq(bookFiles.role, 'content'),
+            sql`lower(trim(${bookFiles.format})) = ${file.format}`,
+            sql`${selectedPartNumber} IS NOT DISTINCT FROM (
+              SELECT (regexp_match(regexp_replace(${file.absolutePath}, '^.*/', ''), '(?i)(?:[-_ .]part[-_ .]?([0-9]+))'))[1]
+            )`,
+          ),
+        );
       if ((countRow?.total ?? 0) <= 1) return 'not_duplicate';
 
       await removeFile({ absolutePath: file.absolutePath, libraryId: file.libraryId });
@@ -278,16 +280,18 @@ export class LibraryIntegrityRepository {
         similarity: Number(row.similarity),
         mergeAllowed: row.left_total_book_count === row.left_book_count && row.right_total_book_count === row.right_book_count,
       })),
-      ignoredSeries: (await this.db.execute(sql`
-        SELECT series.id, series.name, count(DISTINCT visible_book.id)::int AS book_count
-        FROM book_series series
-        INNER JOIN book_series_memberships membership ON membership.series_id = series.id
-        INNER JOIN books visible_book ON visible_book.id = membership.book_id
-        WHERE series.merge_ignored = true
-          AND visible_book.library_id = ANY(${intArray(libraryIds)})
-        GROUP BY series.id, series.name
-        ORDER BY series.name
-      `)).rows.map((row) => ({
+      ignoredSeries: (
+        await this.db.execute(sql`
+          SELECT series.id, series.name, count(DISTINCT visible_book.id)::int AS book_count
+          FROM book_series series
+          INNER JOIN book_series_memberships membership ON membership.series_id = series.id
+          INNER JOIN books visible_book ON visible_book.id = membership.book_id
+          WHERE series.merge_ignored = true
+            AND visible_book.library_id = ANY(${intArray(libraryIds)})
+          GROUP BY series.id, series.name
+          ORDER BY series.name
+        `)
+      ).rows.map((row) => ({
         id: Number((row as { id: number }).id),
         name: String((row as { name: string }).name),
         bookCount: Number((row as { book_count: number }).book_count),
