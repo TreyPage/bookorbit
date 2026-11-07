@@ -39,8 +39,8 @@ describe('LibraryIntegrityService', () => {
     const libraryService = {
       findAccessibleLibraryIds: vi.fn().mockResolvedValue([1, 2]),
       findAll: vi.fn().mockResolvedValue([
-        { id: 1, name: 'Fiction', folders: [{ path: '/fiction' }] },
-        { id: 2, name: 'Audio', folders: [{ path: '/audio' }] },
+        { id: 1, name: 'Fiction', folders: [] },
+        { id: 2, name: 'Audio', folders: [] },
       ]),
     };
     const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => '/nonexistent-appdata' } as never);

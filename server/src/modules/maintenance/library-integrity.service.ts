@@ -539,6 +539,33 @@ export class LibraryIntegrityService {
     return { items: entries.slice(offset, offset + pageSize), total: entries.length, page, pageSize, truncated };
   }
 
+  async cleanupDuplicateFormatFile(user: RequestUser, fileId: number): Promise<{ removed: boolean }> {
+    const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
+    if (libraryIds.length === 0) throw new NotFoundException('Duplicate file not found or not accessible');
+    const libraries = await this.libraryService.findAll(user);
+    const result = await this.repo.removeDuplicateFormatFile(libraryIds, fileId, async (file) => {
+      const library = libraries.find((item) => item.id === file.libraryId);
+      if (!library) throw new NotFoundException('Duplicate file not found or not accessible');
+      const target = resolve(file.absolutePath);
+      const root = library.folders.map((folder) => resolve(folder.path)).find((candidate) => {
+        const rel = relative(candidate, target);
+        return rel !== '' && rel !== '..' && !rel.startsWith('..' + sep) && !isAbsolute(rel);
+      });
+      if (!root) throw new NotFoundException('File is outside the accessible library roots');
+      const [realRoot, realTarget] = await Promise.all([realpath(root), realpath(target)]);
+      const realRelative = relative(realRoot, realTarget);
+      if (realRelative === '' || realRelative === '..' || realRelative.startsWith('..' + sep) || isAbsolute(realRelative)) {
+        throw new NotFoundException('File is outside the accessible library roots');
+      }
+      const info = await lstat(target);
+      if (!info.isFile() || info.isSymbolicLink()) throw new ConflictException('File is no longer a regular file');
+      await unlink(target);
+    });
+    if (result === 'not_found') throw new NotFoundException('Duplicate file not found or not accessible');
+    if (result === 'not_duplicate') throw new ConflictException('This file is no longer part of a duplicate-format group');
+    return { removed: true };
+  }
+
   async listDuplicateFormats(user: RequestUser, page: number, pageSize: number): Promise<DuplicateFormatPage> {
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
     if (libraryIds.length === 0) {
