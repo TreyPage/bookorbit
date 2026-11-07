@@ -163,6 +163,34 @@ describe('LibraryIntegrityService', () => {
     }
   });
 
+  it('rechecks library access before returning cached filesystem findings', async () => {
+    const fs = await import('node:fs/promises');
+    const repo = { findBookFolderPaths: vi.fn().mockResolvedValue([]) };
+    const libraryService = {
+      findAccessibleLibraryIds: vi.fn()
+        .mockResolvedValueOnce([1])
+        .mockResolvedValueOnce([]),
+      findAll: vi.fn().mockResolvedValue([{ id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] }]),
+    };
+    const readdirSpy = vi.spyOn(fs, 'readdir').mockImplementation(async (path) => {
+      if (String(path) === '/virtual/library') return [{ name: 'orphan', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false }] as never;
+      if (String(path) === '/virtual/library/orphan') return [{ name: 'metadata.json', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true }] as never;
+      return [] as never;
+    });
+    const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => undefined } as never);
+    try {
+      const first = await service.listFilesystemFindings({ id: 7 } as never, 1, 10);
+      expect(first.orphanedBookFolders.total).toBe(1);
+      const second = await service.listFilesystemFindings({ id: 7 } as never, 1, 10, first.snapshotId);
+      expect(second.orphanedBookFolders).toEqual({ items: [], total: 0 });
+      expect(second.orphanedFiles).toEqual({ items: [], total: 0 });
+      expect(libraryService.findAll).toHaveBeenCalledTimes(1);
+      expect(libraryService.findAccessibleLibraryIds).toHaveBeenCalledTimes(2);
+    } finally {
+      readdirSpy.mockRestore();
+    }
+  });
+
   it('scopes duplicate-format results to libraries the user can access', async () => {
     const repo = {
       findDuplicateFormatGroups: vi.fn().mockResolvedValue({

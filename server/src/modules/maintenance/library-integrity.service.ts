@@ -162,7 +162,11 @@ export class LibraryIntegrityService {
     this.pruneFilesystemFindingsSnapshots();
     if (snapshotId) {
       const cached = this.filesystemFindingsSnapshots.get(snapshotId);
-      if (cached && cached.userId === user.id && cached.expiresAt > Date.now()) return this.paginateFilesystemFindings(cached.result, page, pageSize, snapshotId);
+      if (cached && cached.userId === user.id && cached.expiresAt > Date.now()) {
+        const accessibleLibraryIds = new Set(await this.libraryService.findAccessibleLibraryIds(user));
+        const scopedSnapshot = this.scopeFilesystemFindingsSnapshot(cached.result, accessibleLibraryIds);
+        return this.paginateFilesystemFindings(scopedSnapshot, page, pageSize, snapshotId);
+      }
       page = 1;
     }
     const offset = (page - 1) * pageSize;
@@ -278,6 +282,21 @@ export class LibraryIntegrityService {
     const snapshotId = randomUUID();
     this.filesystemFindingsSnapshots.set(snapshotId, { userId, expiresAt: Date.now() + this.filesystemFindingsSnapshotTtlMs, result });
     return this.paginateFilesystemFindings(result, 1, pageSize, snapshotId);
+  }
+
+  private scopeFilesystemFindingsSnapshot(snapshot: LibraryFilesystemFindingsResult, accessibleLibraryIds: Set<number>): LibraryFilesystemFindingsResult {
+    const filter = <T extends LibraryFilesystemFinding>(group: { items: T[]; total: number }) => {
+      const items = group.items.filter((item) => accessibleLibraryIds.has(item.libraryId));
+      return { items, total: items.length };
+    };
+    return {
+      ...snapshot,
+      orphanedMetadataFiles: filter(snapshot.orphanedMetadataFiles),
+      orphanedBookFolders: filter(snapshot.orphanedBookFolders),
+      orphanedFiles: filter(snapshot.orphanedFiles),
+      emptyBookFolders: filter(snapshot.emptyBookFolders),
+      unreadableDirectories: filter(snapshot.unreadableDirectories),
+    };
   }
 
   private paginateFilesystemFindings(snapshot: LibraryFilesystemFindingsResult, page: number, pageSize: number, snapshotId: string): LibraryFilesystemFindingsResult {
