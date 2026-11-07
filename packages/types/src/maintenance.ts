@@ -150,7 +150,7 @@ export type IgnoredSeries = { id: number; name: string; bookCount: number };
 
 export type SimilarSeriesCandidatesResult = {
   items: SimilarSeriesPair[];
-  ignoredSeries: IgnoredSeries[];
+  ignoredSeries?: IgnoredSeries[];
   truncated: boolean;
 };
 
