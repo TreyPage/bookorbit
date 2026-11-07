@@ -1049,9 +1049,6 @@
         "missingRequiredTables": "Missing required tables: {tables}",
         "suggestionsAutoLoad": "User suggestions load automatically after source validation.",
         "refresh": "Refresh",
-        "confirmDelete": "Permanently delete this duplicate-format file from disk?\n\n{path}\n\nThe file record will also be removed from BookOrbit. This cannot be undone.",
-        "deleteFailed": "Could not delete this file. It may no longer be a duplicate or may have changed; refresh and try again.",
-        "deleting": "Deleting...",
         "sourceUser": "Source User",
         "targetUser": "Target User",
         "doNotImport": "Do not import this user",
@@ -14316,7 +14313,10 @@
         "untitled": "Untitled book",
         "fileCount": "{count} files",
         "identical": "Identical content",
-        "refresh": "Refresh"
+        "refresh": "Refresh",
+        "confirmDelete": "Permanently delete this duplicate-format file from disk?\\n\\n{path}\\n\\nThe file record will also be removed from BookOrbit. This cannot be undone.",
+        "deleteFailed": "Could not delete this file. It may no longer be a duplicate or may have changed; refresh and try again.",
+        "deleting": "Deleting..."
       },
       "seriesCleanup": {
         "title": "Series Name Cleanup",
