@@ -43,7 +43,7 @@ describe('LibraryIntegrityController', () => {
     const controller = new LibraryIntegrityController(service as never, { getLastScan: vi.fn() } as never);
     const user = { id: 9 } as never;
     await controller.listFilesystemFindings({ page: 2, pageSize: 25 }, user);
-    expect(service.listFilesystemFindings).toHaveBeenCalledWith(user, 2, 25);
+    expect(service.listFilesystemFindings).toHaveBeenCalledWith(user, 2, 25, undefined);
   });
 
   it('delegates empty book-folder cleanup with the current user and validated target', async () => {

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { AlertCircle, FileWarning, Loader2, RefreshCw } from '@lucide/vue'
+import { AlertCircle, FileWarning, Loader2, RefreshCw, Trash2 } from '@lucide/vue'
 import type { DuplicateFormatGroup } from '@bookorbit/types'
 
 import { Button } from '@/components/ui/button'
-import { getDuplicateFormatIssues } from '../../api/library-integrity'
+import { cleanupDuplicateFormatFile, getDuplicateFormatIssues } from '../../api/library-integrity'
 
 const { t } = useI18n()
 const items = ref<DuplicateFormatGroup[]>([])
@@ -15,6 +15,7 @@ const pageSize = 25
 const loading = ref(false)
 const loaded = ref(false)
 const error = ref<string | null>(null)
+const deletingFileId = ref<number | null>(null)
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
 
 function hasIdenticalContent(group: DuplicateFormatGroup): boolean {
@@ -50,6 +51,19 @@ async function load(): Promise<void> {
   }
 }
 
+async function removeFile(file: DuplicateFormatGroup['files'][number]): Promise<void> {
+  if (!window.confirm(t('tools.libraryIntegrity.duplicateFormats.confirmDelete', { path: file.absolutePath }))) return
+  deletingFileId.value = file.id
+  error.value = null
+  try {
+    await cleanupDuplicateFormatFile({ fileId: file.id })
+    await load()
+  } catch {
+    error.value = t('tools.libraryIntegrity.duplicateFormats.deleteFailed')
+  } finally {
+    deletingFileId.value = null
+  }
+}
 function previousPage(): void {
   if (page.value > 1) {
     page.value--
@@ -131,7 +145,7 @@ onMounted(() => void load())
         <ul class="mt-3 space-y-2 border-t border-border pt-3">
           <li v-for="file in group.files" :key="file.id" class="flex flex-wrap items-start justify-between gap-2 text-sm">
             <span class="min-w-0 break-all text-foreground">{{ file.absolutePath }}</span>
-            <span class="shrink-0 text-xs text-muted-foreground">{{ formatBytes(file.sizeBytes) }}</span>
+            <div class="flex shrink-0 items-center gap-2"><span class="text-xs text-muted-foreground">{{ formatBytes(file.sizeBytes) }}</span><Button size="sm" variant="outline" :disabled="deletingFileId !== null" @click="removeFile(file)"><Trash2 class="size-4" aria-hidden="true" /><span>{{ deletingFileId === file.id ? t('tools.libraryIntegrity.duplicateFormats.deleting') : t('common.delete') }}</span></Button></div>
           </li>
         </ul>
       </article>
