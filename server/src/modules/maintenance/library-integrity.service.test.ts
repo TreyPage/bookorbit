@@ -341,7 +341,7 @@ describe('LibraryIntegrityService', () => {
   describe('cleanupDuplicateFormatFile', () => {
     it('removes only the selected file under an accessible library root', async () => {
       const fs = await import('node:fs/promises');
-      const removeDuplicateFormatFile = vi.fn(async (_libraryIds, _fileId, removeFile) => {
+      const removeDuplicateFormatFile = vi.fn(async (_libraryIds: number[], _fileId: number, removeFile: (file: { absolutePath: string; libraryId: number }) => Promise<void>) => {
         await removeFile({ absolutePath: '/virtual/library/book-copy.epub', libraryId: 1 });
         return 'removed' as const;
       });
