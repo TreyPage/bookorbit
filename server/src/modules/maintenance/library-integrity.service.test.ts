@@ -341,23 +341,17 @@ describe('LibraryIntegrityService', () => {
   describe('cleanupDuplicateFormatFile', () => {
     it('removes only the selected file under an accessible library root', async () => {
       const fs = await import('node:fs/promises');
-      const removeDuplicateFormatFile = vi.fn(async (
-        _libraryIds: number[],
-        _fileId: number,
-        removeFile: (file: { absolutePath: string; libraryId: number }) => Promise<void>,
-      ) => {
-        await removeFile({ absolutePath: '/virtual/library/book-copy.epub', libraryId: 1 });
-        return 'removed' as const;
-      });
+      const removeDuplicateFormatFile = vi.fn(
+        async (_libraryIds: number[], _fileId: number, removeFile: (file: { absolutePath: string; libraryId: number }) => Promise<void>) => {
+          await removeFile({ absolutePath: '/virtual/library/book-copy.epub', libraryId: 1 });
+          return 'removed' as const;
+        },
+      );
       const libraryService = {
         findAccessibleLibraryIds: vi.fn().mockResolvedValue([1]),
         findAll: vi.fn().mockResolvedValue([{ id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] }]),
       };
-      const service = new LibraryIntegrityService(
-        { removeDuplicateFormatFile } as never,
-        libraryService as never,
-        { get: () => undefined } as never,
-      );
+      const service = new LibraryIntegrityService({ removeDuplicateFormatFile } as never, libraryService as never, { get: () => undefined } as never);
       const realpathSpy = vi.mocked(fs.realpath).mockImplementation((path) => Promise.resolve(String(path)));
       const lstatSpy = vi.mocked(fs.lstat).mockResolvedValue({ isFile: () => true, isSymbolicLink: () => false } as never);
       const unlinkSpy = vi.mocked(fs.unlink).mockResolvedValue(undefined);
@@ -376,14 +370,12 @@ describe('LibraryIntegrityService', () => {
 
     it('does not touch disk when the selected file is outside accessible library roots', async () => {
       const fs = await import('node:fs/promises');
-      const removeDuplicateFormatFile = vi.fn(async (
-        _libraryIds: number[],
-        _fileId: number,
-        removeFile: (file: { absolutePath: string; libraryId: number }) => Promise<void>,
-      ) => {
-        await removeFile({ absolutePath: '/outside/book.epub', libraryId: 1 });
-        return 'removed' as const;
-      });
+      const removeDuplicateFormatFile = vi.fn(
+        async (_libraryIds: number[], _fileId: number, removeFile: (file: { absolutePath: string; libraryId: number }) => Promise<void>) => {
+          await removeFile({ absolutePath: '/outside/book.epub', libraryId: 1 });
+          return 'removed' as const;
+        },
+      );
       const libraryService = {
         findAccessibleLibraryIds: vi.fn().mockResolvedValue([1]),
         findAll: vi.fn().mockResolvedValue([{ id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] }]),
