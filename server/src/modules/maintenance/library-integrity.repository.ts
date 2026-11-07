@@ -66,6 +66,9 @@ export class LibraryIntegrityRepository {
   async findDuplicateFormatGroups(libraryIds: number[], offset: number, limit: number) {
     if (libraryIds.length === 0) return { items: [], total: 0 };
 
+    // Numbered audiobook parts are distinct segments, not duplicate formats.
+    // Compare files only when their part number (or lack of one) also matches.
+    const partNumber = sql`(regexp_match(regexp_replace(${bookFiles.absolutePath}, '^.*/', ''), '(?i)(?:[-_ .]part[-_ .]?([0-9]+))'))[1]`;
     const groups = this.db
       .select({
         bookId: books.id,
@@ -74,6 +77,7 @@ export class LibraryIntegrityRepository {
         libraryName: libraries.name,
         folderPath: books.folderPath,
         format: sql<string>`lower(trim(${bookFiles.format}))`.as('format'),
+        partLabel: sql<string | null>`CASE WHEN ${partNumber} IS NULL THEN NULL ELSE 'Part ' || ${partNumber} END`.as('partLabel'),
         fileCount: count(bookFiles.id).as('fileCount'),
         files: sql<DuplicateFormatFileRow[]>`json_agg(
           json_build_object(
@@ -89,7 +93,7 @@ export class LibraryIntegrityRepository {
       .innerJoin(libraries, eq(libraries.id, books.libraryId))
       .leftJoin(bookMetadata, eq(bookMetadata.bookId, books.id))
       .where(and(inArray(books.libraryId, libraryIds), eq(books.status, 'present'), eq(bookFiles.role, 'content'), isNotNull(bookFiles.format)))
-      .groupBy(books.id, bookMetadata.title, libraries.name, sql`lower(trim(${bookFiles.format}))`)
+      .groupBy(books.id, bookMetadata.title, libraries.name, sql`lower(trim(${bookFiles.format}))`, partNumber)
       .having(sql`count(${bookFiles.id}) > 1`)
       .as('duplicate_format_groups');
 
@@ -102,11 +106,12 @@ export class LibraryIntegrityRepository {
         libraryName: groups.libraryName,
         folderPath: groups.folderPath,
         format: groups.format,
+        partLabel: groups.partLabel,
         fileCount: groups.fileCount,
         files: groups.files,
       })
       .from(groups)
-      .orderBy(asc(groups.libraryId), asc(groups.bookId), asc(groups.format))
+      .orderBy(asc(groups.libraryId), asc(groups.bookId), asc(groups.format), asc(groups.partLabel))
       .offset(offset)
       .limit(limit);
 
@@ -169,10 +174,18 @@ export class LibraryIntegrityRepository {
         .for('update');
       if (!file) return 'not_found';
 
+      const selectedPartNumber = sql`(regexp_match(regexp_replace(${bookFiles.absolutePath}, '^.*/', ''), '(?i)(?:[-_ .]part[-_ .]?([0-9]+))'))[1]`;
       const [countRow] = await tx
         .select({ total: count() })
         .from(bookFiles)
-        .where(and(eq(bookFiles.bookId, file.bookId), eq(bookFiles.role, 'content'), sql`lower(trim(${bookFiles.format})) = ${file.format}`));
+        .where(and(
+          eq(bookFiles.bookId, file.bookId),
+          eq(bookFiles.role, 'content'),
+          sql`lower(trim(${bookFiles.format})) = ${file.format}`,
+          sql`${selectedPartNumber} IS NOT DISTINCT FROM (
+            SELECT (regexp_match(regexp_replace(${file.absolutePath}, '^.*/', ''), '(?i)(?:[-_ .]part[-_ .]?([0-9]+))'))[1]
+          )`,
+        ));
       if ((countRow?.total ?? 0) <= 1) return 'not_duplicate';
 
       await removeFile({ absolutePath: file.absolutePath, libraryId: file.libraryId });
