@@ -8,6 +8,8 @@ import * as schema from '../../db/schema';
 import { bookFiles, bookMetadata, books, libraries, libraryIntegrityScanStatus } from '../../db/schema';
 type Db = NodePgDatabase<typeof schema>;
 
+const intArray = (values: number[]) => sql`ARRAY[${sql.join(values.map((value) => sql`${value}`), sql`, `)}]::int[]`;
+
 export type DuplicateFormatFileRow = {
   id: number;
   absolutePath: string;
@@ -118,7 +120,7 @@ export class LibraryIntegrityRepository {
           membership.series_id,
           count(DISTINCT visible_book.id)::int AS total_book_count,
           count(DISTINCT visible_book.id) FILTER (
-            WHERE visible_book.library_id = ANY(${libraryIds}::int[])
+            WHERE visible_book.library_id = ANY(${intArray(libraryIds)})
           )::int AS accessible_book_count
         FROM book_series_memberships membership
         INNER JOIN books visible_book ON visible_book.id = membership.book_id
@@ -204,7 +206,7 @@ export class LibraryIntegrityRepository {
       const seriesResult = await tx.execute(sql`
         SELECT id, name, expected_book_count, expected_book_count_source
         FROM book_series
-        WHERE id = ANY(${[targetSeriesId, ...sourceSeriesIds]}::int[])
+        WHERE id = ANY(${intArray([targetSeriesId, ...sourceSeriesIds])})
         ORDER BY id FOR UPDATE
       `);
       const seriesRows = seriesResult.rows as Array<{
@@ -221,7 +223,7 @@ export class LibraryIntegrityRepository {
         SELECT 1 FROM book_series_memberships membership
         INNER JOIN books visible_book ON visible_book.id = membership.book_id
         WHERE membership.series_id = ${targetSeriesId}
-          AND visible_book.library_id = ANY(${libraryIds}::int[]) LIMIT 1
+          AND visible_book.library_id = ANY(${intArray(libraryIds)}) LIMIT 1
       `);
       if (visibleTarget.rows.length === 0) return { status: 'not_accessible' as const };
 
@@ -229,10 +231,10 @@ export class LibraryIntegrityRepository {
         SELECT count(DISTINCT visible_book.id)::int AS count
         FROM books visible_book
         LEFT JOIN book_series_memberships membership
-          ON membership.book_id = visible_book.id AND membership.series_id = ANY(${sourceSeriesIds}::int[])
+          ON membership.book_id = visible_book.id AND membership.series_id = ANY(${intArray(sourceSeriesIds)})
         LEFT JOIN book_metadata metadata ON metadata.book_id = visible_book.id
-        WHERE (membership.series_id IS NOT NULL OR metadata.series_id = ANY(${sourceSeriesIds}::int[]))
-          AND NOT (visible_book.library_id = ANY(${libraryIds}::int[]))
+        WHERE (membership.series_id IS NOT NULL OR metadata.series_id = ANY(${intArray(sourceSeriesIds)}))
+          AND NOT (visible_book.library_id = ANY(${intArray(libraryIds)}))
       `);
       const inaccessibleBookCount = Number((hiddenRefs.rows[0] as { count?: number } | undefined)?.count ?? 0);
       if (inaccessibleBookCount > 0) return { status: 'inaccessible_books' as const, inaccessibleBookCount };
@@ -241,35 +243,35 @@ export class LibraryIntegrityRepository {
         SELECT membership.book_id
         FROM book_series_memberships membership
         INNER JOIN books visible_book ON visible_book.id = membership.book_id
-        WHERE membership.series_id = ANY(${[targetSeriesId, ...sourceSeriesIds]}::int[])
-          AND visible_book.library_id = ANY(${libraryIds}::int[])
+        WHERE membership.series_id = ANY(${intArray([targetSeriesId, ...sourceSeriesIds])})
+          AND visible_book.library_id = ANY(${intArray(libraryIds)})
         FOR UPDATE OF membership, visible_book
       `);
       await tx.execute(sql`
         SELECT metadata.book_id
         FROM book_metadata metadata
         INNER JOIN books visible_book ON visible_book.id = metadata.book_id
-        WHERE metadata.series_id = ANY(${sourceSeriesIds}::int[])
-          AND visible_book.library_id = ANY(${libraryIds}::int[])
+        WHERE metadata.series_id = ANY(${intArray(sourceSeriesIds)})
+          AND visible_book.library_id = ANY(${intArray(libraryIds)})
         FOR UPDATE OF metadata
       `);
 
       const invisibleSources = await tx.execute(sql`
         SELECT source.id
-        FROM unnest(${sourceSeriesIds}::int[]) AS source(id)
+        FROM unnest(${intArray(sourceSeriesIds)}) AS source(id)
         WHERE NOT EXISTS (
           SELECT 1
           FROM book_series_memberships membership
           INNER JOIN books visible_book ON visible_book.id = membership.book_id
           WHERE membership.series_id = source.id
-            AND visible_book.library_id = ANY(${libraryIds}::int[])
+            AND visible_book.library_id = ANY(${intArray(libraryIds)})
         )
         AND NOT EXISTS (
           SELECT 1
           FROM book_metadata metadata
           INNER JOIN books visible_book ON visible_book.id = metadata.book_id
           WHERE metadata.series_id = source.id
-            AND visible_book.library_id = ANY(${libraryIds}::int[])
+            AND visible_book.library_id = ANY(${intArray(libraryIds)})
         )
       `);
       if (invisibleSources.rows.length > 0) return { status: 'not_accessible' as const };
@@ -279,8 +281,8 @@ export class LibraryIntegrityRepository {
           SELECT membership.book_id, membership.series_id, membership.series_index
           FROM book_series_memberships membership
           INNER JOIN books visible_book ON visible_book.id = membership.book_id
-          WHERE membership.series_id = ANY(${[targetSeriesId, ...sourceSeriesIds]}::int[])
-            AND visible_book.library_id = ANY(${libraryIds}::int[])
+          WHERE membership.series_id = ANY(${intArray([targetSeriesId, ...sourceSeriesIds])})
+            AND visible_book.library_id = ANY(${intArray(libraryIds)})
         )
         SELECT book_id,
           max(series_index) FILTER (WHERE series_id = ${targetSeriesId}) AS target_index,
@@ -302,8 +304,8 @@ export class LibraryIntegrityRepository {
         FROM books visible_book
         LEFT JOIN book_series_memberships membership ON membership.book_id = visible_book.id
         LEFT JOIN book_metadata metadata ON metadata.book_id = visible_book.id
-        WHERE visible_book.library_id = ANY(${libraryIds}::int[])
-          AND (membership.series_id = ANY(${sourceSeriesIds}::int[]) OR metadata.series_id = ANY(${sourceSeriesIds}::int[]))
+        WHERE visible_book.library_id = ANY(${intArray(libraryIds)})
+          AND (membership.series_id = ANY(${intArray(sourceSeriesIds)}) OR metadata.series_id = ANY(${intArray(sourceSeriesIds)}))
       `);
       const affectedBookIds = (affectedResult.rows as Array<{ book_id: number }>).map((row) => row.book_id);
       const affectedBooks = affectedBookIds.length;
@@ -317,7 +319,7 @@ export class LibraryIntegrityRepository {
           (SELECT source_membership.series_index
            FROM book_series_memberships source_membership
            WHERE source_membership.book_id = target_membership.book_id
-             AND source_membership.series_id = ANY(${sourceSeriesIds}::int[])
+             AND source_membership.series_id = ANY(${intArray(sourceSeriesIds)})
              AND source_membership.series_index IS NOT NULL
            ORDER BY source_membership.display_order, source_membership.series_id LIMIT 1)
         ), updated_at = now()
@@ -325,12 +327,12 @@ export class LibraryIntegrityRepository {
           AND EXISTS (
             SELECT 1 FROM book_series_memberships source_membership
             WHERE source_membership.book_id = target_membership.book_id
-              AND source_membership.series_id = ANY(${sourceSeriesIds}::int[])
+              AND source_membership.series_id = ANY(${intArray(sourceSeriesIds)})
           )
           AND EXISTS (
             SELECT 1 FROM books visible_book
             WHERE visible_book.id = target_membership.book_id
-              AND visible_book.library_id = ANY(${libraryIds}::int[])
+              AND visible_book.library_id = ANY(${intArray(libraryIds)})
           )
       `);
 
@@ -341,13 +343,13 @@ export class LibraryIntegrityRepository {
             bool_or(membership.series_id = ${targetSeriesId}) OVER (PARTITION BY membership.book_id) AS has_target
           FROM book_series_memberships membership
           INNER JOIN books visible_book ON visible_book.id = membership.book_id
-          WHERE membership.series_id = ANY(${[targetSeriesId, ...sourceSeriesIds]}::int[])
-            AND visible_book.library_id = ANY(${libraryIds}::int[])
+          WHERE membership.series_id = ANY(${intArray([targetSeriesId, ...sourceSeriesIds])})
+            AND visible_book.library_id = ANY(${intArray(libraryIds)})
         )
         DELETE FROM book_series_memberships membership
         USING ranked
         WHERE membership.ctid = ranked.ctid
-          AND membership.series_id = ANY(${sourceSeriesIds}::int[])
+          AND membership.series_id = ANY(${intArray(sourceSeriesIds)})
           AND (ranked.has_target OR ranked.position > 1)
       `);
 
@@ -356,8 +358,8 @@ export class LibraryIntegrityRepository {
         SET series_id = ${targetSeriesId}, updated_at = now()
         FROM books visible_book
         WHERE membership.book_id = visible_book.id
-          AND membership.series_id = ANY(${sourceSeriesIds}::int[])
-          AND visible_book.library_id = ANY(${libraryIds}::int[])
+          AND membership.series_id = ANY(${intArray(sourceSeriesIds)})
+          AND visible_book.library_id = ANY(${intArray(libraryIds)})
       `);
 
       await tx.execute(sql`
@@ -365,8 +367,8 @@ export class LibraryIntegrityRepository {
         SELECT metadata.book_id, ${targetSeriesId}, metadata.series_index, 0
         FROM book_metadata metadata
         INNER JOIN books visible_book ON visible_book.id = metadata.book_id
-        WHERE metadata.series_id = ANY(${sourceSeriesIds}::int[])
-          AND visible_book.library_id = ANY(${libraryIds}::int[])
+        WHERE metadata.series_id = ANY(${intArray(sourceSeriesIds)})
+          AND visible_book.library_id = ANY(${intArray(libraryIds)})
           AND NOT EXISTS (
             SELECT 1 FROM book_series_memberships membership
             WHERE membership.book_id = metadata.book_id
@@ -387,7 +389,7 @@ export class LibraryIntegrityRepository {
 
       await tx.execute(sql`
         WITH affected AS (
-          SELECT unnest(${affectedBookIds}::int[]) AS book_id
+          SELECT unnest(${intArray(affectedBookIds)}) AS book_id
         ), primary_membership AS (
           SELECT DISTINCT ON (membership.book_id)
             membership.book_id, membership.series_id, series.name, membership.series_index
@@ -406,9 +408,9 @@ export class LibraryIntegrityRepository {
       `);
 
       await tx.execute(sql`
-        UPDATE books SET updated_at = now() WHERE id = ANY(${affectedBookIds}::int[])
+        UPDATE books SET updated_at = now() WHERE id = ANY(${intArray(affectedBookIds)})
       `);
-      await tx.execute(sql`DELETE FROM book_series WHERE id = ANY(${sourceSeriesIds}::int[])`);
+      await tx.execute(sql`DELETE FROM book_series WHERE id = ANY(${intArray(sourceSeriesIds)})`);
 
       return {
         status: 'merged' as const,
