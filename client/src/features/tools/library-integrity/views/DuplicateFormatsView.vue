@@ -146,12 +146,11 @@ onMounted(() => void load())
           <li v-for="file in group.files" :key="file.id" class="flex flex-wrap items-start justify-between gap-2 text-sm">
             <span class="min-w-0 break-all text-foreground">{{ file.absolutePath }}</span>
             <div class="flex shrink-0 items-center gap-2">
-              <span class="text-xs text-muted-foreground">{{ formatBytes(file.sizeBytes) }}</span
-              ><Button size="sm" variant="outline" :disabled="deletingFileId !== null" @click="removeFile(file)"
-                ><Trash2 class="size-4" aria-hidden="true" /><span>{{
-                  deletingFileId === file.id ? t('tools.libraryIntegrity.duplicateFormats.deleting') : t('common.delete')
-                }}</span></Button
-              >
+              <span class="text-xs text-muted-foreground">{{ formatBytes(file.sizeBytes) }}</span>
+              <Button size="sm" variant="outline" :disabled="deletingFileId !== null" @click="removeFile(file)">
+                <Trash2 class="size-4" aria-hidden="true" />
+                <span>{{ deletingFileId === file.id ? t('tools.libraryIntegrity.duplicateFormats.deleting') : t('common.delete') }}</span>
+              </Button>
             </div>
           </li>
         </ul>
