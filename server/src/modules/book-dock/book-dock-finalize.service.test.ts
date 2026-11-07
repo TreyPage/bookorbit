@@ -535,7 +535,10 @@ describe('BookDockFinalizeService', () => {
     });
 
     it('fails when target file already exists at resolved destination', async () => {
-      const { service, validator } = makeService();
+      const { service, validator, db } = makeService();
+      db.update.mockReturnValue({
+        set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+      } as never);
       vi.spyOn(service as never, 'findLibraryOrFail').mockResolvedValue({
         id: 5,
         allowedFormats: ['epub'],
@@ -544,11 +547,10 @@ describe('BookDockFinalizeService', () => {
       } as never);
       vi.spyOn(service as never, 'findFolderOrFail').mockResolvedValue({ id: 9, libraryId: 5, path: '/library' } as never);
       vi.spyOn(service as never, 'resolveDestination').mockResolvedValue('/library/existing.epub' as never);
-      mockAccess.mockImplementation((path) =>
-        path === '/library/existing.epub'
-          ? Promise.resolve()
-          : Promise.reject(Object.assign(new Error('not found'), { code: 'ENOENT' })),
-      );
+      mockAccess.mockImplementation((path) => {
+        if (path === '/library/existing.epub') return Promise.resolve();
+        return Promise.reject(Object.assign(new Error('not found'), { code: 'ENOENT' }));
+      });
 
       const result = await (service as any).finalizeFile(
         makeRow({ targetLibraryId: 5, targetFolderId: 9 }),
@@ -1211,7 +1213,10 @@ describe('BookDockFinalizeService', () => {
     });
 
     it('automatically suffixes a targetFileName when its destination is occupied', async () => {
-      const { service } = makeService();
+      const { service, db } = makeService();
+      db.update.mockReturnValue({
+        set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+      } as never);
       vi.spyOn(service as never, 'findLibraryOrFail').mockResolvedValue({
         id: 5,
         allowedFormats: ['epub'],
@@ -1222,11 +1227,10 @@ describe('BookDockFinalizeService', () => {
       vi.spyOn(service as never, 'resolveDestination').mockResolvedValue('/library/Unknown Author/1/1.epub' as never);
       // 1_alt.epub also already exists. Every collision probe for the suffixed
       // destination should see ENOENT so the allocator can reserve it.
-      mockAccess.mockImplementation((path) =>
-        path === '/library/Unknown Author/1/1_alt.epub'
-          ? Promise.resolve()
-          : Promise.reject(Object.assign(new Error('not found'), { code: 'ENOENT' })),
-      );
+      mockAccess.mockImplementation((path) => {
+        if (path === '/library/Unknown Author/1/1_alt.epub') return Promise.resolve();
+        return Promise.reject(Object.assign(new Error('not found'), { code: 'ENOENT' }));
+      });
 
       const overrideMap = new Map([[1, { libraryId: 5, folderId: 9, targetFileName: '1_alt' }]]);
       const result = await (service as any).finalizeFile(
