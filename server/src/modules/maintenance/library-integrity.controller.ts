@@ -9,7 +9,6 @@ import { DeleteDuplicateFormatFileDto, ListLibraryIntegrityDto } from './dto/lib
 import { CleanupEmptyBookFolderDto } from './dto/cleanup-empty-book-folder.dto';
 import { MergeSeriesDto } from './dto/merge-series.dto';
 import { SetSeriesMergeIgnoredDto } from './dto/set-series-merge-ignored.dto';
-import { ListLibraryIntegrityDto } from './dto/library-integrity.dto';
 import { LibraryIntegrityService } from './library-integrity.service';
 
 @Controller('maintenance/library-integrity')
