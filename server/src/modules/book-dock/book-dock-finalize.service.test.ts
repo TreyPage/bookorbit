@@ -1355,6 +1355,35 @@ describe('BookDockFinalizeService', () => {
       );
     });
 
+    it('automatically suffixes an occupied destination that is not a known duplicate', async () => {
+      const { service } = makeService();
+      const candidate = {
+        fileId: 1,
+        fileName: 'book.epub',
+        status: 'ready',
+        destPath: '/library/book.epub',
+        newName: 'book.epub',
+        library: { id: 5, organizationMode: 'book_per_file' },
+        folder: { id: 9, path: '/library' },
+        format: 'epub',
+        placement: [{ sourcePath: '/dock/book.epub', destPath: '/library/book.epub', format: 'epub', role: 'content', sortOrder: 0 }],
+      };
+      mockAccess.mockImplementation((path) =>
+        String(path) === '/library/book.epub'
+          ? Promise.resolve(undefined)
+          : Promise.reject(Object.assign(new Error('not found'), { code: 'ENOENT' })),
+      );
+
+      const result = await (service as any).classifyDestination(candidate, new Map());
+
+      expect(result).toMatchObject({
+        status: 'ready',
+        destPath: '/library/book (2).epub',
+        newName: 'book (2).epub',
+        placement: [{ destPath: '/library/book (2).epub' }],
+      });
+    });
+
     it('recognizes a multi-file unit as a duplicate when its occupied paths belong to the same existing book', async () => {
       const { service } = makeService();
       const candidate = {
