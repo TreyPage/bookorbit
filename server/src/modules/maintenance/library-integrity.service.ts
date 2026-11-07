@@ -117,6 +117,7 @@ export class LibraryIntegrityService {
           return;
         }
         if (child.isDirectory()) {
+          if (depth === 0 && child.name.toLowerCase() === 'metadata') continue;
           await inspect(resolve(directory, child.name), depth + 1);
           if (truncated) return;
         } else if (child.isFile()) {
@@ -248,6 +249,7 @@ export class LibraryIntegrityService {
         }
         const childPath = resolve(directory, child.name);
         if (child.isDirectory()) {
+          if (depth === 0 && child.name.toLowerCase() === 'metadata') continue;
           await inspect(childPath, libraryId, libraryName, depth + 1);
           if (truncated) return;
         } else if (child.isFile()) {
@@ -423,6 +425,10 @@ export class LibraryIntegrityService {
       return !rel.startsWith('..' + sep) && rel !== '..' && rel !== '' && !isAbsolute(rel);
     });
     if (!containingRoot) throw new NotFoundException('File is outside the accessible library roots');
+    const relativeFilePath = relative(containingRoot, target);
+    if (relativeFilePath.split(sep)[0]?.toLowerCase() === 'metadata') {
+      throw new ConflictException('BookWyrm metadata assets are managed by the metadata provider and cannot be removed as orphaned files');
+    }
     try {
       const [realRoot, realTarget] = await Promise.all([realpath(containingRoot), realpath(target)]);
       const realRelative = relative(realRoot, realTarget);
