@@ -8,6 +8,7 @@ import { LibraryIntegrityScanSchedulerService } from './library-integrity-scan-s
 import { DeleteDuplicateFormatFileDto, ListLibraryIntegrityDto } from './dto/library-integrity.dto';
 import { CleanupEmptyBookFolderDto } from './dto/cleanup-empty-book-folder.dto';
 import { MergeSeriesDto } from './dto/merge-series.dto';
+import { ListLibraryIntegrityDto } from './dto/library-integrity.dto';
 import { LibraryIntegrityService } from './library-integrity.service';
 
 @Controller('maintenance/library-integrity')
@@ -57,8 +58,13 @@ export class LibraryIntegrityController {
     return this.service.cleanupDuplicateFormatFile(user, dto.fileId);
   }
   @Get('series-name-candidates')
-  listSimilarSeries(@CurrentUser() user: RequestUser) {
-    return this.service.listSimilarSeries(user);
+  listSimilarSeries(@Query() dto: ListLibraryIntegrityDto, @CurrentUser() user: RequestUser) {
+    return this.service.listSimilarSeries(user, dto.similarityPercent ?? 30);
+  }
+
+  @Post('series-name-ignore')
+  ignoreSeries(@Body() body: { seriesId: number; ignored: boolean }, @CurrentUser() user: RequestUser) {
+    return this.service.setSeriesMergeIgnored(user, Number(body.seriesId), body.ignored === true);
   }
 
   @Post('series-name-merge')
