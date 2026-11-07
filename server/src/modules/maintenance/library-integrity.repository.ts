@@ -181,7 +181,7 @@ export class LibraryIntegrityRepository {
     });
   }
 
-  async findSimilarSeriesPairs(libraryIds: number[], similarityPercent = 30) {
+  async findSimilarSeriesPairs(libraryIds: number[], similarityPercent = 85) {
     if (libraryIds.length === 0) return { items: [], truncated: false };
 
     // Series are global records, while library access is user-scoped. Keep both counts so
