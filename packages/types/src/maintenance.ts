@@ -13,6 +13,8 @@ export type DuplicateFormatGroup = {
   folderPath: string;
   /** Normalized lowercase file format, such as "epub" or "m4b". */
   format: string;
+  /** Numbered audiobook segment, e.g. "Part 01"; null for unnumbered files. */
+  partLabel: string | null;
   fileCount: number;
   files: DuplicateFormatFile[];
 };
