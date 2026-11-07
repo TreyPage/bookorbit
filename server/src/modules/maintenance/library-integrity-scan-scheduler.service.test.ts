@@ -63,6 +63,7 @@ describe('LibraryIntegrityScanSchedulerService', () => {
 
     const first = service.runNow();
     const second = await service.runNow();
+    await vi.waitFor(() => expect(integrityService.scanAllLibraries).toHaveBeenCalledOnce());
 
     expect(integrityService.scanAllLibraries).toHaveBeenCalledOnce();
     expect(second).toMatchObject({ status: 'running' });

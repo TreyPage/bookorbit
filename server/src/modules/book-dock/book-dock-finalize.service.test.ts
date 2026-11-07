@@ -2793,6 +2793,7 @@ describe('BookDockFinalizeService', () => {
       library: { id: 5 },
       folder: { id: 9, path: '/shared' },
       format: 'epub',
+      placement: [{ sourcePath: '/incoming/book.epub', destPath: '/shared/book.epub', format: 'epub', role: 'content', sortOrder: 0 }],
     };
     mockAccess.mockResolvedValueOnce(undefined as never);
 
@@ -2814,6 +2815,7 @@ describe('BookDockFinalizeService', () => {
       library: { id: 5 },
       folder: { id: 9, path: '/library' },
       format: 'epub',
+      placement: [{ sourcePath: '/incoming/book.epub', destPath: '/library/book.epub', format: 'epub', role: 'content', sortOrder: 0 }],
     };
     mockAccess.mockRejectedValueOnce(Object.assign(new Error('permission denied'), { code: 'EACCES' }));
 
