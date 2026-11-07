@@ -167,7 +167,6 @@ export class LibraryIntegrityService {
         const scopedSnapshot = this.scopeFilesystemFindingsSnapshot(cached.result, accessibleLibraryIds);
         return this.paginateFilesystemFindings(scopedSnapshot, page, pageSize, snapshotId);
       }
-      page = 1;
     }
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
     if (libraryIds.length === 0) {
