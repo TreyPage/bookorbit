@@ -54,10 +54,10 @@ async function merge(pair: SimilarSeriesPair, confirmPositionConflicts = false) 
     await load()
   } catch (caught) {
     const failure = caught as SeriesMergeError
-    if (failure.status === 409 && failure.body.code === 'series_position_conflicts' && !confirmPositionConflicts) {
+    if (failure.status === 409 && failure.body.errorCode === 'series_position_conflicts' && !confirmPositionConflicts) {
       confirmKey.value = key
-      conflictCount.value = Array.isArray(failure.body.conflicts) ? failure.body.conflicts.length : 0
-    } else if (failure.status === 409 && failure.body.code === 'series_has_inaccessible_books') {
+      conflictCount.value = Number(failure.body.errorMeta?.conflictCount ?? 0)
+    } else if (failure.status === 409 && failure.body.errorCode === 'series_has_inaccessible_books') {
       error.value = t('tools.libraryIntegrity.seriesCleanup.inaccessibleError')
     } else {
       error.value = t('tools.libraryIntegrity.seriesCleanup.mergeFailed')
