@@ -14314,7 +14314,7 @@
         "fileCount": "{count} files",
         "identical": "Identical content",
         "refresh": "Refresh",
-        "confirmDelete": "Permanently delete this duplicate-format file from disk?\\n\\n{path}\\n\\nThe file record will also be removed from BookOrbit. This cannot be undone.",
+        "confirmDelete": "Permanently delete only this file from disk and remove its file record from BookOrbit? The book record, metadata, reading history, and all other files will be kept.\\n\\n{path}\\n\\nThis cannot be undone.",
         "deleteFailed": "Could not delete this file. It may no longer be a duplicate or may have changed; refresh and try again.",
         "deleting": "Deleting..."
       },
