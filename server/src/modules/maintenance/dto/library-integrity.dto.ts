@@ -20,7 +20,7 @@ export class ListLibraryIntegrityDto {
   @IsInt()
   @Min(70)
   @Max(100)
-  similarityPercent?: number;
+  similarityPercent = 85;
 
   @IsOptional()
   @IsString()
