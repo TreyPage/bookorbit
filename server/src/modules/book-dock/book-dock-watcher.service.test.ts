@@ -71,6 +71,7 @@ describe('BookDockWatcherService', () => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
     vi.mocked(readdir).mockResolvedValue([]);
+    vi.mocked(stat).mockResolvedValue({ isDirectory: () => false } as any);
   });
 
   it('rescan walks files and emits summary', async () => {
