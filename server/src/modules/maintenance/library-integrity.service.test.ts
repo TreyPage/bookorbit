@@ -554,4 +554,35 @@ describe('LibraryIntegrityService', () => {
       }
     });
   });
+
+  describe('mergeSeries conflict responses', () => {
+    const user = { id: 7 } as never;
+    const dto = { targetSeriesId: 10, sourceSeriesIds: [11], confirmPositionConflicts: false };
+
+    it('exposes position conflicts using the global filter error format', async () => {
+      const repo = { mergeSeries: vi.fn().mockResolvedValue({ status: 'position_conflicts', conflicts: [{ bookId: 42 }, { bookId: 43 }] }) };
+      const libraryService = { findAccessibleLibraryIds: vi.fn().mockResolvedValue([1]) };
+      const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => undefined } as never);
+
+      const error = await service.mergeSeries(user, dto).catch((caught: unknown) => caught as { getResponse: () => unknown });
+      expect(error.getResponse()).toEqual({
+        message: 'Series memberships have conflicting book positions',
+        errorCode: 'series_position_conflicts',
+        errorMeta: { conflictCount: 2 },
+      });
+    });
+
+    it('exposes inaccessible source books using the global filter error format', async () => {
+      const repo = { mergeSeries: vi.fn().mockResolvedValue({ status: 'inaccessible_books', inaccessibleBookCount: 3 }) };
+      const libraryService = { findAccessibleLibraryIds: vi.fn().mockResolvedValue([1]) };
+      const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => undefined } as never);
+
+      const error = await service.mergeSeries(user, dto).catch((caught: unknown) => caught as { getResponse: () => unknown });
+      expect(error.getResponse()).toEqual({
+        message: 'The source series contains books outside your accessible libraries',
+        errorCode: 'series_has_inaccessible_books',
+        errorMeta: { inaccessibleBookCount: 3 },
+      });
+    });
+  });
 });

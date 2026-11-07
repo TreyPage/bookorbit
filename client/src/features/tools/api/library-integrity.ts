@@ -22,7 +22,10 @@ export async function getSidecarFileIssues(params: { page: number; pageSize: num
   return response.json() as Promise<SidecarFilePage>
 }
 
-export type SeriesMergeError = Error & { status: number; body: Record<string, unknown> }
+export type SeriesMergeError = Error & {
+  status: number
+  body: { errorCode?: string; errorMeta?: Record<string, string | number>; message?: string }
+}
 
 export async function getSimilarSeriesCandidates(): Promise<SimilarSeriesCandidatesResult> {
   const response = await api('/api/v1/maintenance/library-integrity/series-name-candidates')
