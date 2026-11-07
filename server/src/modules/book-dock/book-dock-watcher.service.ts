@@ -2,7 +2,7 @@ import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@ne
 import { ConfigService } from '@nestjs/config';
 import { watch, type FSWatcher } from 'chokidar';
 import { Dirent } from 'fs';
-import { mkdir, readdir, realpath, stat, unlink } from 'fs/promises';
+import { mkdir, readdir, realpath, rmdir, stat, unlink } from 'fs/promises';
 import { join, resolve, sep } from 'path';
 
 import { waitForStability } from '../../common/utils/fs-stability.utils';
@@ -15,6 +15,8 @@ import { BookDockProcessingStateService } from './book-dock-processing-state.ser
 
 const DEBOUNCE_MS = 500;
 const COVERS_DIR = 'covers';
+const MIN_EMPTY_DIRECTORY_AGE_MS = 5 * 60 * 1000;
+const JUNK_FILE_NAMES = new Set(['.ds_store', 'thumbs.db', 'desktop.ini', 'ehthumbs.db', 'ehthumbs_vista.db']);
 
 @Injectable()
 export class BookDockWatcherService implements OnApplicationBootstrap, OnModuleDestroy {
@@ -64,6 +66,7 @@ export class BookDockWatcherService implements OnApplicationBootstrap, OnModuleD
       return;
     }
     await this.scan(this.bookDockPath);
+    await this.cleanupIngestArtifacts();
     this.emitChange();
   }
 
@@ -242,6 +245,72 @@ export class BookDockWatcherService implements OnApplicationBootstrap, OnModuleD
     }
   }
 
+  /**
+   * Keep the ingest root tidy without touching active or Book Dock-owned content. Only
+   * well-known OS-generated junk files are removed; unknown files are deliberately preserved.
+   * Empty directories are pruned bottom-up after a quiet period and only when no dock row owns
+   * the directory. The covers directory is managed separately by metadata extraction.
+   */
+  private async cleanupIngestArtifacts(): Promise<void> {
+    const files: string[] = [];
+    const directories: string[] = [];
+
+    const walk = async (directory: string): Promise<void> => {
+      if (!(await this.isSafePath(directory))) return;
+      let entries: Dirent[];
+      try {
+        entries = await readdir(directory, { withFileTypes: true });
+      } catch {
+        return;
+      }
+
+      for (const entry of entries) {
+        const fullPath = join(directory, entry.name);
+        if (entry.isSymbolicLink()) continue;
+        if (entry.isDirectory()) {
+          if (directory === this.bookDockPath && entry.name === COVERS_DIR) continue;
+          directories.push(fullPath);
+          await walk(fullPath);
+        } else if (entry.isFile() && isKnownIngestJunk(entry.name)) {
+          files.push(fullPath);
+        }
+      }
+    };
+
+    await walk(this.bookDockPath);
+    if (files.length > 0) {
+      const claimed = await this.repo.findClaimedPaths(files);
+      for (const path of files) {
+        if (claimed.has(path)) continue;
+        try {
+          await unlink(path);
+          this.logger.debug(`Removed Book Dock ingest junk file: ${path}`);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+            this.logger.warn(`Could not remove Book Dock ingest junk file ${path}: ${(error as Error).message}`);
+          }
+        }
+      }
+    }
+
+    const now = Date.now();
+    for (const directory of directories.reverse()) {
+      if (this.pendingTimers.has(directory) || [...this.pendingTimers.keys()].some((pending) => pending.startsWith(directory + sep))) continue;
+      if (await this.repo.findByUnitDirectory(directory)) continue;
+      try {
+        const info = await stat(directory);
+        if (now - info.mtimeMs < MIN_EMPTY_DIRECTORY_AGE_MS) continue;
+        const entries = await readdir(directory);
+        if (entries.length === 0) await rmdir(directory);
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code !== 'ENOENT' && code !== 'ENOTEMPTY') {
+          this.logger.debug(`Could not prune Book Dock directory ${directory}: ${(error as Error).message}`);
+        }
+      }
+    }
+  }
+
   private emitChange(): void {
     this.gateway.emitChanged();
   }
@@ -253,4 +322,10 @@ async function safeUnlink(path: string): Promise<void> {
   } catch {
     // file may already be deleted
   }
+}
+
+
+function isKnownIngestJunk(filename: string): boolean {
+  const normalized = filename.toLowerCase();
+  return JUNK_FILE_NAMES.has(normalized) || normalized.startsWith('._');
 }
