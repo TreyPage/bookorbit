@@ -8,7 +8,11 @@ import * as schema from '../../db/schema';
 import { bookFiles, bookMetadata, books, libraries, libraryIntegrityScanStatus } from '../../db/schema';
 type Db = NodePgDatabase<typeof schema>;
 
-const intArray = (values: number[]) => sql`ARRAY[${sql.join(values.map((value) => sql`${value}`), sql`, `)}]::int[]`;
+const intArray = (values: number[]) =>
+  sql`ARRAY[${sql.join(
+    values.map((value) => sql`${value}`),
+    sql`, `,
+  )}]::int[]`;
 
 export type DuplicateFormatFileRow = {
   id: number;
@@ -123,13 +127,15 @@ export class LibraryIntegrityRepository {
         .select({ bookId: bookFiles.bookId })
         .from(bookFiles)
         .innerJoin(books, eq(books.id, bookFiles.bookId))
-        .where(and(
-          eq(bookFiles.id, fileId),
-          eq(bookFiles.role, 'content'),
-          isNotNull(bookFiles.format),
-          inArray(books.libraryId, libraryIds),
-          eq(books.status, 'present'),
-        ));
+        .where(
+          and(
+            eq(bookFiles.id, fileId),
+            eq(bookFiles.role, 'content'),
+            isNotNull(bookFiles.format),
+            inArray(books.libraryId, libraryIds),
+            eq(books.status, 'present'),
+          ),
+        );
       if (!candidate) return 'not_found';
 
       const [lockedBook] = await tx
@@ -151,24 +157,22 @@ export class LibraryIntegrityRepository {
         })
         .from(bookFiles)
         .innerJoin(books, eq(books.id, bookFiles.bookId))
-        .where(and(
-          eq(bookFiles.id, fileId),
-          eq(bookFiles.role, 'content'),
-          isNotNull(bookFiles.format),
-          inArray(books.libraryId, libraryIds),
-          eq(books.status, 'present'),
-        ))
+        .where(
+          and(
+            eq(bookFiles.id, fileId),
+            eq(bookFiles.role, 'content'),
+            isNotNull(bookFiles.format),
+            inArray(books.libraryId, libraryIds),
+            eq(books.status, 'present'),
+          ),
+        )
         .for('update');
       if (!file) return 'not_found';
 
       const [countRow] = await tx
         .select({ total: count() })
         .from(bookFiles)
-        .where(and(
-          eq(bookFiles.bookId, file.bookId),
-          eq(bookFiles.role, 'content'),
-          sql`lower(trim(${bookFiles.format})) = ${file.format}`,
-        ));
+        .where(and(eq(bookFiles.bookId, file.bookId), eq(bookFiles.role, 'content'), sql`lower(trim(${bookFiles.format})) = ${file.format}`));
       if ((countRow?.total ?? 0) <= 1) return 'not_duplicate';
 
       await removeFile({ absolutePath: file.absolutePath, libraryId: file.libraryId });
