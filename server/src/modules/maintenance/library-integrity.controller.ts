@@ -60,7 +60,7 @@ export class LibraryIntegrityController {
   }
   @Get('series-name-candidates')
   listSimilarSeries(@Query() dto: ListLibraryIntegrityDto, @CurrentUser() user: RequestUser) {
-    return this.service.listSimilarSeries(user, dto.similarityPercent ?? 30);
+    return this.service.listSimilarSeries(user, dto.similarityPercent);
   }
 
   @Post('series-name-ignore')
