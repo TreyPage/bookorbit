@@ -14,13 +14,14 @@ vi.mock('fs/promises', () => ({
   // `isUnitDirectory` asks about.
   stat: vi.fn().mockResolvedValue({ isDirectory: () => false }),
   unlink: vi.fn(),
+  rmdir: vi.fn(),
 }));
 
 vi.mock('chokidar', () => ({
   watch: vi.fn(),
 }));
 
-import { mkdir, readdir, realpath, stat, unlink } from 'fs/promises';
+import { mkdir, readdir, realpath, rmdir, stat, unlink } from 'fs/promises';
 import { watch } from 'chokidar';
 
 import { waitForStability } from '../../common/utils/fs-stability.utils';
@@ -38,6 +39,7 @@ function makeService(bookDockPath = '/data/book-dock') {
   const repo = {
     findByAbsolutePath: vi.fn(),
     findByUnitDirectory: vi.fn().mockResolvedValue(undefined),
+    findClaimedPaths: vi.fn().mockResolvedValue(new Set()),
     deleteById: vi.fn(),
     countsByStatus: vi.fn().mockResolvedValue({ pending: 1, ready: 2, error: 0, total: 3 }),
   };
@@ -90,6 +92,33 @@ describe('BookDockWatcherService', () => {
 
     expect(walkSpy).toHaveBeenCalledWith('/books/bookdrop');
     expect(emitSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('removes only known OS junk and prunes old empty ingest folders', async () => {
+    const { service, repo } = makeService();
+    vi.mocked(readdir).mockImplementation(async (path: any) => {
+      if (path === '/data/book-dock') {
+        return [
+          { name: '.DS_Store', isDirectory: () => false, isFile: () => true, isSymbolicLink: () => false },
+          { name: '._cover.jpg', isDirectory: () => false, isFile: () => true, isSymbolicLink: () => false },
+          { name: 'notes.txt', isDirectory: () => false, isFile: () => true, isSymbolicLink: () => false },
+          { name: 'empty-old', isDirectory: () => true, isFile: () => false, isSymbolicLink: () => false },
+          { name: 'covers', isDirectory: () => true, isFile: () => false, isSymbolicLink: () => false },
+        ] as any;
+      }
+      if (path === '/data/book-dock/empty-old') return [] as any;
+      return [] as any;
+    });
+    vi.mocked(stat).mockResolvedValue({ mtimeMs: Date.now() - 10 * 60 * 1000 } as any);
+
+    await (service as any).cleanupIngestArtifacts();
+
+    expect(unlink).toHaveBeenCalledWith('/data/book-dock/.DS_Store');
+    expect(unlink).toHaveBeenCalledWith('/data/book-dock/._cover.jpg');
+    expect(unlink).not.toHaveBeenCalledWith('/data/book-dock/notes.txt');
+    expect(rmdir).toHaveBeenCalledWith('/data/book-dock/empty-old');
+    expect(readdir).not.toHaveBeenCalledWith('/data/book-dock/covers');
+    expect(repo.findClaimedPaths).toHaveBeenCalledWith(['/data/book-dock/.DS_Store', '/data/book-dock/._cover.jpg']);
   });
 
   it('startWatcher ensures directory exists and subscribes for file events', async () => {
