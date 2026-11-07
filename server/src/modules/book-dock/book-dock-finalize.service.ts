@@ -966,12 +966,23 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
       const candidatePrimary = perFolder
         ? join(candidateFolder, relative(originalFolder, analysis.destPath))
         : join(dirname(analysis.destPath), `${stem}${suffix}${extension}`);
+      const candidateStem = basename(candidatePrimary, extname(candidatePrimary));
       const placement = analysis.placement.map((file) => ({
         ...file,
-        destPath: perFolder ? join(candidateFolder, relative(originalFolder, file.destPath)) : (file.destPath === analysis.destPath ? candidatePrimary : file.destPath),
+        destPath: perFolder
+          ? join(candidateFolder, relative(originalFolder, file.destPath))
+          : join(dirname(candidatePrimary), `${candidateStem}${extname(file.destPath)}`),
       }));
 
       let occupied = false;
+      if (perFolder) {
+        try {
+          await fsAccess(candidateFolder);
+          occupied = true;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        }
+      }
       for (const file of placement) {
         try {
           await fsAccess(file.destPath);
@@ -994,7 +1005,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
         destPath: candidatePrimary,
         newName,
         placement,
-        ...(perFolder ? { bookFolderPath: candidateFolder } : {}),
+        bookFolderPath: perFolder ? candidateFolder : candidatePrimary,
       };
     }
     return null;
