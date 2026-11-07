@@ -125,7 +125,7 @@ onMounted(() => void load())
     </div>
 
     <section v-else class="flex flex-col gap-3">
-      <article v-for="group in items" :key="`${group.bookId}-${group.format}`" class="rounded-lg border border-border bg-card p-4">
+      <article v-for="group in items" :key="`${group.bookId}-${group.format}-${group.partLabel ?? 'all'}`" class="rounded-lg border border-border bg-card p-4">
         <div class="flex flex-wrap items-start justify-between gap-2">
           <div class="min-w-0 space-y-1">
             <h2 class="font-semibold text-foreground">{{ group.title || t('tools.libraryIntegrity.duplicateFormats.untitled') }}</h2>
@@ -134,6 +134,7 @@ onMounted(() => void load())
           </div>
           <div class="flex shrink-0 flex-wrap items-center gap-2">
             <span class="rounded-md bg-muted px-2 py-1 text-xs font-medium uppercase">{{ group.format }}</span>
+            <span v-if="group.partLabel" class="rounded-md border border-border px-2 py-1 text-xs">{{ group.partLabel }}</span>
             <span class="rounded-md border border-border px-2 py-1 text-xs">{{
               t('tools.libraryIntegrity.duplicateFormats.fileCount', { count: group.fileCount })
             }}</span>
