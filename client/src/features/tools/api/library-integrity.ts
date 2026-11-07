@@ -89,3 +89,12 @@ export async function cleanupOrphanedFile(params: { libraryId: number; path: str
   })
   if (!response.ok) throw new Error('library_integrity_orphaned_file_cleanup_failed')
 }
+
+export async function cleanupDuplicateFormatFile(params: { fileId: number }): Promise<void> {
+  const response = await api('/api/v1/maintenance/library-integrity/duplicate-formats/cleanup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
+  if (!response.ok) throw new Error('library_integrity_duplicate_format_cleanup_failed')
+}

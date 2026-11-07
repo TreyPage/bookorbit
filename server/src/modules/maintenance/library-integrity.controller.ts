@@ -5,7 +5,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import type { RequestUser } from '../../common/types/request-user';
 import { LibraryIntegrityScanSchedulerService } from './library-integrity-scan-scheduler.service';
-import { ListLibraryIntegrityDto } from './dto/library-integrity.dto';
+import { DeleteDuplicateFormatFileDto, ListLibraryIntegrityDto } from './dto/library-integrity.dto';
 import { CleanupEmptyBookFolderDto } from './dto/cleanup-empty-book-folder.dto';
 import { MergeSeriesDto } from './dto/merge-series.dto';
 import { LibraryIntegrityService } from './library-integrity.service';
@@ -51,6 +51,10 @@ export class LibraryIntegrityController {
   @Get('duplicate-formats')
   listDuplicateFormats(@Query() dto: ListLibraryIntegrityDto, @CurrentUser() user: RequestUser) {
     return this.service.listDuplicateFormats(user, dto.page, dto.pageSize);
+  }
+  @Post('duplicate-formats/cleanup')
+  cleanupDuplicateFormatFile(@Body() dto: DeleteDuplicateFormatFileDto, @CurrentUser() user: RequestUser) {
+    return this.service.cleanupDuplicateFormatFile(user, dto.fileId);
   }
   @Get('series-name-candidates')
   listSimilarSeries(@CurrentUser() user: RequestUser) {

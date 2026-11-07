@@ -20,3 +20,10 @@ export class ListLibraryIntegrityDto {
   @MaxLength(64)
   snapshotId?: string;
 }
+
+export class DeleteDuplicateFormatFileDto {
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(1)
+  fileId!: number;
+}

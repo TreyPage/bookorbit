@@ -109,6 +109,49 @@ export class LibraryIntegrityRepository {
     return { items, total: countRow?.total ?? 0 };
   }
 
+  async removeDuplicateFormatFile(
+    libraryIds: number[],
+    fileId: number,
+    removeFile: (file: { absolutePath: string; libraryId: number }) => Promise<void>,
+  ): Promise<'removed' | 'not_found' | 'not_duplicate'> {
+    if (libraryIds.length === 0) return 'not_found';
+    return this.db.transaction(async (tx) => {
+      const [file] = await tx
+        .select({
+          id: bookFiles.id,
+          bookId: bookFiles.bookId,
+          libraryId: books.libraryId,
+          absolutePath: bookFiles.absolutePath,
+          format: sql<string>`lower(trim(${bookFiles.format}))`,
+        })
+        .from(bookFiles)
+        .innerJoin(books, eq(books.id, bookFiles.bookId))
+        .where(and(
+          eq(bookFiles.id, fileId),
+          eq(bookFiles.role, 'content'),
+          isNotNull(bookFiles.format),
+          inArray(books.libraryId, libraryIds),
+          eq(books.status, 'present'),
+        ))
+        .for('update');
+      if (!file) return 'not_found';
+
+      const [countRow] = await tx
+        .select({ total: count() })
+        .from(bookFiles)
+        .where(and(
+          eq(bookFiles.bookId, file.bookId),
+          eq(bookFiles.role, 'content'),
+          sql`lower(trim(${bookFiles.format})) = ${file.format}`,
+        ));
+      if ((countRow?.total ?? 0) <= 1) return 'not_duplicate';
+
+      await removeFile({ absolutePath: file.absolutePath, libraryId: file.libraryId });
+      await tx.delete(bookFiles).where(eq(bookFiles.id, file.id));
+      return 'removed';
+    });
+  }
+
   async findSimilarSeriesPairs(libraryIds: number[]) {
     if (libraryIds.length === 0) return { items: [], truncated: false };
 
