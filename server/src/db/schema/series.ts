@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { check, index, integer, pgTable, primaryKey, serial, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
+import { boolean, check, index, integer, pgTable, primaryKey, serial, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 
 import { books } from './books';
 
@@ -10,6 +10,7 @@ export const bookSeries = pgTable(
     name: varchar('name', { length: 500 }).notNull(),
     normalizedName: varchar('normalized_name', { length: 500 }).notNull(),
     expectedBookCount: integer('expected_book_count'),
+    mergeIgnored: boolean('merge_ignored').default(false).notNull(),
     expectedBookCountSource: varchar('expected_book_count_source', { length: 50 }),
     expectedBookCountUpdatedAt: timestamp('expected_book_count_updated_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

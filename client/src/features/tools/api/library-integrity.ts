@@ -27,10 +27,20 @@ export type SeriesMergeError = Error & {
   body: { errorCode?: string; errorMeta?: Record<string, string | number>; message?: string }
 }
 
-export async function getSimilarSeriesCandidates(): Promise<SimilarSeriesCandidatesResult> {
-  const response = await api('/api/v1/maintenance/library-integrity/series-name-candidates')
+export async function getSimilarSeriesCandidates(similarityPercent = 30): Promise<SimilarSeriesCandidatesResult> {
+  const query = new URLSearchParams({ similarityPercent: String(similarityPercent) })
+  const response = await api(`/api/v1/maintenance/library-integrity/series-name-candidates?${query.toString()}`)
   if (!response.ok) throw new Error('library_integrity_series_candidates_failed')
   return response.json() as Promise<SimilarSeriesCandidatesResult>
+}
+
+export async function setSeriesMergeIgnored(seriesId: number, ignored: boolean): Promise<void> {
+  const response = await api('/api/v1/maintenance/library-integrity/series-name-ignore', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ seriesId, ignored }),
+  })
+  if (!response.ok) throw new Error('library_integrity_series_ignore_failed')
 }
 
 export async function mergeSimilarSeries(params: {

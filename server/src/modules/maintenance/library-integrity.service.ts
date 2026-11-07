@@ -598,10 +598,16 @@ export class LibraryIntegrityService {
       pageSize,
     };
   }
-  async listSimilarSeries(user: RequestUser): Promise<SimilarSeriesCandidatesResult> {
+  async listSimilarSeries(user: RequestUser, similarityPercent = 85): Promise<SimilarSeriesCandidatesResult> {
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
-    if (libraryIds.length === 0) return { items: [], truncated: false };
-    return this.repo.findSimilarSeriesPairs(libraryIds);
+    if (libraryIds.length === 0) return { items: [], ignoredSeries: [], truncated: false };
+    return this.repo.findSimilarSeriesPairs(libraryIds, similarityPercent);
+  }
+
+  async setSeriesMergeIgnored(user: RequestUser, seriesId: number, ignored: boolean): Promise<void> {
+    const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
+    const updated = await this.repo.setSeriesMergeIgnored(libraryIds, seriesId, ignored);
+    if (!updated) throw new NotFoundException('Series not found or not accessible');
   }
   async mergeSeries(user: RequestUser, dto: { targetSeriesId: number; sourceSeriesIds: number[]; confirmPositionConflicts: boolean }) {
     if (dto.sourceSeriesIds.includes(dto.targetSeriesId)) {

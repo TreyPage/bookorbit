@@ -181,7 +181,7 @@ export class LibraryIntegrityRepository {
     });
   }
 
-  async findSimilarSeriesPairs(libraryIds: number[]) {
+  async findSimilarSeriesPairs(libraryIds: number[], similarityPercent = 85) {
     if (libraryIds.length === 0) return { items: [], truncated: false };
 
     // Series are global records, while library access is user-scoped. Keep both counts so
@@ -209,7 +209,7 @@ export class LibraryIntegrityRepository {
           scope.accessible_book_count
         FROM book_series series
         INNER JOIN series_scope scope ON scope.series_id = series.id
-        WHERE scope.accessible_book_count > 0
+        WHERE scope.accessible_book_count > 0 AND series.merge_ignored = false
       )
       SELECT
         left_series.id AS left_id,
@@ -227,13 +227,11 @@ export class LibraryIntegrityRepository {
         )::real AS similarity
       FROM normalized_series left_series
       INNER JOIN normalized_series right_series ON right_series.id > left_series.id
-      WHERE (
-        similarity(left_series.normalized_name, right_series.normalized_name) >= 0.3
-        OR left_series.article_free_name = right_series.article_free_name
-        OR left_series.suffix_free_name = right_series.suffix_free_name
-        OR left_series.article_free_name = right_series.suffix_free_name
-        OR left_series.suffix_free_name = right_series.article_free_name
-      )
+      WHERE GREATEST(
+        similarity(left_series.normalized_name, right_series.normalized_name),
+        similarity(left_series.article_free_name, right_series.article_free_name),
+        similarity(left_series.suffix_free_name, right_series.suffix_free_name)
+      ) >= ${similarityPercent / 100}
       ORDER BY similarity DESC, left_series.name, right_series.name
       LIMIT 501
     `);
@@ -267,9 +265,41 @@ export class LibraryIntegrityRepository {
         similarity: Number(row.similarity),
         mergeAllowed: row.left_total_book_count === row.left_book_count && row.right_total_book_count === row.right_book_count,
       })),
+      ignoredSeries: (await this.db.execute(sql`
+        SELECT series.id, series.name, count(DISTINCT visible_book.id)::int AS book_count
+        FROM book_series series
+        INNER JOIN book_series_memberships membership ON membership.series_id = series.id
+        INNER JOIN books visible_book ON visible_book.id = membership.book_id
+        WHERE series.merge_ignored = true
+          AND visible_book.library_id = ANY(${intArray(libraryIds)})
+        GROUP BY series.id, series.name
+        ORDER BY series.name
+      `)).rows.map((row) => ({
+        id: Number((row as { id: number }).id),
+        name: String((row as { name: string }).name),
+        bookCount: Number((row as { book_count: number }).book_count),
+      })),
       truncated: rows.length > 500,
     };
   }
+
+  async setSeriesMergeIgnored(libraryIds: number[], seriesId: number, ignored: boolean): Promise<boolean> {
+    if (libraryIds.length === 0) return false;
+    const result = await this.db.execute(sql`
+      UPDATE book_series
+      SET merge_ignored = ${ignored}, updated_at = now()
+      WHERE id = ${seriesId}
+        AND EXISTS (
+          SELECT 1 FROM book_series_memberships membership
+          INNER JOIN books visible_book ON visible_book.id = membership.book_id
+          WHERE membership.series_id = book_series.id
+            AND visible_book.library_id = ANY(${intArray(libraryIds)})
+        )
+      RETURNING id
+    `);
+    return result.rows.length > 0;
+  }
+
   async mergeSeries(libraryIds: number[], targetSeriesId: number, sourceSeriesIds: number[], confirmPositionConflicts: boolean) {
     if (libraryIds.length === 0) return { status: 'not_accessible' as const };
     if (sourceSeriesIds.length === 0 || sourceSeriesIds.includes(targetSeriesId)) return { status: 'invalid_request' as const };

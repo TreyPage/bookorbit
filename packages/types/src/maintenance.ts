@@ -146,8 +146,11 @@ export type SimilarSeriesPair = {
   mergeAllowed: boolean;
 };
 
+export type IgnoredSeries = { id: number; name: string; bookCount: number };
+
 export type SimilarSeriesCandidatesResult = {
   items: SimilarSeriesPair[];
+  ignoredSeries?: IgnoredSeries[];
   truncated: boolean;
 };
 

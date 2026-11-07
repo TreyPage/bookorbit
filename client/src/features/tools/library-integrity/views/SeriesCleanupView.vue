@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { AlertCircle, GitMerge, Loader2, RefreshCw } from '@lucide/vue'
 import type { SimilarSeriesPair } from '@bookorbit/types'
 import { Button } from '@/components/ui/button'
-import { getSimilarSeriesCandidates, mergeSimilarSeries, type SeriesMergeError } from '../../api/library-integrity'
+import { getSimilarSeriesCandidates, mergeSimilarSeries, setSeriesMergeIgnored, type SeriesMergeError } from '../../api/library-integrity'
 
 const { t } = useI18n()
 const items = ref<SimilarSeriesPair[]>([])
@@ -15,6 +15,8 @@ const busy = ref<string | null>(null)
 const confirmKey = ref<string | null>(null)
 const conflictCount = ref(0)
 const truncated = ref(false)
+const similarityPercent = ref(85)
+const ignoredSeries = ref<Array<{ id: number; name: string; bookCount: number }>>([])
 const error = ref<string | null>(null)
 
 const keyOf = (pair: SimilarSeriesPair) => `${pair.left.id}-${pair.right.id}`
@@ -26,8 +28,9 @@ async function load() {
   error.value = null
   confirmKey.value = null
   try {
-    const result = await getSimilarSeriesCandidates()
+    const result = await getSimilarSeriesCandidates(similarityPercent.value)
     items.value = result.items
+    ignoredSeries.value = result.ignoredSeries ?? []
     truncated.value = result.truncated
     for (const pair of result.items) {
       const key = keyOf(pair)
@@ -38,6 +41,19 @@ async function load() {
     error.value = t('tools.libraryIntegrity.seriesCleanup.loadFailed')
   } finally {
     loading.value = false
+  }
+}
+
+async function ignoreSeries(seriesId: number, ignored: boolean) {
+  busy.value = `series-${seriesId}`
+  error.value = null
+  try {
+    await setSeriesMergeIgnored(seriesId, ignored)
+    await load()
+  } catch {
+    error.value = t('tools.libraryIntegrity.seriesCleanup.mergeFailed')
+  } finally {
+    busy.value = null
   }
 }
 
@@ -93,6 +109,10 @@ onMounted(() => void load())
     <p v-if="truncated" role="status" class="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
       {{ t('tools.libraryIntegrity.seriesCleanup.truncated') }}
     </p>
+    <div class="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3">
+      <label class="text-sm font-medium text-foreground" for="series-similarity">Minimum similarity: {{ similarityPercent }}%</label>
+      <input id="series-similarity" v-model.number="similarityPercent" type="range" min="70" max="100" step="1" class="min-w-40 flex-1" @change="load" />
+    </div>
     <p class="text-sm text-muted-foreground" aria-live="polite">
       {{ t('tools.libraryIntegrity.seriesCleanup.resultCount', { count: items.length }) }}
     </p>
@@ -147,6 +167,8 @@ onMounted(() => void load())
               <option :value="pair.right.id">{{ pair.right.name }}</option>
             </select>
           </label>
+          <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(pair.left.id, true)">Ignore {{ pair.left.name }}</Button>
+          <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(pair.right.id, true)">Ignore {{ pair.right.name }}</Button>
           <Button size="sm" :disabled="!pair.mergeAllowed || busy !== null" @click="merge(pair)">
             <Loader2 v-if="busy === keyOf(pair)" class="size-4 animate-spin" aria-hidden="true" />
             <GitMerge v-else class="size-4" aria-hidden="true" />
@@ -162,6 +184,13 @@ onMounted(() => void load())
           </div>
         </div>
       </article>
+    </section>
+    <section v-if="ignoredSeries.length" class="flex flex-col gap-2 border-t border-border pt-4">
+      <h2 class="font-semibold text-foreground">Ignored series</h2>
+      <div v-for="series in ignoredSeries" :key="series.id" class="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
+        <span class="text-sm">{{ series.name }} <span class="text-muted-foreground">({{ series.bookCount }} books)</span></span>
+        <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(series.id, false)">Restore</Button>
+      </div>
     </section>
   </div>
 </template>
