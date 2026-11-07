@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LibraryIntegrityService } from './library-integrity.service';
+
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>();
   return {
@@ -23,8 +25,6 @@ afterEach(async () => {
   vi.mocked(mocked.rmdir).mockReset().mockImplementation(actual.rmdir);
   vi.mocked(mocked.unlink).mockReset().mockImplementation(actual.unlink);
 });
-
-import { LibraryIntegrityService } from './library-integrity.service';
 
 describe('LibraryIntegrityService', () => {
   it('runs a read-only summary across all libraries and all duplicate-format pages', async () => {
@@ -123,7 +123,7 @@ describe('LibraryIntegrityService', () => {
         { id: 2, name: 'Private', folders: [{ path: '/private' }] },
       ]),
     };
-    const readdirSpy = vi.mocked(fs.readdir).mockImplementation((path) =>
+    const readdirSpy = vi.mocked(originalReaddir.readdir).mockImplementation((path) =>
       Promise.resolve().then(() => {
         const value = String(path);
         if (value === '/virtual/library')
