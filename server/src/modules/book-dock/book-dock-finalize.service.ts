@@ -1583,8 +1583,10 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
 async function safeUnlink(path: string): Promise<void> {
   try {
     await unlink(path);
-  } catch {
-    // file may already be deleted
+  } catch (error) {
+    // ENOENT means the system file is already gone. Any other failure must leave the Book Dock
+    // record in place so the discard can be retried instead of silently orphaning the file.
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
 }
 
