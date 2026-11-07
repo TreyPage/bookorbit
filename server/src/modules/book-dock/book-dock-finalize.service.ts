@@ -387,7 +387,9 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
     if (!analysis) {
       return { fileId: row.id, fileName: row.fileName, success: false, message: 'Finalization target could not be resolved' };
     }
-    return this.finalizePreparedCandidate(analysis, prepared.existingDestinations);
+    // Keep the mutation index available even if a partial/mock preparation result omits it.
+    const existingDestinations = prepared.existingDestinations ?? new Map<string, number>();
+    return this.finalizePreparedCandidate(analysis, existingDestinations);
   }
 
   private async finalizePreparedCandidate(
