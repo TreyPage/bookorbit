@@ -73,9 +73,9 @@ describe('LibraryIntegrityController', () => {
     const controller = new LibraryIntegrityController(service as never, { getLastScan: vi.fn() } as never);
     const user = { id: 9 } as never;
 
-    await controller.listSimilarSeries(user);
+    await controller.listSimilarSeries({ similarityPercent: 85 } as never, user);
 
-    expect(service.listSimilarSeries).toHaveBeenCalledWith(user);
+    expect(service.listSimilarSeries).toHaveBeenCalledWith(user, 85);
   });
 
   it('delegates series merge with the current user and validated request', async () => {

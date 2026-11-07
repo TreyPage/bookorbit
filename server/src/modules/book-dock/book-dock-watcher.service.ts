@@ -324,7 +324,6 @@ async function safeUnlink(path: string): Promise<void> {
   }
 }
 
-
 function isKnownIngestJunk(filename: string): boolean {
   const normalized = filename.toLowerCase();
   return JUNK_FILE_NAMES.has(normalized) || normalized.startsWith('._');

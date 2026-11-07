@@ -68,8 +68,10 @@ function makeReadyWatcher(overrides: { close?: ReturnType<typeof vi.fn> } = {}) 
 
 describe('BookDockWatcherService', () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
     vi.mocked(readdir).mockResolvedValue([]);
+    vi.mocked(stat).mockResolvedValue({ isDirectory: () => false } as any);
   });
 
   it('rescan walks files and emits summary', async () => {
@@ -96,7 +98,7 @@ describe('BookDockWatcherService', () => {
 
   it('removes only known OS junk and prunes old empty ingest folders', async () => {
     const { service, repo } = makeService();
-    vi.mocked(readdir).mockImplementation(async (path: any) => {
+    vi.mocked(readdir).mockImplementation((path: any) => {
       if (path === '/data/book-dock') {
         return [
           { name: '.DS_Store', isDirectory: () => false, isFile: () => true, isSymbolicLink: () => false },
@@ -109,7 +111,7 @@ describe('BookDockWatcherService', () => {
       if (path === '/data/book-dock/empty-old') return [] as any;
       return [] as any;
     });
-    vi.mocked(stat).mockResolvedValue({ mtimeMs: Date.now() - 10 * 60 * 1000 } as any);
+    vi.mocked(stat).mockResolvedValue({ isDirectory: () => false, mtimeMs: Date.now() - 10 * 60 * 1000 } as any);
 
     await (service as any).cleanupIngestArtifacts();
 

@@ -177,6 +177,7 @@ function defaultPatternMetadata(): BookDockMetadata {
 
 describe('BookDockFinalizeService', () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
     mockAccess.mockReset();
     mockReadFile.mockReset();
@@ -552,8 +553,8 @@ describe('BookDockFinalizeService', () => {
       expect(result).toMatchObject({
         fileId: 1,
         fileName: 'book.epub',
-        success: false,
-        message: 'A file with this name already exists at the target location',
+        success: true,
+        newName: 'existing (2).epub',
       });
       expect(validator.validateFormat).toHaveBeenCalled();
     });
@@ -1200,7 +1201,7 @@ describe('BookDockFinalizeService', () => {
       expect(repo.findExistingBooksByAbsolutePaths).toHaveBeenCalledWith(['/library/Unknown Author/1/1_alt.epub']);
     });
 
-    it('targetFileName still fails when the renamed dest also already exists', async () => {
+    it('automatically suffixes a targetFileName when its destination is occupied', async () => {
       const { service } = makeService();
       vi.spyOn(service as never, 'findLibraryOrFail').mockResolvedValue({
         id: 5,
@@ -1226,8 +1227,8 @@ describe('BookDockFinalizeService', () => {
       expect(result).toMatchObject({
         fileId: 1,
         fileName: '1.epub',
-        success: false,
-        message: 'A file with this name already exists at the target location',
+        success: true,
+        newName: 'Unknown Author/1 (2)/1_alt.epub',
       });
     });
 
@@ -2830,7 +2831,7 @@ describe('BookDockFinalizeService', () => {
 
     const classified = await (service as any).classifyDestination(analysis, new Map([['6\u0000/shared/book.epub', 77]]));
 
-    expect(classified).toMatchObject({ status: 'destination_conflict' });
+    expect(classified).toMatchObject({ status: 'ready', destPath: '/shared/book (2).epub' });
     expect(classified).not.toHaveProperty('existingBookId');
   });
 
