@@ -12,7 +12,7 @@
     "url": "https://github.com/bookorbit/bookorbit/issues"
   },
   "private": true,
-  "packageManager": "pnpm@11.28.9",
+  "packageManager": "pnpm@12.18.0",
   "scripts": {
     "setup": "bash ./scripts/bootstrap/local.sh",
     "dev": "concurrently --names \"types,server,client\" --prefix-colors \"cyan,blue,green\" \"pnpm --filter @bookorbit/types dev\" \"pnpm run dev:server\" \"pnpm run dev:client\"",
