@@ -587,8 +587,10 @@ function toDto(row: BookDockFileRow, unitFiles: BookDockUnitFileRow[] = []): Boo
 async function safeUnlink(path: string): Promise<void> {
   try {
     await unlink(path);
-  } catch {
-    // file may already be deleted
+  } catch (error) {
+    // A missing file is already cleaned up; other failures must stop the DB discard so the
+    // Book Dock row remains available for retry rather than silently orphaning a system file.
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
 }
 
