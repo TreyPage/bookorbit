@@ -169,7 +169,6 @@ export class LibraryIntegrityService {
       }
       page = 1;
     }
-    const offset = (page - 1) * pageSize;
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
     if (libraryIds.length === 0) {
       const empty = { orphanedMetadataFiles: { items: [], total: 0 }, orphanedBookFolders: { items: [], total: 0 }, orphanedFiles: { items: [], total: 0 }, emptyBookFolders: { items: [], total: 0 }, unreadableDirectories: { items: [], total: 0 }, truncated: false, hasMore: false, page: 1, pageSize: 0 } satisfies LibraryFilesystemFindingsResult;
