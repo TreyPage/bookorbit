@@ -338,6 +338,59 @@ describe('LibraryIntegrityService', () => {
     expect(repo.findDuplicateFormatGroups).not.toHaveBeenCalled();
   });
 
+  describe('cleanupDuplicateFormatFile', () => {
+    it('removes only the selected file under an accessible library root', async () => {
+      const fs = await import('node:fs/promises');
+      const removeDuplicateFormatFile = vi.fn(async (_libraryIds, _fileId, removeFile) => {
+        await removeFile({ absolutePath: '/virtual/library/book-copy.epub', libraryId: 1 });
+        return 'removed' as const;
+      });
+      const libraryService = {
+        findAccessibleLibraryIds: vi.fn().mockResolvedValue([1]),
+        findAll: vi.fn().mockResolvedValue([{ id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] }]),
+      };
+      const service = new LibraryIntegrityService({ removeDuplicateFormatFile } as never, libraryService as never, { get: () => undefined } as never);
+      const realpathSpy = vi.mocked(fs.realpath).mockImplementation((path) => Promise.resolve(String(path)));
+      const lstatSpy = vi.mocked(fs.lstat).mockResolvedValue({ isFile: () => true, isSymbolicLink: () => false } as never);
+      const unlinkSpy = vi.mocked(fs.unlink).mockResolvedValue(undefined);
+
+      try {
+        await expect(service.cleanupDuplicateFormatFile({ id: 7 } as never, 102)).resolves.toEqual({ removed: true });
+        expect(removeDuplicateFormatFile).toHaveBeenCalledWith([1], 102, expect.any(Function));
+        expect(unlinkSpy).toHaveBeenCalledTimes(1);
+        expect(unlinkSpy).toHaveBeenCalledWith('/virtual/library/book-copy.epub');
+      } finally {
+        realpathSpy.mockReset();
+        lstatSpy.mockReset();
+        unlinkSpy.mockReset();
+      }
+    });
+
+    it('does not touch disk when the selected file is outside accessible library roots', async () => {
+      const fs = await import('node:fs/promises');
+      const removeDuplicateFormatFile = vi.fn(async (_libraryIds, _fileId, removeFile) => {
+        await removeFile({ absolutePath: '/outside/book.epub', libraryId: 1 });
+        return 'removed' as const;
+      });
+      const libraryService = {
+        findAccessibleLibraryIds: vi.fn().mockResolvedValue([1]),
+        findAll: vi.fn().mockResolvedValue([{ id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] }]),
+      };
+      const service = new LibraryIntegrityService({ removeDuplicateFormatFile } as never, libraryService as never, { get: () => undefined } as never);
+      const realpathSpy = vi.mocked(fs.realpath);
+      const unlinkSpy = vi.mocked(fs.unlink);
+
+      try {
+        await expect(service.cleanupDuplicateFormatFile({ id: 7 } as never, 102)).rejects.toMatchObject({ status: 404 });
+        expect(realpathSpy).not.toHaveBeenCalled();
+        expect(unlinkSpy).not.toHaveBeenCalled();
+      } finally {
+        realpathSpy.mockReset();
+        unlinkSpy.mockReset();
+      }
+    });
+  });
+
   describe('cleanupEmptyBookFolder', () => {
     function createService(accessibleLibraryIds = [1]) {
       const libraryService = {
