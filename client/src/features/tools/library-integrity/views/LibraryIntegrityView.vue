@@ -6,7 +6,13 @@ import { ArrowRight, Copy, Files, GitMerge, Merge, RefreshCw, ShieldCheck } from
 
 import type { LibraryFilesystemFindingsResult, LibraryIntegrityScanStatus } from '@bookorbit/types'
 
-import { cleanupEmptyBookFolder, cleanupOrphanedFile, getLibraryFilesystemFindings, getLibraryIntegrityScanStatus, startLibraryIntegrityScan } from '@/features/tools/api/library-integrity'
+import {
+  cleanupEmptyBookFolder,
+  cleanupOrphanedFile,
+  getLibraryFilesystemFindings,
+  getLibraryIntegrityScanStatus,
+  startLibraryIntegrityScan,
+} from '@/features/tools/api/library-integrity'
 import MissingResourcesView from '@/features/tools/missing-resources/views/MissingResourcesView.vue'
 
 import { Button } from '@/components/ui/button'
@@ -34,7 +40,9 @@ function stopScanPolling(): void {
 
 function startScanPolling(): void {
   stopScanPolling()
-  scanPollInterval = setInterval(() => { void pollScanStatus() }, 2000)
+  scanPollInterval = setInterval(() => {
+    void pollScanStatus()
+  }, 2000)
 }
 
 async function pollScanStatus(): Promise<void> {
@@ -75,15 +83,28 @@ async function loadFilesystemFindings(append = false): Promise<void> {
   findingsLoading.value = true
   findingsError.value = false
   try {
-    const result = await getLibraryFilesystemFindings({ page: requestedPage, pageSize: findingsPageSize, snapshotId: append ? findings.value?.snapshotId : undefined })
+    const result = await getLibraryFilesystemFindings({
+      page: requestedPage,
+      pageSize: findingsPageSize,
+      snapshotId: append ? findings.value?.snapshotId : undefined,
+    })
     if (append && findings.value && result.page === requestedPage) {
       findings.value = {
         ...result,
-        orphanedMetadataFiles: { ...result.orphanedMetadataFiles, items: [...findings.value.orphanedMetadataFiles.items, ...result.orphanedMetadataFiles.items] },
-        orphanedBookFolders: { ...result.orphanedBookFolders, items: [...findings.value.orphanedBookFolders.items, ...result.orphanedBookFolders.items] },
+        orphanedMetadataFiles: {
+          ...result.orphanedMetadataFiles,
+          items: [...findings.value.orphanedMetadataFiles.items, ...result.orphanedMetadataFiles.items],
+        },
+        orphanedBookFolders: {
+          ...result.orphanedBookFolders,
+          items: [...findings.value.orphanedBookFolders.items, ...result.orphanedBookFolders.items],
+        },
         orphanedFiles: { ...result.orphanedFiles, items: [...findings.value.orphanedFiles.items, ...result.orphanedFiles.items] },
         emptyBookFolders: { ...result.emptyBookFolders, items: [...findings.value.emptyBookFolders.items, ...result.emptyBookFolders.items] },
-        unreadableDirectories: { ...result.unreadableDirectories, items: [...findings.value.unreadableDirectories.items, ...result.unreadableDirectories.items] },
+        unreadableDirectories: {
+          ...result.unreadableDirectories,
+          items: [...findings.value.unreadableDirectories.items, ...result.unreadableDirectories.items],
+        },
       }
     } else {
       findings.value = result
@@ -209,94 +230,152 @@ function openBookMerge(): void {
       <p v-else-if="!scanStatus" class="mt-3 text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.scanStatus.noScan') }}</p>
       <div v-else class="mt-4 space-y-3">
         <div class="flex flex-wrap gap-x-5 gap-y-1 text-sm">
-          <span><strong>{{ t('tools.libraryIntegrity.scanStatus.status') }}:</strong> {{ t('tools.libraryIntegrity.scanStatus.states.' + scanStatus.status) }}</span>
-          <span><strong>{{ t('tools.libraryIntegrity.scanStatus.started') }}:</strong> {{ formatScanDate(scanStatus.startedAt) }}</span>
-          <span v-if="scanStatus.completedAt"><strong>{{ t('tools.libraryIntegrity.scanStatus.completed') }}:</strong> {{ formatScanDate(scanStatus.completedAt) }}</span>
+          <span
+            ><strong>{{ t('tools.libraryIntegrity.scanStatus.status') }}:</strong>
+            {{ t('tools.libraryIntegrity.scanStatus.states.' + scanStatus.status) }}</span
+          >
+          <span
+            ><strong>{{ t('tools.libraryIntegrity.scanStatus.started') }}:</strong> {{ formatScanDate(scanStatus.startedAt) }}</span
+          >
+          <span v-if="scanStatus.completedAt"
+            ><strong>{{ t('tools.libraryIntegrity.scanStatus.completed') }}:</strong> {{ formatScanDate(scanStatus.completedAt) }}</span
+          >
         </div>
         <p v-if="scanStatus.errorMessage" class="text-sm text-destructive">{{ scanStatus.errorMessage }}</p>
         <dl v-if="scanStatus.summary" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div v-for="item in scanMetrics" :key="item.key" class="rounded-lg bg-muted/50 px-3 py-2">
             <dt class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.scanStatus.metrics.' + item.key) }}</dt>
-            <dd class="text-lg font-semibold tabular-nums text-foreground">{{ item.key === 'coverBytes' ? (item.value / 1024 / 1024).toFixed(2) + ' MB' : item.value }}</dd>
+            <dd class="text-lg font-semibold tabular-nums text-foreground">
+              {{ item.key === 'coverBytes' ? (item.value / 1024 / 1024).toFixed(2) + ' MB' : item.value }}
+            </dd>
           </div>
         </dl>
-        <p v-if="scanStatus.summary?.sidecarScanTruncated || scanStatus.summary?.filesystemScanTruncated" class="text-sm text-warning">{{ t('tools.libraryIntegrity.scanStatus.truncated') }}</p>
+        <p v-if="scanStatus.summary?.sidecarScanTruncated || scanStatus.summary?.filesystemScanTruncated" class="text-sm text-warning">
+          {{ t('tools.libraryIntegrity.scanStatus.truncated') }}
+        </p>
       </div>
     </section>
 
     <section class="rounded-xl border border-border bg-card p-5">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="space-y-1">
-              <h3 class="text-sm font-semibold text-foreground">{{ t('tools.libraryIntegrity.findings.title') }}</h3>
-              <p class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.description') }}</p>
-            </div>
-            <Button size="sm" variant="outline" :disabled="findingsLoading" @click="loadFilesystemFindings">
-              <RefreshCw class="size-4" :class="{ 'animate-spin': findingsLoading }" aria-hidden="true" />
-              {{ t('tools.libraryIntegrity.findings.load') }}
-            </Button>
-          </div>
-          <p v-if="findingsError" role="alert" class="mt-3 text-sm text-destructive">{{ t('tools.libraryIntegrity.findings.loadFailed') }}</p>
-          <p v-if="cleanupError" role="alert" class="mt-2 text-sm text-destructive">{{ t('tools.libraryIntegrity.findings.cleanupFailed') }}</p>
-          <div v-if="findings" class="mt-3 grid gap-4 lg:grid-cols-2">
-            <section class="min-w-0 space-y-2">
-              <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.orphanedBookFolders', { count: findings.orphanedBookFolders.total }) }}</h4>
-              <p v-if="findings.orphanedBookFolders.total > findings.orphanedBookFolders.items.length" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.showingCount', { shown: findings.orphanedBookFolders.items.length, total: findings.orphanedBookFolders.total }) }}</p>
-              <p v-if="findings.orphanedBookFolders.items.length === 0" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.none') }}</p>
-              <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
-                <li v-for="item in findings.orphanedBookFolders.items" :key="item.path" class="space-y-0.5 text-xs">
-                  <span class="block text-muted-foreground">{{ item.libraryName }}</span>
-                  <code class="block break-all text-foreground">{{ item.path }}</code>
-                </li>
-              </ul>
-            </section>
-            <section class="min-w-0 space-y-2">
-              <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.orphanedFiles', { count: findings.orphanedFiles.total }) }}</h4>
-              <p v-if="findings.orphanedFiles.total > findings.orphanedFiles.items.length" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.showingCount', { shown: findings.orphanedFiles.items.length, total: findings.orphanedFiles.total }) }}</p>
-              <p v-if="findings.orphanedFiles.items.length === 0" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.none') }}</p>
-              <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
-                <li v-for="item in findings.orphanedFiles.items" :key="item.path" class="flex items-start justify-between gap-2 text-xs">
-                  <div class="min-w-0 space-y-0.5">
-                    <span class="block text-muted-foreground">{{ item.libraryName }} · {{ t('tools.libraryIntegrity.findings.fileReasons.' + item.reason) }}</span>
-                    <code class="block break-all text-foreground">{{ item.path }}</code>
-                  </div>
-                  <Button size="sm" variant="outline" :disabled="cleaningFile !== null || cleaningFolder !== null" @click="removeOrphanedFile(item)">
-                    {{ cleaningFile === item.path ? t('tools.libraryIntegrity.findings.cleaning') : t('tools.libraryIntegrity.findings.removeOrphanedFile') }}
-                  </Button>
-                </li>
-              </ul>
-            </section>
-            <section class="min-w-0 space-y-2">
-              <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.emptyFolders', { count: findings.emptyBookFolders.total }) }}</h4>
-              <p v-if="findings.emptyBookFolders.total > findings.emptyBookFolders.items.length" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.showingCount', { shown: findings.emptyBookFolders.items.length, total: findings.emptyBookFolders.total }) }}</p>
-              <p v-if="findings.emptyBookFolders.items.length === 0" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.none') }}</p>
-              <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
-                <li v-for="item in findings.emptyBookFolders.items" :key="item.path" class="flex items-start justify-between gap-2 text-xs">
-                  <div class="min-w-0 space-y-0.5">
-                    <span class="block text-muted-foreground">{{ item.libraryName }}</span>
-                    <code class="block break-all text-foreground">{{ item.path }}</code>
-                  </div>
-                  <Button size="sm" variant="outline" :disabled="cleaningFolder !== null" @click="removeEmptyFolder(item)">
-                    {{ cleaningFolder === item.path ? t('tools.libraryIntegrity.findings.cleaning') : t('tools.libraryIntegrity.findings.removeEmptyFolder') }}
-                  </Button>
-                </li>
-              </ul>
-            </section>
-            <section class="min-w-0 space-y-2">
-              <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.unreadableDirectories', { count: findings.unreadableDirectories.total }) }}</h4>
-              <p v-if="findings.unreadableDirectories.total > findings.unreadableDirectories.items.length" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.showingCount', { shown: findings.unreadableDirectories.items.length, total: findings.unreadableDirectories.total }) }}</p>
-              <p v-if="findings.unreadableDirectories.items.length === 0" class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.none') }}</p>
-              <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
-                <li v-for="item in findings.unreadableDirectories.items" :key="item.path" class="space-y-0.5 text-xs">
-                  <span class="block text-muted-foreground">{{ item.libraryName }}</span>
-                  <code class="block break-all text-foreground">{{ item.path }}</code>
-                </li>
-              </ul>
-            </section>
-          </div>
-          <p v-if="findings?.truncated" class="mt-2 text-xs text-warning">{{ t('tools.libraryIntegrity.findings.scanTruncated') }}</p>
-          <div v-if="findings?.hasMore" class="mt-3 flex justify-center">
-            <Button size="sm" variant="outline" :disabled="findingsLoading" @click="loadFilesystemFindings(true)">{{ findingsLoading ? t('tools.libraryIntegrity.findings.loadingMore') : t('tools.libraryIntegrity.findings.loadMore') }}</Button>
-          </div>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="space-y-1">
+          <h3 class="text-sm font-semibold text-foreground">{{ t('tools.libraryIntegrity.findings.title') }}</h3>
+          <p class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.findings.description') }}</p>
+        </div>
+        <Button size="sm" variant="outline" :disabled="findingsLoading" @click="loadFilesystemFindings">
+          <RefreshCw class="size-4" :class="{ 'animate-spin': findingsLoading }" aria-hidden="true" />
+          {{ t('tools.libraryIntegrity.findings.load') }}
+        </Button>
+      </div>
+      <p v-if="findingsError" role="alert" class="mt-3 text-sm text-destructive">{{ t('tools.libraryIntegrity.findings.loadFailed') }}</p>
+      <p v-if="cleanupError" role="alert" class="mt-2 text-sm text-destructive">{{ t('tools.libraryIntegrity.findings.cleanupFailed') }}</p>
+      <div v-if="findings" class="mt-3 grid gap-4 lg:grid-cols-2">
+        <section class="min-w-0 space-y-2">
+          <h4 class="text-sm font-medium">
+            {{ t('tools.libraryIntegrity.findings.orphanedBookFolders', { count: findings.orphanedBookFolders.total }) }}
+          </h4>
+          <p v-if="findings.orphanedBookFolders.total > findings.orphanedBookFolders.items.length" class="text-xs text-muted-foreground">
+            {{
+              t('tools.libraryIntegrity.findings.showingCount', {
+                shown: findings.orphanedBookFolders.items.length,
+                total: findings.orphanedBookFolders.total,
+              })
+            }}
+          </p>
+          <p v-if="findings.orphanedBookFolders.items.length === 0" class="text-xs text-muted-foreground">
+            {{ t('tools.libraryIntegrity.findings.none') }}
+          </p>
+          <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
+            <li v-for="item in findings.orphanedBookFolders.items" :key="item.path" class="space-y-0.5 text-xs">
+              <span class="block text-muted-foreground">{{ item.libraryName }}</span>
+              <code class="block break-all text-foreground">{{ item.path }}</code>
+            </li>
+          </ul>
+        </section>
+        <section class="min-w-0 space-y-2">
+          <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.orphanedFiles', { count: findings.orphanedFiles.total }) }}</h4>
+          <p v-if="findings.orphanedFiles.total > findings.orphanedFiles.items.length" class="text-xs text-muted-foreground">
+            {{
+              t('tools.libraryIntegrity.findings.showingCount', { shown: findings.orphanedFiles.items.length, total: findings.orphanedFiles.total })
+            }}
+          </p>
+          <p v-if="findings.orphanedFiles.items.length === 0" class="text-xs text-muted-foreground">
+            {{ t('tools.libraryIntegrity.findings.none') }}
+          </p>
+          <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
+            <li v-for="item in findings.orphanedFiles.items" :key="item.path" class="flex items-start justify-between gap-2 text-xs">
+              <div class="min-w-0 space-y-0.5">
+                <span class="block text-muted-foreground"
+                  >{{ item.libraryName }} · {{ t('tools.libraryIntegrity.findings.fileReasons.' + item.reason) }}</span
+                >
+                <code class="block break-all text-foreground">{{ item.path }}</code>
+              </div>
+              <Button size="sm" variant="outline" :disabled="cleaningFile !== null || cleaningFolder !== null" @click="removeOrphanedFile(item)">
+                {{
+                  cleaningFile === item.path ? t('tools.libraryIntegrity.findings.cleaning') : t('tools.libraryIntegrity.findings.removeOrphanedFile')
+                }}
+              </Button>
+            </li>
+          </ul>
+        </section>
+        <section class="min-w-0 space-y-2">
+          <h4 class="text-sm font-medium">{{ t('tools.libraryIntegrity.findings.emptyFolders', { count: findings.emptyBookFolders.total }) }}</h4>
+          <p v-if="findings.emptyBookFolders.total > findings.emptyBookFolders.items.length" class="text-xs text-muted-foreground">
+            {{
+              t('tools.libraryIntegrity.findings.showingCount', {
+                shown: findings.emptyBookFolders.items.length,
+                total: findings.emptyBookFolders.total,
+              })
+            }}
+          </p>
+          <p v-if="findings.emptyBookFolders.items.length === 0" class="text-xs text-muted-foreground">
+            {{ t('tools.libraryIntegrity.findings.none') }}
+          </p>
+          <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
+            <li v-for="item in findings.emptyBookFolders.items" :key="item.path" class="flex items-start justify-between gap-2 text-xs">
+              <div class="min-w-0 space-y-0.5">
+                <span class="block text-muted-foreground">{{ item.libraryName }}</span>
+                <code class="block break-all text-foreground">{{ item.path }}</code>
+              </div>
+              <Button size="sm" variant="outline" :disabled="cleaningFolder !== null" @click="removeEmptyFolder(item)">
+                {{
+                  cleaningFolder === item.path
+                    ? t('tools.libraryIntegrity.findings.cleaning')
+                    : t('tools.libraryIntegrity.findings.removeEmptyFolder')
+                }}
+              </Button>
+            </li>
+          </ul>
+        </section>
+        <section class="min-w-0 space-y-2">
+          <h4 class="text-sm font-medium">
+            {{ t('tools.libraryIntegrity.findings.unreadableDirectories', { count: findings.unreadableDirectories.total }) }}
+          </h4>
+          <p v-if="findings.unreadableDirectories.total > findings.unreadableDirectories.items.length" class="text-xs text-muted-foreground">
+            {{
+              t('tools.libraryIntegrity.findings.showingCount', {
+                shown: findings.unreadableDirectories.items.length,
+                total: findings.unreadableDirectories.total,
+              })
+            }}
+          </p>
+          <p v-if="findings.unreadableDirectories.items.length === 0" class="text-xs text-muted-foreground">
+            {{ t('tools.libraryIntegrity.findings.none') }}
+          </p>
+          <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
+            <li v-for="item in findings.unreadableDirectories.items" :key="item.path" class="space-y-0.5 text-xs">
+              <span class="block text-muted-foreground">{{ item.libraryName }}</span>
+              <code class="block break-all text-foreground">{{ item.path }}</code>
+            </li>
+          </ul>
+        </section>
+      </div>
+      <p v-if="findings?.truncated" class="mt-2 text-xs text-warning">{{ t('tools.libraryIntegrity.findings.scanTruncated') }}</p>
+      <div v-if="findings?.hasMore" class="mt-3 flex justify-center">
+        <Button size="sm" variant="outline" :disabled="findingsLoading" @click="loadFilesystemFindings(true)">{{
+          findingsLoading ? t('tools.libraryIntegrity.findings.loadingMore') : t('tools.libraryIntegrity.findings.loadMore')
+        }}</Button>
+      </div>
     </section>
 
     <section class="grid gap-4 md:grid-cols-2" :aria-label="t('tools.libraryIntegrity.checksLabel')">

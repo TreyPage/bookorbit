@@ -52,7 +52,10 @@ describe('LibraryIntegrityScanSchedulerService', () => {
         }),
       ),
     };
-    const service = new LibraryIntegrityScanSchedulerService(integrityService as never);
+    const service = new LibraryIntegrityScanSchedulerService(
+      integrityService as never,
+      { saveLibraryIntegrityScanStatus: vi.fn().mockResolvedValue(undefined) } as never,
+    );
     vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
 
     const first = service.runNow();
@@ -67,6 +70,8 @@ describe('LibraryIntegrityScanSchedulerService', () => {
       sidecarEntries: 0,
       sidecarScanTruncated: false,
       orphanedMetadataFiles: 0,
+      orphanedBookFolders: 0,
+      orphanedFiles: 0,
       emptyBookFolders: 0,
       orphanedCoverDirectories: 0,
       orphanedCoverBytes: 0,
@@ -85,8 +90,6 @@ describe('LibraryIntegrityScanSchedulerService', () => {
     expect(service.getLastScan()).toMatchObject({ status: 'failed', errorMessage: 'disk unavailable retry later' });
   });
 });
-
-
 describe('LibraryIntegrityScanSchedulerService persistence', () => {
   it('restores the latest completed scan after restart', async () => {
     const persisted = { status: 'completed', startedAt: '2026-11-06T10:00:00.000Z', completedAt: '2026-11-06T10:01:00.000Z', summary: null, errorMessage: null };

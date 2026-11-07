@@ -176,7 +176,6 @@ export type LibraryIntegrityScanStatus = {
   errorMessage: string | null;
 };
 
-
 export type LibraryFilesystemFinding = {
   libraryId: number;
   libraryName: string;

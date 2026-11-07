@@ -82,7 +82,6 @@ export const entityDuplicateScanStatus = pgTable('entity_duplicate_scan_status',
 
 export type EntityDuplicateScanStatus = typeof entityDuplicateScanStatus.$inferSelect;
 
-
 /** The single durable record for the latest global library-integrity scan. */
 export const libraryIntegrityScanStatus = pgTable('library_integrity_scan_status', {
   id: varchar('id', { length: 32 }).primaryKey(),

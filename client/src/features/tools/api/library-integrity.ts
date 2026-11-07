@@ -1,4 +1,10 @@
-import type { DuplicateFormatPage, LibraryFilesystemFindingsResult, LibraryIntegrityScanStatus, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types'
+import type {
+  DuplicateFormatPage,
+  LibraryFilesystemFindingsResult,
+  LibraryIntegrityScanStatus,
+  SidecarFilePage,
+  SimilarSeriesCandidatesResult,
+} from '@bookorbit/types'
 
 import { api } from '@/lib/api'
 
@@ -54,8 +60,11 @@ export async function startLibraryIntegrityScan(): Promise<LibraryIntegrityScanS
   return response.json() as Promise<LibraryIntegrityScanStatus | null>
 }
 
-
-export async function getLibraryFilesystemFindings(params: { page: number; pageSize: number; snapshotId?: string }): Promise<LibraryFilesystemFindingsResult> {
+export async function getLibraryFilesystemFindings(params: {
+  page: number
+  pageSize: number
+  snapshotId?: string
+}): Promise<LibraryFilesystemFindingsResult> {
   const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize) })
   if (params.snapshotId) query.set('snapshotId', params.snapshotId)
   const response = await api(`/api/v1/maintenance/library-integrity/filesystem-findings?${query.toString()}`)
