@@ -921,11 +921,66 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
       };
     }
 
+    // The destination is occupied by something that is not a known same-format
+    // book file. Preserve the incoming book and allocate a deterministic suffixed
+    // destination instead of blocking the import for a manual rename.
+    const renamed = await this.allocateCollisionFreeDestination(analysis, existingDestinations);
+    if (renamed) return renamed;
+
     return {
       ...analysis,
       status: 'destination_conflict',
-      message: 'A file with this name already exists at the target location',
+      message: 'Could not find an unused destination name after 50 attempts',
     };
+  }
+
+  private async allocateCollisionFreeDestination(
+    analysis: FinalizeCandidateAnalysis,
+    existingDestinations: Map<string, number>,
+  ): Promise<FinalizeCandidateAnalysis | null> {
+    if (!analysis.destPath || !analysis.library || !analysis.folder || !analysis.placement?.length) return null;
+    const perFolder = analysis.library.organizationMode === 'book_per_folder';
+    const originalFolder = analysis.bookFolderPath ?? dirname(analysis.destPath);
+    const extension = extname(analysis.destPath);
+    const stem = basename(analysis.destPath, extension);
+
+    for (let attempt = 2; attempt <= 50; attempt++) {
+      const suffix = ` (${attempt})`;
+      const candidateFolder = perFolder ? `${originalFolder}${suffix}` : dirname(analysis.destPath);
+      const candidatePrimary = perFolder
+        ? join(candidateFolder, relative(originalFolder, analysis.destPath))
+        : join(dirname(analysis.destPath), `${stem}${suffix}${extension}`);
+      const placement = analysis.placement.map((file) => ({
+        ...file,
+        destPath: perFolder ? join(candidateFolder, relative(originalFolder, file.destPath)) : (file.destPath === analysis.destPath ? candidatePrimary : file.destPath),
+      }));
+
+      let occupied = false;
+      for (const file of placement) {
+        try {
+          await fsAccess(file.destPath);
+          occupied = true;
+          break;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        }
+        if (existingDestinations.has(this.destinationKey(analysis.library.id, file.destPath))) {
+          occupied = true;
+          break;
+        }
+      }
+      if (occupied) continue;
+
+      const newName = candidatePrimary.substring(analysis.folder.path.length + 1);
+      return {
+        ...analysis,
+        destPath: candidatePrimary,
+        newName,
+        placement,
+        ...(perFolder ? { bookFolderPath: candidateFolder } : {}),
+      };
+    }
+    return null;
   }
 
   private logFinalizeFailure(fileId: number, stage: string, error: unknown): void {
