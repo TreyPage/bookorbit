@@ -51,18 +51,18 @@ describe('LibraryIntegrityService', () => {
 
   it('does not duplicate text-file findings in the legacy sidecar list', async () => {
     const fs = await import('node:fs/promises');
-    const readdirSpy = vi.spyOn(fs, 'readdir').mockImplementation((path) => Promise.resolve().then(() => {
-      if (String(path) !== '/virtual/library') return [];
-      return [
-        { name: 'notes.txt', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
-        { name: 'partial.tmp', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
-      ] as never;
-    }));
+    const readdirSpy = vi.spyOn(fs, 'readdir').mockImplementation((path) =>
+      Promise.resolve().then(() => {
+        if (String(path) !== '/virtual/library') return [];
+        return [
+          { name: 'notes.txt', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
+          { name: 'partial.tmp', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
+        ] as never;
+      }),
+    );
     const statSpy = vi.spyOn(fs, 'stat').mockResolvedValue({ size: 12 } as never);
     const libraryService = {
-      findAll: vi.fn().mockResolvedValue([
-        { id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] },
-      ]),
+      findAll: vi.fn().mockResolvedValue([{ id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] }]),
     };
     const service = new LibraryIntegrityService({} as never, libraryService as never, { get: () => '/nonexistent-appdata' } as never);
 
@@ -89,41 +89,52 @@ describe('LibraryIntegrityService', () => {
         { id: 2, name: 'Private', folders: [{ path: '/private' }] },
       ]),
     };
-    const readdirSpy = vi.spyOn(originalReaddir, 'readdir').mockImplementation((path) => Promise.resolve().then(() => {
-      const value = String(path);
-      if (value === '/virtual/library') return [
-        { name: 'known-book', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
-        { name: 'orphan', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
-        { name: 'empty-untracked', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
-        { name: 'valid-book', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
-        { name: 'locked', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
-      ] as never;
-      if (value === '/virtual/library/known-book') return [] as never;
-      if (value === '/virtual/library/valid-book') return [
-        { name: 'novel.epub', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
-        { name: 'notes.txt', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
-      ] as never;
-      if (value === '/virtual/library/locked') throw new Error('EACCES');
-      if (value === '/virtual/library/orphan') return [
-        { name: 'metadata.json', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
-        { name: 'cover.jpg', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
-      ] as never;
-      return [] as never;
-    }));
+    const readdirSpy = vi.spyOn(originalReaddir, 'readdir').mockImplementation((path) =>
+      Promise.resolve().then(() => {
+        const value = String(path);
+        if (value === '/virtual/library')
+          return [
+            { name: 'known-book', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
+            { name: 'orphan', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
+            { name: 'empty-untracked', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
+            { name: 'valid-book', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
+            { name: 'locked', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false },
+          ] as never;
+        if (value === '/virtual/library/known-book') return [] as never;
+        if (value === '/virtual/library/valid-book')
+          return [
+            { name: 'novel.epub', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
+            { name: 'notes.txt', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
+          ] as never;
+        if (value === '/virtual/library/locked') throw new Error('EACCES');
+        if (value === '/virtual/library/orphan')
+          return [
+            { name: 'metadata.json', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
+            { name: 'cover.jpg', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true },
+          ] as never;
+        return [] as never;
+      }),
+    );
     const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => undefined } as never);
     try {
       await expect(service.listFilesystemFindings({ id: 7 } as never)).resolves.toEqual({
         orphanedMetadataFiles: { items: [{ libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan/metadata.json' }], total: 1 },
         orphanedBookFolders: { items: [{ libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan' }], total: 1 },
-        orphanedFiles: { items: [
-          { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan/cover.jpg', reason: 'folder_without_format' },
-          { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan/metadata.json', reason: 'folder_without_format' },
-          { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/valid-book/notes.txt', reason: 'text_file' },
-        ], total: 3 },
-        emptyBookFolders: { items: [
-          { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/empty-untracked' },
-          { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/known-book' },
-        ], total: 2 },
+        orphanedFiles: {
+          items: [
+            { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan/cover.jpg', reason: 'folder_without_format' },
+            { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/orphan/metadata.json', reason: 'folder_without_format' },
+            { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/valid-book/notes.txt', reason: 'text_file' },
+          ],
+          total: 3,
+        },
+        emptyBookFolders: {
+          items: [
+            { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/empty-untracked' },
+            { libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/known-book' },
+          ],
+          total: 2,
+        },
         unreadableDirectories: { items: [{ libraryId: 1, libraryName: 'Fiction', path: '/virtual/library/locked' }], total: 1 },
         truncated: false,
         hasMore: false,
@@ -143,13 +154,20 @@ describe('LibraryIntegrityService', () => {
       findAccessibleLibraryIds: vi.fn().mockResolvedValue([1]),
       findAll: vi.fn().mockResolvedValue([{ id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] }]),
     };
-    const readdirSpy = vi.spyOn(fs, 'readdir').mockImplementation((path) => Promise.resolve().then(() => {
-      if (String(path) === '/virtual/library') return Array.from({ length: 3 }, (_, index) => ({
-        name: `orphan-${index}`, isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false,
-      })) as never;
-      if (String(path).startsWith('/virtual/library/orphan-')) return [{ name: 'metadata.json', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true }] as never;
-      return [] as never;
-    }));
+    const readdirSpy = vi.spyOn(fs, 'readdir').mockImplementation((path) =>
+      Promise.resolve().then(() => {
+        if (String(path) === '/virtual/library')
+          return Array.from({ length: 3 }, (_, index) => ({
+            name: `orphan-${index}`,
+            isSymbolicLink: () => false,
+            isDirectory: () => true,
+            isFile: () => false,
+          })) as never;
+        if (String(path).startsWith('/virtual/library/orphan-'))
+          return [{ name: 'metadata.json', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true }] as never;
+        return [] as never;
+      }),
+    );
     const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => undefined } as never);
     try {
       const first = await service.listFilesystemFindings({ id: 7 } as never, 1, 2);
@@ -172,16 +190,18 @@ describe('LibraryIntegrityService', () => {
     const fs = await import('node:fs/promises');
     const repo = { findBookFolderPaths: vi.fn().mockResolvedValue([]) };
     const libraryService = {
-      findAccessibleLibraryIds: vi.fn()
-        .mockResolvedValueOnce([1])
-        .mockResolvedValueOnce([]),
+      findAccessibleLibraryIds: vi.fn().mockResolvedValueOnce([1]).mockResolvedValueOnce([]),
       findAll: vi.fn().mockResolvedValue([{ id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] }]),
     };
-    const readdirSpy = vi.spyOn(fs, 'readdir').mockImplementation((path) => Promise.resolve().then(() => {
-      if (String(path) === '/virtual/library') return [{ name: 'orphan', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false }] as never;
-      if (String(path) === '/virtual/library/orphan') return [{ name: 'metadata.json', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true }] as never;
-      return [] as never;
-    }));
+    const readdirSpy = vi.spyOn(fs, 'readdir').mockImplementation((path) =>
+      Promise.resolve().then(() => {
+        if (String(path) === '/virtual/library')
+          return [{ name: 'orphan', isSymbolicLink: () => false, isDirectory: () => true, isFile: () => false }] as never;
+        if (String(path) === '/virtual/library/orphan')
+          return [{ name: 'metadata.json', isSymbolicLink: () => false, isDirectory: () => false, isFile: () => true }] as never;
+        return [] as never;
+      }),
+    );
     const service = new LibraryIntegrityService(repo as never, libraryService as never, { get: () => undefined } as never);
     try {
       const first = await service.listFilesystemFindings({ id: 7 } as never, 1, 10);
@@ -284,14 +304,11 @@ describe('LibraryIntegrityService', () => {
     expect(repo.findDuplicateFormatGroups).not.toHaveBeenCalled();
   });
 
-
   describe('cleanupEmptyBookFolder', () => {
     function createService(accessibleLibraryIds = [1]) {
       const libraryService = {
         findAccessibleLibraryIds: vi.fn().mockResolvedValue(accessibleLibraryIds),
-        findAll: vi.fn().mockResolvedValue([
-          { id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] },
-        ]),
+        findAll: vi.fn().mockResolvedValue([{ id: 1, name: 'Fiction', folders: [{ path: '/virtual/library' }] }]),
       };
       return new LibraryIntegrityService({} as never, libraryService as never, { get: () => undefined } as never);
     }
@@ -305,8 +322,7 @@ describe('LibraryIntegrityService', () => {
       const rmdirSpy = vi.spyOn(fs, 'rmdir').mockResolvedValue(undefined);
 
       try {
-        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library/untracked-empty'))
-          .resolves.toEqual({ removed: true });
+        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library/untracked-empty')).resolves.toEqual({ removed: true });
         expect(lstatSpy).toHaveBeenCalledWith('/virtual/library/untracked-empty');
         expect(readdirSpy).toHaveBeenCalledWith('/virtual/library/untracked-empty');
         expect(rmdirSpy).toHaveBeenCalledWith('/virtual/library/untracked-empty');
@@ -324,10 +340,8 @@ describe('LibraryIntegrityService', () => {
       const realpathSpy = vi.spyOn(fs, 'realpath');
 
       try {
-        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library'))
-          .rejects.toMatchObject({ status: 404 });
-        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library-backup/empty'))
-          .rejects.toMatchObject({ status: 404 });
+        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library')).rejects.toMatchObject({ status: 404 });
+        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library-backup/empty')).rejects.toMatchObject({ status: 404 });
         expect(realpathSpy).not.toHaveBeenCalled();
       } finally {
         realpathSpy.mockRestore();
@@ -340,8 +354,7 @@ describe('LibraryIntegrityService', () => {
       const realpathSpy = vi.spyOn(fs, 'realpath');
 
       try {
-        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library/empty'))
-          .rejects.toMatchObject({ status: 404 });
+        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library/empty')).rejects.toMatchObject({ status: 404 });
         expect(realpathSpy).not.toHaveBeenCalled();
       } finally {
         realpathSpy.mockRestore();
@@ -357,8 +370,7 @@ describe('LibraryIntegrityService', () => {
       const rmdirSpy = vi.spyOn(fs, 'rmdir');
 
       try {
-        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library/changed'))
-          .rejects.toMatchObject({ status: 409 });
+        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library/changed')).rejects.toMatchObject({ status: 409 });
         expect(rmdirSpy).not.toHaveBeenCalled();
       } finally {
         realpathSpy.mockRestore();
@@ -371,20 +383,19 @@ describe('LibraryIntegrityService', () => {
     it('rejects symlink targets and real paths that escape the library root', async () => {
       const fs = await import('node:fs/promises');
       const service = createService();
-      const realpathSpy = vi.spyOn(fs, 'realpath').mockImplementation((path) => Promise.resolve(
-        String(path) === '/virtual/library/linked' ? '/outside/secret' : String(path)));
+      const realpathSpy = vi
+        .spyOn(fs, 'realpath')
+        .mockImplementation((path) => Promise.resolve(String(path) === '/virtual/library/linked' ? '/outside/secret' : String(path)));
       const lstatSpy = vi.spyOn(fs, 'lstat').mockResolvedValue({ isDirectory: () => true, isSymbolicLink: () => true } as never);
       const readdirSpy = vi.spyOn(fs, 'readdir');
       const rmdirSpy = vi.spyOn(fs, 'rmdir');
 
       try {
-        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library/linked'))
-          .rejects.toMatchObject({ status: 404 });
+        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library/linked')).rejects.toMatchObject({ status: 404 });
         expect(lstatSpy).not.toHaveBeenCalled();
 
         realpathSpy.mockImplementation((path) => Promise.resolve(String(path)));
-        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library/symlink'))
-          .rejects.toMatchObject({ status: 409 });
+        await expect(service.cleanupEmptyBookFolder({ id: 7 } as never, 1, '/virtual/library/symlink')).rejects.toMatchObject({ status: 409 });
         expect(readdirSpy).not.toHaveBeenCalled();
         expect(rmdirSpy).not.toHaveBeenCalled();
       } finally {
@@ -417,8 +428,7 @@ describe('LibraryIntegrityService', () => {
       const unlinkSpy = vi.spyOn(fs, 'unlink').mockResolvedValue(undefined);
 
       try {
-        await expect(service.cleanupOrphanedFile({ id: 7 } as never, 1, '/virtual/library/orphan/metadata.json'))
-          .resolves.toEqual({ removed: true });
+        await expect(service.cleanupOrphanedFile({ id: 7 } as never, 1, '/virtual/library/orphan/metadata.json')).resolves.toEqual({ removed: true });
         expect(unlinkSpy).toHaveBeenCalledWith('/virtual/library/orphan/metadata.json');
       } finally {
         realpathSpy.mockRestore();
@@ -440,10 +450,8 @@ describe('LibraryIntegrityService', () => {
       const unlinkSpy = vi.spyOn(fs, 'unlink');
 
       try {
-        await expect(service.cleanupOrphanedFile({ id: 7 } as never, 1, '/virtual/library/book.epub'))
-          .rejects.toMatchObject({ status: 409 });
-        await expect(service.cleanupOrphanedFile({ id: 7 } as never, 1, '/virtual/library/metadata.json'))
-          .rejects.toMatchObject({ status: 409 });
+        await expect(service.cleanupOrphanedFile({ id: 7 } as never, 1, '/virtual/library/book.epub')).rejects.toMatchObject({ status: 409 });
+        await expect(service.cleanupOrphanedFile({ id: 7 } as never, 1, '/virtual/library/metadata.json')).rejects.toMatchObject({ status: 409 });
         expect(unlinkSpy).not.toHaveBeenCalled();
       } finally {
         realpathSpy.mockRestore();
@@ -453,5 +461,4 @@ describe('LibraryIntegrityService', () => {
       }
     });
   });
-
 });

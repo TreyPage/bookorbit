@@ -4,7 +4,15 @@ import { randomUUID } from 'node:crypto';
 import { lstat, readdir, realpath, rmdir, stat, unlink } from 'node:fs/promises';
 import { extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { isBookFormat } from '@bookorbit/types';
-import type { DuplicateFormatGroup, DuplicateFormatPage, LibraryFilesystemFinding, LibraryFilesystemFindingsResult, SidecarFileEntry, SidecarFilePage, SimilarSeriesCandidatesResult } from '@bookorbit/types';
+import type {
+  DuplicateFormatGroup,
+  DuplicateFormatPage,
+  LibraryFilesystemFinding,
+  LibraryFilesystemFindingsResult,
+  SidecarFileEntry,
+  SidecarFilePage,
+  SimilarSeriesCandidatesResult,
+} from '@bookorbit/types';
 
 import type { RequestUser } from '../../common/types/request-user';
 import type { LibraryIntegrityScanSummary } from '@bookorbit/types';
@@ -148,9 +156,17 @@ export class LibraryIntegrityService {
       }
     }
 
-    return { orphanedMetadataFiles, orphanedBookFolders, orphanedFiles, emptyBookFolders, orphanedCoverDirectories, orphanedCoverBytes, truncated, unreadableDirectories };
+    return {
+      orphanedMetadataFiles,
+      orphanedBookFolders,
+      orphanedFiles,
+      emptyBookFolders,
+      orphanedCoverDirectories,
+      orphanedCoverBytes,
+      truncated,
+      unreadableDirectories,
+    };
   }
-
 
   /**
    * Returns bounded, user-scoped filesystem findings. This endpoint never mutates files.
@@ -167,7 +183,17 @@ export class LibraryIntegrityService {
     }
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
     if (libraryIds.length === 0) {
-      const empty = { orphanedMetadataFiles: { items: [], total: 0 }, orphanedBookFolders: { items: [], total: 0 }, orphanedFiles: { items: [], total: 0 }, emptyBookFolders: { items: [], total: 0 }, unreadableDirectories: { items: [], total: 0 }, truncated: false, hasMore: false, page: 1, pageSize: 0 } satisfies LibraryFilesystemFindingsResult;
+      const empty = {
+        orphanedMetadataFiles: { items: [], total: 0 },
+        orphanedBookFolders: { items: [], total: 0 },
+        orphanedFiles: { items: [], total: 0 },
+        emptyBookFolders: { items: [], total: 0 },
+        unreadableDirectories: { items: [], total: 0 },
+        truncated: false,
+        hasMore: false,
+        page: 1,
+        pageSize: 0,
+      } satisfies LibraryFilesystemFindingsResult;
       return this.storeFilesystemFindingsSnapshot(user.id, empty, pageSize);
     }
 
@@ -258,7 +284,17 @@ export class LibraryIntegrityService {
     orphanedFiles.sort(sort);
     emptyBookFolders.sort(sort);
     unreadableDirectories.sort(sort);
-    const snapshot = { orphanedMetadataFiles: { items: orphanedMetadataFiles, total: orphanedMetadataTotal }, orphanedBookFolders: { items: orphanedBookFolders, total: orphanedBookFolderTotal }, orphanedFiles: { items: orphanedFiles, total: orphanedFileTotal }, emptyBookFolders: { items: emptyBookFolders, total: emptyFolderTotal }, unreadableDirectories: { items: unreadableDirectories, total: unreadableDirectoryTotal }, truncated, hasMore: false, page: 1, pageSize: 0 } satisfies LibraryFilesystemFindingsResult;
+    const snapshot = {
+      orphanedMetadataFiles: { items: orphanedMetadataFiles, total: orphanedMetadataTotal },
+      orphanedBookFolders: { items: orphanedBookFolders, total: orphanedBookFolderTotal },
+      orphanedFiles: { items: orphanedFiles, total: orphanedFileTotal },
+      emptyBookFolders: { items: emptyBookFolders, total: emptyFolderTotal },
+      unreadableDirectories: { items: unreadableDirectories, total: unreadableDirectoryTotal },
+      truncated,
+      hasMore: false,
+      page: 1,
+      pageSize: 0,
+    } satisfies LibraryFilesystemFindingsResult;
     return this.storeFilesystemFindingsSnapshot(user.id, snapshot, pageSize);
   }
 
@@ -267,7 +303,11 @@ export class LibraryIntegrityService {
     for (const [id, snapshot] of this.filesystemFindingsSnapshots) if (snapshot.expiresAt <= now) this.filesystemFindingsSnapshots.delete(id);
   }
 
-  private storeFilesystemFindingsSnapshot(userId: number, result: LibraryFilesystemFindingsResult, pageSize: number): LibraryFilesystemFindingsResult {
+  private storeFilesystemFindingsSnapshot(
+    userId: number,
+    result: LibraryFilesystemFindingsResult,
+    pageSize: number,
+  ): LibraryFilesystemFindingsResult {
     this.pruneFilesystemFindingsSnapshots();
     while (this.filesystemFindingsSnapshots.size >= this.filesystemFindingsSnapshotLimit) {
       const oldest = this.filesystemFindingsSnapshots.keys().next().value;
@@ -279,7 +319,10 @@ export class LibraryIntegrityService {
     return this.paginateFilesystemFindings(result, 1, pageSize, snapshotId);
   }
 
-  private scopeFilesystemFindingsSnapshot(snapshot: LibraryFilesystemFindingsResult, accessibleLibraryIds: Set<number>): LibraryFilesystemFindingsResult {
+  private scopeFilesystemFindingsSnapshot(
+    snapshot: LibraryFilesystemFindingsResult,
+    accessibleLibraryIds: Set<number>,
+  ): LibraryFilesystemFindingsResult {
     const filter = <T extends LibraryFilesystemFinding>(group: { items: T[]; total: number }) => {
       const items = group.items.filter((item) => accessibleLibraryIds.has(item.libraryId));
       return { items, total: items.length };
@@ -294,17 +337,32 @@ export class LibraryIntegrityService {
     };
   }
 
-  private paginateFilesystemFindings(snapshot: LibraryFilesystemFindingsResult, page: number, pageSize: number, snapshotId: string): LibraryFilesystemFindingsResult {
+  private paginateFilesystemFindings(
+    snapshot: LibraryFilesystemFindingsResult,
+    page: number,
+    pageSize: number,
+    snapshotId: string,
+  ): LibraryFilesystemFindingsResult {
     const offset = (page - 1) * pageSize;
     const slice = <T>(items: T[]) => items.slice(offset, offset + pageSize);
-    const totals = [snapshot.orphanedMetadataFiles.total, snapshot.orphanedBookFolders.total, snapshot.orphanedFiles.total, snapshot.emptyBookFolders.total, snapshot.unreadableDirectories.total];
+    const totals = [
+      snapshot.orphanedMetadataFiles.total,
+      snapshot.orphanedBookFolders.total,
+      snapshot.orphanedFiles.total,
+      snapshot.emptyBookFolders.total,
+      snapshot.unreadableDirectories.total,
+    ];
     return {
       orphanedMetadataFiles: { ...snapshot.orphanedMetadataFiles, items: slice(snapshot.orphanedMetadataFiles.items) },
       orphanedBookFolders: { ...snapshot.orphanedBookFolders, items: slice(snapshot.orphanedBookFolders.items) },
       orphanedFiles: { ...snapshot.orphanedFiles, items: slice(snapshot.orphanedFiles.items) },
       emptyBookFolders: { ...snapshot.emptyBookFolders, items: slice(snapshot.emptyBookFolders.items) },
       unreadableDirectories: { ...snapshot.unreadableDirectories, items: slice(snapshot.unreadableDirectories.items) },
-      truncated: snapshot.truncated, hasMore: totals.some((total) => total > offset + pageSize), page, pageSize, snapshotId,
+      truncated: snapshot.truncated,
+      hasMore: totals.some((total) => total > offset + pageSize),
+      page,
+      pageSize,
+      snapshotId,
     };
   }
 
@@ -323,7 +381,8 @@ export class LibraryIntegrityService {
       const rel = relative(root, target);
       return rel === '' || (!rel.startsWith('..' + sep) && rel !== '..' && !isAbsolute(rel));
     });
-    if (!containingRoot || containingRoot === target) throw new NotFoundException('Directory is outside the accessible library roots or is a configured library root');
+    if (!containingRoot || containingRoot === target)
+      throw new NotFoundException('Directory is outside the accessible library roots or is a configured library root');
 
     try {
       const [realRoot, realTarget] = await Promise.all([realpath(containingRoot), realpath(target)]);
@@ -339,7 +398,11 @@ export class LibraryIntegrityService {
       return { removed: true };
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof ConflictException) throw error;
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT' || (error as NodeJS.ErrnoException).code === 'ENOTEMPTY' || (error as NodeJS.ErrnoException).code === 'EEXIST') {
+      if (
+        (error as NodeJS.ErrnoException).code === 'ENOENT' ||
+        (error as NodeJS.ErrnoException).code === 'ENOTEMPTY' ||
+        (error as NodeJS.ErrnoException).code === 'EEXIST'
+      ) {
         throw new ConflictException('Directory changed before cleanup; refresh findings and try again');
       }
       throw error;
@@ -363,7 +426,8 @@ export class LibraryIntegrityService {
     try {
       const [realRoot, realTarget] = await Promise.all([realpath(containingRoot), realpath(target)]);
       const realRelative = relative(realRoot, realTarget);
-      if (realRelative === '..' || realRelative.startsWith('..' + sep) || realRelative === '' || isAbsolute(realRelative)) throw new NotFoundException('File is outside the accessible library roots');
+      if (realRelative === '..' || realRelative.startsWith('..' + sep) || realRelative === '' || isAbsolute(realRelative))
+        throw new NotFoundException('File is outside the accessible library roots');
       const info = await lstat(target);
       if (!info.isFile() || info.isSymbolicLink()) throw new ConflictException('File is no longer a regular file');
       if (isBookFormat(extname(target).slice(1))) throw new ConflictException('Book-format files cannot be removed as orphaned files');
@@ -374,7 +438,8 @@ export class LibraryIntegrityService {
       return { removed: true };
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof ConflictException) throw error;
-      if (['ENOENT', 'EISDIR', 'EPERM'].includes((error as NodeJS.ErrnoException).code ?? '')) throw new ConflictException('File changed before cleanup; refresh findings and try again');
+      if (['ENOENT', 'EISDIR', 'EPERM'].includes((error as NodeJS.ErrnoException).code ?? ''))
+        throw new ConflictException('File changed before cleanup; refresh findings and try again');
       throw error;
     }
   }

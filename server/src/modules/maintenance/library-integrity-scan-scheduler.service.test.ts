@@ -20,7 +20,10 @@ describe('LibraryIntegrityScanSchedulerService', () => {
         filesystemScanTruncated: false,
       }),
     };
-    const service = new LibraryIntegrityScanSchedulerService(integrityService as never, { saveLibraryIntegrityScanStatus: vi.fn().mockResolvedValue(undefined) } as never);
+    const service = new LibraryIntegrityScanSchedulerService(
+      integrityService as never,
+      { saveLibraryIntegrityScanStatus: vi.fn().mockResolvedValue(undefined) } as never,
+    );
     vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
 
     const result = await service.runNow();
@@ -82,7 +85,10 @@ describe('LibraryIntegrityScanSchedulerService', () => {
 
   it('records failures without throwing from the scheduled callback', async () => {
     const integrityService = { scanAllLibraries: vi.fn().mockRejectedValue(new Error('disk unavailable\nretry later')) };
-    const service = new LibraryIntegrityScanSchedulerService(integrityService as never, { saveLibraryIntegrityScanStatus: vi.fn().mockResolvedValue(undefined) } as never);
+    const service = new LibraryIntegrityScanSchedulerService(
+      integrityService as never,
+      { saveLibraryIntegrityScanStatus: vi.fn().mockResolvedValue(undefined) } as never,
+    );
     vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
     vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
@@ -92,7 +98,13 @@ describe('LibraryIntegrityScanSchedulerService', () => {
 });
 describe('LibraryIntegrityScanSchedulerService persistence', () => {
   it('restores the latest completed scan after restart', async () => {
-    const persisted = { status: 'completed', startedAt: '2026-11-06T10:00:00.000Z', completedAt: '2026-11-06T10:01:00.000Z', summary: null, errorMessage: null };
+    const persisted = {
+      status: 'completed',
+      startedAt: '2026-11-06T10:00:00.000Z',
+      completedAt: '2026-11-06T10:01:00.000Z',
+      summary: null,
+      errorMessage: null,
+    };
     const repository = { getLibraryIntegrityScanStatus: vi.fn().mockResolvedValue(persisted), saveLibraryIntegrityScanStatus: vi.fn() };
     const service = new LibraryIntegrityScanSchedulerService({} as never, repository as never);
     await service.onModuleInit();
@@ -101,7 +113,10 @@ describe('LibraryIntegrityScanSchedulerService persistence', () => {
 
   it('marks a scan interrupted by restart as failed', async () => {
     const persisted = { status: 'running', startedAt: '2026-11-06T10:00:00.000Z', completedAt: null, summary: null, errorMessage: null };
-    const repository = { getLibraryIntegrityScanStatus: vi.fn().mockResolvedValue(persisted), saveLibraryIntegrityScanStatus: vi.fn().mockResolvedValue(undefined) };
+    const repository = {
+      getLibraryIntegrityScanStatus: vi.fn().mockResolvedValue(persisted),
+      saveLibraryIntegrityScanStatus: vi.fn().mockResolvedValue(undefined),
+    };
     const service = new LibraryIntegrityScanSchedulerService({} as never, repository as never);
     await service.onModuleInit();
     expect(service.getLastScan()).toMatchObject({ status: 'failed', errorMessage: 'Scan interrupted by application restart.' });
