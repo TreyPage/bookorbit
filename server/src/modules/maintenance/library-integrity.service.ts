@@ -547,10 +547,12 @@ export class LibraryIntegrityService {
       const library = libraries.find((item) => item.id === file.libraryId);
       if (!library) throw new NotFoundException('Duplicate file not found or not accessible');
       const target = resolve(file.absolutePath);
-      const root = library.folders.map((folder) => resolve(folder.path)).find((candidate) => {
-        const rel = relative(candidate, target);
-        return rel !== '' && rel !== '..' && !rel.startsWith('..' + sep) && !isAbsolute(rel);
-      });
+      const root = library.folders
+        .map((folder) => resolve(folder.path))
+        .find((candidate) => {
+          const rel = relative(candidate, target);
+          return rel !== '' && rel !== '..' && !rel.startsWith('..' + sep) && !isAbsolute(rel);
+        });
       if (!root) throw new NotFoundException('File is outside the accessible library roots');
       const [realRoot, realTarget] = await Promise.all([realpath(root), realpath(target)]);
       const realRelative = relative(realRoot, realTarget);
