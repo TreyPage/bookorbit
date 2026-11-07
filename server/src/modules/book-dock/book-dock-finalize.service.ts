@@ -507,7 +507,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
                 status: 'destination_conflict' as const,
                 message: 'A file with this name already exists at the target location',
               }
-            : await this.classifyDestination(candidate, prepared.existingDestinations);
+            : await this.classifyDestination(candidate, prepared.existingDestinations, claimedDestinations);
 
           addFinalizePreviewAnalysis(summary, analysis);
           if (analysis.status === 'ready') {
@@ -887,6 +887,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
   private async classifyDestination(
     analysis: FinalizeCandidateAnalysis,
     existingDestinations: Map<string, number>,
+    reservedDestinations: Set<string> = new Set(),
   ): Promise<FinalizeCandidateAnalysis> {
     if (analysis.status !== 'ready' || !analysis.destPath || !analysis.library) return analysis;
 
@@ -924,7 +925,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
     // The destination is occupied by something that is not a known same-format
     // book file. Preserve the incoming book and allocate a deterministic suffixed
     // destination instead of blocking the import for a manual rename.
-    const renamed = await this.allocateCollisionFreeDestination(analysis, existingDestinations);
+    const renamed = await this.allocateCollisionFreeDestination(analysis, existingDestinations, reservedDestinations);
     if (renamed) return renamed;
 
     return {
@@ -937,6 +938,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
   private async allocateCollisionFreeDestination(
     analysis: FinalizeCandidateAnalysis,
     existingDestinations: Map<string, number>,
+    reservedDestinations: Set<string> = new Set(),
   ): Promise<FinalizeCandidateAnalysis | null> {
     if (!analysis.destPath || !analysis.library || !analysis.folder || !analysis.placement?.length) return null;
     const perFolder = analysis.library.organizationMode === 'book_per_folder';
@@ -964,7 +966,8 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
         }
-        if (existingDestinations.has(this.destinationKey(analysis.library.id, file.destPath))) {
+        const key = this.destinationKey(analysis.library.id, file.destPath);
+        if (existingDestinations.has(key) || reservedDestinations.has(key)) {
           occupied = true;
           break;
         }
