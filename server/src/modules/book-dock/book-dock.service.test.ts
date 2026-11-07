@@ -175,6 +175,16 @@ describe('BookDockService', () => {
     expect(repo.deleteById).toHaveBeenCalledWith(1);
   });
 
+  it('keeps the Book Dock record when a system file cannot be deleted', async () => {
+    const { service, repo } = makeService();
+    repo.findById.mockResolvedValue(row({ absolutePath: '/bucket/book.epub' }));
+    repo.findUnitFiles.mockResolvedValue([{ absolutePath: '/bucket/book.epub' }]);
+    vi.mocked(unlink).mockRejectedValueOnce(Object.assign(new Error('permission denied'), { code: 'EACCES' }));
+
+    await expect(service.discardFile(1, 1, false)).rejects.toMatchObject({ code: 'EACCES' });
+    expect(repo.deleteById).not.toHaveBeenCalled();
+  });
+
   it('normalizes legacy tainted metadata before returning it through the API', async () => {
     const { service, repo } = makeService();
     const taintedMetadata = {

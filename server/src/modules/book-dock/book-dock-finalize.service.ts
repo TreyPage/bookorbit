@@ -1539,9 +1539,9 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
 
   private async cleanupBookDockRecord(row: BookDockFileRow): Promise<void> {
     if (row.coverPath) {
-      await safeUnlink(row.coverPath);
+      await bestEffortUnlink(row.coverPath);
       const thumbPath = row.coverPath.replace(/\.\w+$/, '_thumb.jpg');
-      await safeUnlink(thumbPath);
+      await bestEffortUnlink(thumbPath);
     }
     // The unit's files have all been moved into the library by now, so what is left is the empty
     // directory they came out of. The child rows go with the anchor via the cascade.
@@ -1580,11 +1580,21 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
   }
 }
 
-async function safeUnlink(path: string): Promise<void> {
+async function bestEffortUnlink(path: string): Promise<void> {
   try {
     await unlink(path);
   } catch {
-    // file may already be deleted
+    // Successful finalization has already moved the book files; stale cover cleanup is best-effort.
+  }
+}
+
+async function safeUnlink(path: string): Promise<void> {
+  try {
+    await unlink(path);
+  } catch (error) {
+    // ENOENT means the system file is already gone. Any other failure must leave the Book Dock
+    // record in place so the discard can be retried instead of silently orphaning the file.
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
 }
 
