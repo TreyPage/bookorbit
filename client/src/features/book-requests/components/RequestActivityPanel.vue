@@ -45,7 +45,7 @@ watch(() => props.requestId, (id) => void load(id), { immediate: true })
         <p class="mt-0.5 text-xs text-muted-foreground">
           {{ event.actorName || (event.actorUsername === 'system' ? t('bookRequests.detail.activity.system') : event.actorUsername) }}
           <span aria-hidden="true">·</span>
-          <time :datetime="event.createdAt">{{ formatDateTime(event.createdAt) }}</time>
+          <time :datetime="event.createdAt">{{ formatDateTime(new Date(event.createdAt)) }}</time>
         </p>
       </li>
     </ol>
