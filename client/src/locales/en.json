@@ -14339,6 +14339,7 @@
         "truncated": "Only the first 500 candidate pairs are shown. Refine the library's series names before reviewing more."
       },
       "scanStatus": {
+        "relatedChecks": "Related checks",
         "title": "Scheduled library scan",
         "description": "Read-only checks across your libraries. The latest result is saved and remains available after a restart.",
         "refresh": "Refresh status",

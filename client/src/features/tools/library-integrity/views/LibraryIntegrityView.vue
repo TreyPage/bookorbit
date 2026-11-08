@@ -4,13 +4,15 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ArrowRight, Copy, Files, GitMerge, Merge, RefreshCw, ShieldCheck } from '@lucide/vue'
 
-import type { LibraryFilesystemFindingsResult, LibraryIntegrityScanStatus } from '@bookorbit/types'
-
+import type { BookDuplicateScan, LibraryFilesystemFindingsResult, LibraryIntegrityScanStatus } from '@bookorbit/types'
+import { createBookDuplicateScan, getActiveBookDuplicateScan, getBookDuplicateScan } from '@/features/tools/api/book-duplicates'
+import { getBookMergeCandidates } from '@/features/tools/api/book-merge'
 import {
   cleanupEmptyBookFolder,
   cleanupOrphanedFile,
   getLibraryFilesystemFindings,
   getLibraryIntegrityScanStatus,
+  getSimilarSeriesCandidates,
   startLibraryIntegrityScan,
 } from '@/features/tools/api/library-integrity'
 import MissingResourcesView from '@/features/tools/missing-resources/views/MissingResourcesView.vue'
@@ -22,6 +24,12 @@ const { t } = useI18n()
 const scanStatus = ref<LibraryIntegrityScanStatus | null>(null)
 const scanLoading = ref(false)
 const scanError = ref(false)
+const relatedChecks = ref({
+  duplicateBooks: { status: 'idle' as 'idle' | 'running' | 'complete' | 'failed', count: null as number | null, progress: null as number | null },
+  mergeCandidates: { status: 'idle' as 'idle' | 'running' | 'complete' | 'failed', count: null as number | null },
+  seriesCleanup: { status: 'idle' as 'idle' | 'running' | 'complete' | 'failed', count: null as number | null, truncated: false },
+})
+const duplicateScanId = ref<number | null>(null)
 const findings = ref<LibraryFilesystemFindingsResult | null>(null)
 const findingsLoading = ref(false)
 const findingsPage = ref(1)
@@ -157,11 +165,80 @@ async function refreshScanStatus(): Promise<void> {
   }
 }
 
+async function countMergeCandidates(): Promise<number> {
+  let cursor: { bookIdA: number; bookIdB: number } | undefined
+  let total = 0
+  do {
+    const page = await getBookMergeCandidates({ similarityPercent: 85, ...(cursor ? { cursor } : {}) })
+    total += page.candidates.length
+    cursor = page.nextCursor ?? undefined
+  } while (cursor)
+  return total
+}
+
+async function pollDuplicateScan(): Promise<void> {
+  if (duplicateScanId.value === null) return
+  try {
+    const scan: BookDuplicateScan = await getBookDuplicateScan(duplicateScanId.value)
+    if (scan.status === 'completed') {
+      relatedChecks.value.duplicateBooks = { status: 'complete', count: scan.totalGroups ?? 0, progress: 100 }
+      if (duplicatePollInterval) clearInterval(duplicatePollInterval)
+      duplicatePollInterval = null
+    } else if (scan.status === 'failed') {
+      relatedChecks.value.duplicateBooks = { status: 'failed', count: null, progress: null }
+      if (duplicatePollInterval) clearInterval(duplicatePollInterval)
+      duplicatePollInterval = null
+    } else {
+      relatedChecks.value.duplicateBooks.progress = scan.progressPercent
+    }
+  } catch {
+    relatedChecks.value.duplicateBooks = { status: 'failed', count: null, progress: null }
+    if (duplicatePollInterval) clearInterval(duplicatePollInterval)
+    duplicatePollInterval = null
+  }
+}
+
+let duplicatePollInterval: ReturnType<typeof setInterval> | null = null
+
+async function runRelatedChecks(): Promise<void> {
+  relatedChecks.value = {
+    duplicateBooks: { status: 'running', count: null, progress: 0 },
+    mergeCandidates: { status: 'running', count: null },
+    seriesCleanup: { status: 'running', count: null, truncated: false },
+  }
+  try {
+    const active = await getActiveBookDuplicateScan()
+    const scan = active ?? await createBookDuplicateScan({ similarityPercent: 85 })
+    duplicateScanId.value = scan.id
+    if (scan.status === 'completed') {
+      relatedChecks.value.duplicateBooks = { status: 'complete', count: scan.totalGroups ?? 0, progress: 100 }
+    } else if (scan.status === 'failed') {
+      relatedChecks.value.duplicateBooks = { status: 'failed', count: null, progress: null }
+    } else {
+      relatedChecks.value.duplicateBooks.progress = scan.progressPercent
+      if (duplicatePollInterval) clearInterval(duplicatePollInterval)
+      duplicatePollInterval = setInterval(() => void pollDuplicateScan(), 2000)
+      void pollDuplicateScan()
+    }
+  } catch {
+    relatedChecks.value.duplicateBooks = { status: 'failed', count: null, progress: null }
+  }
+
+  const [mergeCount, series] = await Promise.allSettled([countMergeCandidates(), getSimilarSeriesCandidates(85)])
+  relatedChecks.value.mergeCandidates = mergeCount.status === 'fulfilled'
+    ? { status: 'complete', count: mergeCount.value }
+    : { status: 'failed', count: null }
+  relatedChecks.value.seriesCleanup = series.status === 'fulfilled'
+    ? { status: 'complete', count: series.value.items.length, truncated: series.value.truncated }
+    : { status: 'failed', count: null, truncated: false }
+}
+
 async function runScan(): Promise<void> {
   scanLoading.value = true
   scanError.value = false
   try {
     scanStatus.value = await startLibraryIntegrityScan()
+    void runRelatedChecks()
     if (scanStatus.value?.status === 'running') startScanPolling()
     else if (scanStatus.value) await loadFilesystemFindings()
   } catch {
@@ -181,7 +258,10 @@ onMounted(() => {
   })
 })
 
-onUnmounted(stopScanPolling)
+onUnmounted(() => {
+  stopScanPolling()
+  if (duplicatePollInterval) clearInterval(duplicatePollInterval)
+})
 
 function openDuplicateFormats(): void {
   void router.push({ name: 'tools-library-integrity-duplicate-formats' })
@@ -250,6 +330,73 @@ function openBookMerge(): void {
             </dd>
           </div>
         </dl>
+        <div class="space-y-2">
+          <h3 class="text-sm font-semibold text-foreground">{{ t('tools.libraryIntegrity.scanStatus.relatedChecks') }}</h3>
+          <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-live="polite">
+            <div class="rounded-lg bg-muted/50 px-3 py-2">
+              <dl>
+                <dt class="text-xs text-muted-foreground">{{ t('tools.header.duplicateBooks') }}</dt>
+                <dd class="text-lg font-semibold tabular-nums text-foreground">
+                  <span v-if="relatedChecks.duplicateBooks.status === 'complete'">{{ relatedChecks.duplicateBooks.count }}</span>
+                  <span v-else-if="relatedChecks.duplicateBooks.status === 'running'">{{ relatedChecks.duplicateBooks.progress ?? 0 }}%</span>
+                  <span v-else-if="relatedChecks.duplicateBooks.status === 'failed'">—</span>
+                  <span v-else>Not scanned</span>
+                </dd>
+              </dl>
+              <Button
+                v-if="relatedChecks.duplicateBooks.status === 'complete' && (relatedChecks.duplicateBooks.count ?? 0) > 0"
+                size="sm"
+                variant="link"
+                class="h-auto p-0"
+                @click="openDuplicateBooks"
+              >
+                {{ t('tools.libraryIntegrity.openCheck') }}
+              </Button>
+            </div>
+            <div class="rounded-lg bg-muted/50 px-3 py-2">
+              <dl>
+                <dt class="text-xs text-muted-foreground">{{ t('tools.header.bookMerge') }}</dt>
+                <dd class="text-lg font-semibold tabular-nums text-foreground">
+                  <span v-if="relatedChecks.mergeCandidates.status === 'complete'">{{ relatedChecks.mergeCandidates.count }}</span>
+                  <span v-else-if="relatedChecks.mergeCandidates.status === 'failed'">—</span>
+                  <span v-else-if="relatedChecks.mergeCandidates.status === 'running'">Scanning…</span>
+                  <span v-else>Not scanned</span>
+                </dd>
+              </dl>
+              <Button
+                v-if="relatedChecks.mergeCandidates.status === 'complete' && (relatedChecks.mergeCandidates.count ?? 0) > 0"
+                size="sm"
+                variant="link"
+                class="h-auto p-0"
+                @click="openBookMerge"
+              >
+                {{ t('tools.libraryIntegrity.openCheck') }}
+              </Button>
+            </div>
+            <div class="rounded-lg bg-muted/50 px-3 py-2">
+              <dl>
+                <dt class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.title') }}</dt>
+                <dd class="text-lg font-semibold tabular-nums text-foreground">
+                  <span v-if="relatedChecks.seriesCleanup.status === 'complete'">
+                    {{ relatedChecks.seriesCleanup.count ?? 0 }}{{ relatedChecks.seriesCleanup.truncated ? '+' : '' }}
+                  </span>
+                  <span v-else-if="relatedChecks.seriesCleanup.status === 'failed'">—</span>
+                  <span v-else-if="relatedChecks.seriesCleanup.status === 'running'">Scanning…</span>
+                  <span v-else>Not scanned</span>
+                </dd>
+              </dl>
+              <Button
+                v-if="relatedChecks.seriesCleanup.status === 'complete' && (relatedChecks.seriesCleanup.count ?? 0) > 0"
+                size="sm"
+                variant="link"
+                class="h-auto p-0"
+                @click="openSeriesCleanup"
+              >
+                {{ t('tools.libraryIntegrity.openCheck') }}
+              </Button>
+            </div>
+          </div>          </div>
+        </div>
         <p v-if="scanStatus.summary?.sidecarScanTruncated || scanStatus.summary?.filesystemScanTruncated" class="text-sm text-warning">
           {{ t('tools.libraryIntegrity.scanStatus.truncated') }}
         </p>
