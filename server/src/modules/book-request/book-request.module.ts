@@ -63,6 +63,7 @@ import { RequestAutomationSettingsService } from './fulfillment/request-automati
 import { RequestFulfillmentService } from './fulfillment/request-fulfillment.service';
 import { RequestImportService } from './fulfillment/request-import.service';
 import { RequestSeedService } from './fulfillment/request-seed.service';
+import { RequestSeedCleanupSchedulerService } from './fulfillment/request-seed-cleanup-scheduler.service';
 import { RequestUserCleanupService } from './fulfillment/request-user-cleanup.service';
 import { RequestCompanionService } from './fulfillment/request-companion.service';
 import { RequestVerificationService } from './fulfillment/request-verification.service';
@@ -160,6 +161,7 @@ import { RequestWatchdogService } from './fulfillment/request-watchdog.service';
     RequestCompanionService,
     RequestVerificationService,
     RequestSeedService,
+    RequestSeedCleanupSchedulerService,
     RequestUserCleanupService,
     RequestAutomationSettingsService,
     RequestAutomationSearchDelay,
