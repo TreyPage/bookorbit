@@ -33,6 +33,7 @@ import RequestDownloadProgress from './RequestDownloadProgress.vue'
 import RequestDrawerToolbar from './RequestDrawerToolbar.vue'
 import RequestPipeline from './RequestPipeline.vue'
 import RequestAttemptsPanel from './RequestAttemptsPanel.vue'
+import RequestActivityPanel from './RequestActivityPanel.vue'
 import RequestSeedPanel from './RequestSeedPanel.vue'
 import RequestStatusBadge from './RequestStatusBadge.vue'
 import { useBookRequestActions, type ActionOutcome } from '../composables/useBookRequests'
@@ -801,6 +802,7 @@ function dockFileMeta(file: BookDockFile): string {
             before this, and what did those sources say. Approvers only: it names indexers.
           -->
           <RequestAttemptsPanel v-if="canFulfilThis" :request="request" :can-manage="canManage" />
+          <RequestActivityPanel :request-id="request.id" />
 
           <!-- Sits above the failure reason: the reason says a choice is needed, and this is it. -->
           <ReleaseUnitChooser v-if="canFulfilThis && releaseUnits.length" :units="releaseUnits" :busy="busy" @choose="handleChooseReleaseUnit" />
