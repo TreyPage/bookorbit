@@ -23,6 +23,7 @@ function makeService(
   const gateway = { emitChanged: vi.fn() };
   const auditEvents = { emit: vi.fn() };
   const direct = { reapStaging: vi.fn().mockResolvedValue(0), resume: vi.fn().mockResolvedValue(true) };
+  const automationSettings = { get: vi.fn().mockResolvedValue({ stalledDownloadTimeoutHours: 12 }) };
 
   return {
     service: new RequestWatchdogService(
@@ -32,6 +33,7 @@ function makeService(
       gateway as never,
       auditEvents as never,
       direct as never,
+      automationSettings as never,
     ),
     downloads,
     fulfillment,
@@ -39,15 +41,51 @@ function makeService(
     gateway,
     auditEvents,
     direct,
+    automationSettings,
   };
 }
 
 describe('RequestWatchdogService.sweep', () => {
   it('measures a stalled download from the last time bytes moved', async () => {
-    const { service, downloads } = makeService();
+    const { service, downloads, automationSettings } = makeService();
+    const before = Date.now();
+    await service.sweep();
+    const after = Date.now();
+
+    expect(automationSettings.get).toHaveBeenCalled();
+    const [, cutoff] = downloads.findByStatusOlderThan.mock.calls.find((call) => call[0].includes('queued')) as [string[], Date, string];
+    expect(cutoff.getTime()).toBeGreaterThanOrEqual(before - 12 * 60 * 60 * 1000);
+    expect(cutoff.getTime()).toBeLessThanOrEqual(after - 12 * 60 * 60 * 1000);
+  });
+
+  it('falls back to twelve hours when settings cannot be read and still runs the rest of the watchdog', async () => {
+    const { service, downloads, automationSettings, requests } = makeService();
+    automationSettings.get.mockRejectedValue(new Error('settings store unavailable'));
+    const before = Date.now();
+
     await service.sweep();
 
-    expect(downloads.findByStatusOlderThan).toHaveBeenCalledWith(['queued', 'downloading'], expect.any(Date), 'progress');
+    const after = Date.now();
+    const [, cutoff] = downloads.findByStatusOlderThan.mock.calls.find((call) => call[0].includes('queued')) as [string[], Date, string];
+    expect(cutoff.getTime()).toBeGreaterThanOrEqual(before - 12 * 60 * 60 * 1000);
+    expect(cutoff.getTime()).toBeLessThanOrEqual(after - 12 * 60 * 60 * 1000);
+    expect(requests.findStrandedSearching).toHaveBeenCalled();
+  });
+
+  it('uses the configured stalled timeout and reports that threshold in the failure reason', async () => {
+    const { service, downloads, fulfillment, automationSettings } = makeService({
+      'queued,downloading': [{ id: 21 } as BookRequestDownloadRow],
+    });
+    automationSettings.get.mockResolvedValue({ stalledDownloadTimeoutHours: 6 });
+    const before = Date.now();
+
+    await service.sweep();
+
+    const after = Date.now();
+    const [, cutoff] = downloads.findByStatusOlderThan.mock.calls.find((call) => call[0].includes('queued')) as [string[], Date, string];
+    expect(cutoff.getTime()).toBeGreaterThanOrEqual(before - 6 * 60 * 60 * 1000);
+    expect(cutoff.getTime()).toBeLessThanOrEqual(after - 6 * 60 * 60 * 1000);
+    expect(fulfillment.failDownload).toHaveBeenCalledWith({ id: 21 }, 'The download made no progress for 6 hours');
   });
 
   /**
@@ -86,7 +124,7 @@ describe('RequestWatchdogService.sweep', () => {
   it('swallows a sweep failure rather than crashing the scheduler', async () => {
     const { service } = makeService();
     const downloads = { findByStatusOlderThan: vi.fn().mockRejectedValue(new Error('db down')) };
-    const broken = new RequestWatchdogService(downloads as never, { failDownload: vi.fn() } as never);
+    const broken = new RequestWatchdogService(downloads as never, { failDownload: vi.fn() } as never, {} as never, {} as never, {} as never, {} as never, { get: vi.fn().mockResolvedValue({ stalledDownloadTimeoutHours: 12 }) } as never);
 
     await expect(broken.sweep()).resolves.toBeUndefined();
     await expect(service.sweep()).resolves.toBeUndefined();

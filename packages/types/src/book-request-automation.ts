@@ -21,6 +21,7 @@ export const BOOK_REQUEST_AUTOMATION_SETTING_KEYS = {
   AUTO_SEARCH_ENABLED: "book_request_auto_search_enabled",
   AUTO_SEARCH_INTERVAL_HOURS: "book_request_auto_search_interval_hours",
   AUTO_SEARCH_MAX_AGE_DAYS: "book_request_auto_search_max_age_days",
+  STALLED_DOWNLOAD_TIMEOUT_HOURS: "book_request_stalled_download_timeout_hours",
 } as const;
 
 /**
@@ -67,7 +68,7 @@ export interface BookRequestAutomationSettings {
   autoGrabEnabled: boolean;
   /** A release scoring below this is never grabbed unattended; the approver still sees the list. */
   autoGrabMinScore: number;
-  /** Whether a failed automatic grab falls back to the next-best release on its own. */
+  /** Whether a failed release attempt, including a hand-picked one, falls back to the next eligible release. */
   autoRetryEnabled: boolean;
   /** Total automatic grabs allowed per request, first attempt included. */
   maxAutoGrabAttempts: number;
@@ -144,6 +145,7 @@ export const DEFAULT_BOOK_REQUEST_AUTOMATION_SETTINGS: BookRequestAutomationSett
   autoSearchEnabled: false,
   autoSearchIntervalHours: 24,
   autoSearchMaxAgeDays: 60,
+  stalledDownloadTimeoutHours: 12,
   verificationEnabled: true,
   verificationThreshold: 70,
   // Keeping what the release carried is the less surprising default: dropping formats silently is
@@ -172,6 +174,8 @@ export const MIN_AUTO_SEARCH_INTERVAL_HOURS = 1;
 export const MAX_AUTO_SEARCH_INTERVAL_HOURS = 168;
 export const MIN_AUTO_SEARCH_MAX_AGE_DAYS = 1;
 export const MAX_AUTO_SEARCH_MAX_AGE_DAYS = 365;
+export const MIN_STALLED_DOWNLOAD_TIMEOUT_HOURS = 1;
+export const MAX_STALLED_DOWNLOAD_TIMEOUT_HOURS = 168;
 
 /**
  * How far the interval is allowed to stretch as a request ages. It doubles for each week the

@@ -48,6 +48,7 @@ describe('RequestAutomationSettingsService.get', () => {
       [KEYS.AUTO_SEARCH_ENABLED]: 'true',
       [KEYS.AUTO_SEARCH_INTERVAL_HOURS]: '12',
       [KEYS.AUTO_SEARCH_MAX_AGE_DAYS]: '90',
+      [KEYS.STALLED_DOWNLOAD_TIMEOUT_HOURS]: '6',
     });
 
     await expect(service.get()).resolves.toEqual({
@@ -58,6 +59,7 @@ describe('RequestAutomationSettingsService.get', () => {
       autoSearchEnabled: true,
       autoSearchIntervalHours: 12,
       autoSearchMaxAgeDays: 90,
+      stalledDownloadTimeoutHours: 6,
       verificationEnabled: false,
       verificationThreshold: 85,
       importFormats: 'preferred',
@@ -102,6 +104,23 @@ describe('RequestAutomationSettingsService.update', () => {
     const { service, appSettings } = makeService();
 
     await expect(service.update({ autoGrabMinScore: 5 })).rejects.toBeInstanceOf(BadRequestException);
+    expect(appSettings.setValue).not.toHaveBeenCalled();
+  });
+
+  it('writes only the stalled timeout setting', async () => {
+    const { service, appSettings } = makeService();
+
+    await service.update({ stalledDownloadTimeoutHours: 6 });
+
+    expect(appSettings.setValue).toHaveBeenCalledTimes(1);
+    expect(appSettings.setValue).toHaveBeenCalledWith(KEYS.STALLED_DOWNLOAD_TIMEOUT_HOURS, '6');
+  });
+
+  it('refuses a stalled timeout outside the supported range', async () => {
+    const { service, appSettings } = makeService();
+
+    await expect(service.update({ stalledDownloadTimeoutHours: 0 })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.update({ stalledDownloadTimeoutHours: 169 })).rejects.toBeInstanceOf(BadRequestException);
     expect(appSettings.setValue).not.toHaveBeenCalled();
   });
 

@@ -11,13 +11,14 @@ import { BookRequestRepository } from '../book-request.repository';
 import { BookRequestDownloadRepository } from './book-request-download.repository';
 import { DirectDownloadService } from './direct-download.service';
 import { RequestFulfillmentService } from './request-fulfillment.service';
+import { RequestAutomationSettingsService } from './request-automation-settings.service';
 
 /**
  * A torrent with no seeders can sit at zero for a long time and still be worth waiting for, so
  * these are generous. They exist to stop a request sitting at "downloading" forever with nobody
  * told, not to enforce a service level.
  */
-const STALL_TIMEOUT_MS = 12 * 60 * 60 * 1000;
+const DEFAULT_STALL_TIMEOUT_HOURS = 12;
 /** Import is local filesystem work plus a metadata fetch. An hour is already pathological. */
 const IMPORT_TIMEOUT_MS = 60 * 60 * 1000;
 
@@ -61,6 +62,7 @@ export class RequestWatchdogService implements OnApplicationBootstrap {
     private readonly gateway: BookRequestGateway,
     private readonly auditEvents: AuditEventsService,
     private readonly direct: DirectDownloadService,
+    private readonly automationSettings: RequestAutomationSettingsService,
   ) {}
 
   /**
@@ -180,9 +182,24 @@ export class RequestWatchdogService implements OnApplicationBootstrap {
   }
 
   private async failStalled(): Promise<void> {
-    const rows = await this.downloads.findByStatusOlderThan(STALLABLE, new Date(Date.now() - STALL_TIMEOUT_MS), 'progress');
+    let timeoutHours = DEFAULT_STALL_TIMEOUT_HOURS;
+    try {
+      const settings = await this.automationSettings.get();
+      if (Number.isInteger(settings.stalledDownloadTimeoutHours) && settings.stalledDownloadTimeoutHours > 0) {
+        timeoutHours = settings.stalledDownloadTimeoutHours;
+      }
+    } catch (error) {
+      // A settings-store outage must not prevent the rest of the watchdog from running.
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `[book_request.watchdog] [fail] event=stalled_settings error="${sanitizeLogValue(message)}" - using the 12-hour default`,
+      );
+    }
+
+    const timeoutMs = timeoutHours * 60 * 60 * 1000;
+    const rows = await this.downloads.findByStatusOlderThan(STALLABLE, new Date(Date.now() - timeoutMs), 'progress');
     for (const row of rows) {
-      await this.fulfillment.failDownload(row, 'The download made no progress for 12 hours');
+      await this.fulfillment.failDownload(row, `The download made no progress for ${timeoutHours} hours`);
     }
   }
 
