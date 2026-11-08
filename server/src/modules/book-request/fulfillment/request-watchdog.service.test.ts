@@ -58,6 +58,20 @@ describe('RequestWatchdogService.sweep', () => {
     expect(cutoff.getTime()).toBeLessThanOrEqual(after - 12 * 60 * 60 * 1000);
   });
 
+  it('records a stalled event only when the watchdog successfully fails the download', async () => {
+    const row = { id: 11, requestId: 7 } as BookRequestDownloadRow;
+    const { service, auditEvents, fulfillment } = makeService({ 'queued,downloading': [row] });
+
+    await service.sweep();
+
+    expect(fulfillment.failDownload).toHaveBeenCalledWith(row, 'The download made no progress for 12 hours');
+    expect(auditEvents.emit).toHaveBeenCalledWith('audit.log', expect.objectContaining({
+      action: 'book_request.stalled',
+      resourceId: 7,
+      meta: { requestId: 7, downloadId: 11, timeoutHours: 12 },
+    }));
+  });
+
   it('falls back to twelve hours when settings cannot be read and still runs the rest of the watchdog', async () => {
     const { service, downloads, automationSettings, requests } = makeService();
     automationSettings.get.mockRejectedValue(new Error('settings store unavailable'));
