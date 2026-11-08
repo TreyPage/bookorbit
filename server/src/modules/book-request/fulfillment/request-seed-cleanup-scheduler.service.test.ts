@@ -46,14 +46,16 @@ function makeService(rows = [download(1, HASH_A), download(2, HASH_B)], statuses
   const adapter = { status: vi.fn().mockResolvedValue(statuses) };
   const registry = { require: vi.fn().mockReturnValue(adapter) };
   const removal = { detachAttempt: vi.fn().mockResolvedValue(null) };
+  const auditEvents = { emit: vi.fn() };
   const service = new RequestSeedCleanupSchedulerService(
     downloads as never,
     clients as never,
     registry as never,
     removal as never,
+    auditEvents as never,
   );
 
-  return { service, downloads, clients, adapter, registry, removal };
+  return { service, downloads, clients, adapter, registry, removal, auditEvents };
 }
 
 describe('RequestSeedCleanupSchedulerService', () => {
