@@ -70,6 +70,7 @@ import type { FulfillBookRequestDto } from './dto/fulfill-book-request.dto';
 import type { BulkBookRequestsDto, BulkRejectBookRequestsDto } from './dto/bulk-book-requests.dto';
 import type { ListAllBookRequestsDto, ListBookRequestsDto } from './dto/list-book-requests.dto';
 import type { ListRequesterOptionsDto } from './dto/list-requester-options.dto';
+import type { UpdateBookRequestAutomationDto } from './dto/update-book-request-automation.dto';
 
 /**
  * Statuses that still count as open work in the approver queue, which is exactly the set that
@@ -873,6 +874,25 @@ export class BookRequestService {
   async getOne(id: number, user: RequestUser): Promise<BookRequestItem> {
     const joined = await this.requireVisible(id, user);
     return this.toItem(joined, user.id);
+  }
+
+  /** Requester, fulfiller, or moderator may tune automation for one request. */
+  async updateAutomationControls(id: number, dto: UpdateBookRequestAutomationDto, user: RequestUser): Promise<BookRequestItem> {
+    const joined = await this.repo.findById(id);
+    if (!joined) throw new NotFoundException('Book request not found');
+    if (!this.canDrive(joined.request, user)) throw new ForbiddenException('You cannot change this book request');
+
+    const updated = await this.repo.update(id, {
+      ...(dto.automaticRetryPaused === undefined ? {} : { automaticRetryPaused: dto.automaticRetryPaused }),
+      ...(dto.seedCleanupProtected === undefined ? {} : { seedCleanupProtected: dto.seedCleanupProtected }),
+    });
+    if (!updated) throw new NotFoundException('Book request not found');
+
+    this.logger.log(
+      `[book_request.automation_controls] [end] requestId=${id} userId=${user.id} retryPaused=${updated.automaticRetryPaused} seedProtected=${updated.seedCleanupProtected} - request automation controls updated`,
+    );
+    this.gateway.emitChanged();
+    return this.getOne(id, user);
   }
 
   /**
