@@ -200,6 +200,17 @@ export class BookRequestDownloadRepository {
     return rows.map((row) => row.download);
   }
 
+  /** Re-check immediately before detaching: the protection toggle may change while client status is loading. */
+  async isSeedCleanupProtected(requestId: number): Promise<boolean> {
+    const [row] = await this.db
+      .select({ protected: bookRequests.seedCleanupProtected })
+      .from(bookRequests)
+      .where(eq(bookRequests.id, requestId))
+      .limit(1);
+    // Missing request rows should fail safe rather than detach a torrent we can no longer attribute.
+    return row?.protected ?? true;
+  }
+
   /**
    * `basis` picks what "old" means. A stalled download is measured from the last time bytes
    * moved; a stuck import is measured from its last state change, because its `lastProgressAt`
