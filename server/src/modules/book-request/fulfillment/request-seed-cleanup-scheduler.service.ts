@@ -77,6 +77,9 @@ export class RequestSeedCleanupSchedulerService {
             this.logFailure('remove', new Error(`downloadId=${download.id}: ${error}`));
             continue;
           }
+          // Retire the client identity after a successful detach. The imported attempt stays
+          // in history, but no longer needs to be queried on every future scheduler tick.
+          await this.downloads.updateIf(download.id, ['imported'], { clientKey: null });
           removed++;
           this.logger.log(
             `[book_request.seed_cleanup] [end] requestId=${download.requestId} downloadId=${download.id} clientId=${clientId} - removed torrent after its seed goal was reached; retained downloaded files`,
