@@ -92,6 +92,9 @@ export class RequestSeedCleanupSchedulerService {
           if (!status) continue;
           checked++;
           if (!this.goalReached(status)) continue;
+          // The candidate query filters protected requests, but the setting can change while the
+          // download client is answering. Re-read immediately before the destructive client action.
+          if (await this.downloads.isSeedCleanupProtected(download.requestId)) continue;
 
           // detachAttempt is best-effort and deliberately leaves the imported DB attempt intact.
           // deleteFiles=false is non-negotiable: the library may hardlink to the seeded payload.
