@@ -10,12 +10,13 @@ const props = defineProps<{
   lookup: ChapterLookupQueueState | null
   /** Books with an ASIN in the category shown. */
   candidates: number
+  allCandidates: number
   selectedCount: number
   canLookUp: boolean
   busy: boolean
 }>()
 
-const emit = defineEmits<{ lookUp: []; cancel: []; clearFinished: [] }>()
+const emit = defineEmits<{ lookUp: []; lookUpAll: []; cancel: []; clearFinished: [] }>()
 
 const { t } = useI18n()
 
@@ -53,11 +54,16 @@ function handleClear(): void {
         <h2 class="text-sm font-semibold text-foreground">{{ t('tools.chapterHealth.lookup.title') }}</h2>
         <p class="text-sm text-muted-foreground">{{ t('tools.chapterHealth.lookup.description') }}</p>
       </div>
-      <Button v-if="canLookUp" size="sm" :disabled="actionDisabled" @click="handleLookUp">
-        <Loader2 v-if="busy" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
-        <Search v-else aria-hidden="true" />
-        {{ actionLabel }}
-      </Button>
+      <div v-if="canLookUp" class="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" :disabled="busy || allCandidates === 0" @click="emit('lookUpAll')">
+          {{ t('tools.chapterHealth.lookup.lookUpAll', { count: allCandidates }) }}
+        </Button>
+        <Button size="sm" :disabled="actionDisabled" @click="handleLookUp">
+          <Loader2 v-if="busy" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+          <Search v-else aria-hidden="true" />
+          {{ actionLabel }}
+        </Button>
+      </div>
     </div>
 
     <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" role="status">
