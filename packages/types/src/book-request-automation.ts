@@ -68,7 +68,7 @@ export interface BookRequestAutomationSettings {
   autoGrabEnabled: boolean;
   /** A release scoring below this is never grabbed unattended; the approver still sees the list. */
   autoGrabMinScore: number;
-  /** Whether a failed automatic grab falls back to the next-best release on its own. */
+  /** Whether a failed release attempt, including a hand-picked one, falls back to the next eligible release. */
   autoRetryEnabled: boolean;
   /** Total automatic grabs allowed per request, first attempt included. */
   maxAutoGrabAttempts: number;
