@@ -115,7 +115,7 @@ export class ChapterHealthRepository {
     const columns = sql.join(
       categories.flatMap((category) => [
         sql`count(*) FILTER (WHERE ${this.category(category)})::int AS ${sql.identifier(`${category}_total`)}`,
-        sql`count(*) FILTER (WHERE ${this.category(category)} AND audible_id IS NOT NULL)::int AS ${sql.identifier(`${category}_asin`)}`,
+        sql`count(*) FILTER (WHERE ${this.category(category)} AND audible_id IS NOT NULL ${['no_chapters', 'one_per_file', 'numbered_tracks'].includes(category) ? sql`AND queue_status IS NULL` : sql``})::int AS ${sql.identifier(`${category}_asin`)}`,
       ]),
       sql`, `,
     );
