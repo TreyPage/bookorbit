@@ -9148,6 +9148,12 @@
         "protectSeedHint": "Do not automatically remove this request's torrent when its seed ratio or time goal is reached.",
         "saved": "Request automation settings saved",
         "saveFailed": "Could not save request automation settings"
+      },
+      "activity": {
+        "title": "Request activity",
+        "empty": "No activity has been recorded yet.",
+        "system": "BookOrbit automation",
+        "loadFailed": "Could not load request activity"
       }
     },
     "actions": {
