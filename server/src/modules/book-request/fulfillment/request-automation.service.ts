@@ -202,10 +202,6 @@ export class RequestAutomationService implements OnModuleInit {
 
     const download = await this.downloads.findById(downloadId);
     if (!download) return;
-    const joined = await this.requests.findById(download.requestId);
-    // This switch is deliberately request-scoped: a difficult or intentionally hand-picked
-    // release can be left for a person without disabling recovery for every other request.
-    if (!joined || joined.request.automaticRetryPaused) return;
 
     await this.runAttempt(download.requestId, 'retry', settings);
   }
