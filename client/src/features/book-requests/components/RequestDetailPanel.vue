@@ -24,6 +24,7 @@ import { usePermissions } from '@/features/auth/composables/usePermissions'
 import { useLibraries } from '@/features/library/composables/useLibraries'
 import { formatDateTime } from '@/i18n/formatters'
 import { formatBytes } from '@/lib/formatting'
+import { api } from '@/lib/api'
 import RequestCover from './RequestCover.vue'
 import RequestPairSwitch from './RequestPairSwitch.vue'
 import ReleaseUnitChooser from './ReleaseUnitChooser.vue'
@@ -387,6 +388,23 @@ function handleKeydown(event: KeyboardEvent) {
  * The refusal travels with it rather than being read back off the composable, so one action in
  * flight cannot describe another.
  */
+async function updateAutomationControl(key: 'automaticRetryPaused' | 'seedCleanupProtected', value: boolean): Promise<void> {
+  if (!request.value) return
+  try {
+    const response = await api(`/api/v1/book-requests/${request.value.id}/automation`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [key]: value }),
+    })
+    if (!response.ok) throw new Error('Request automation setting could not be saved')
+    setRequest((await response.json()) as BookRequestItem)
+    toast.success(t('bookRequests.detail.automation.saved'))
+  } catch {
+    toast.error(t('bookRequests.detail.automation.saveFailed'))
+    await fetchRequest(requestId.value, { background: true })
+  }
+}
+
 function applyUpdate(outcome: ActionOutcome, failureKey: string): boolean {
   if (!outcome.item) {
     const localized = localizedRequestActionFailure(outcome)
@@ -680,6 +698,17 @@ function dockFileMeta(file: BookDockFile): string {
       </div>
 
       <template v-else-if="request">
+        <section v-if="canFulfilThis" class="mb-4 rounded-lg border border-border p-3">
+          <h3 class="mb-2 text-sm font-semibold">{{ t('bookRequests.detail.automation.title') }}</h3>
+          <label class="flex items-start gap-2 py-1.5 text-sm">
+            <input type="checkbox" class="mt-0.5" :checked="request.automaticRetryPaused" @change="updateAutomationControl('automaticRetryPaused', ($event.target as HTMLInputElement).checked)" />
+            <span><span class="block">{{ t('bookRequests.detail.automation.pauseRetries') }}</span><span class="block text-xs text-muted-foreground">{{ t('bookRequests.detail.automation.pauseRetriesHint') }}</span></span>
+          </label>
+          <label class="flex items-start gap-2 py-1.5 text-sm">
+            <input type="checkbox" class="mt-0.5" :checked="request.seedCleanupProtected" @change="updateAutomationControl('seedCleanupProtected', ($event.target as HTMLInputElement).checked)" />
+            <span><span class="block">{{ t('bookRequests.detail.automation.protectSeed') }}</span><span class="block text-xs text-muted-foreground">{{ t('bookRequests.detail.automation.protectSeedHint') }}</span></span>
+          </label>
+        </section>
         <RequestPairSwitch v-if="companion" :request="request" :companion="companion" :progress-by-request="progressByRequest" />
 
         <header class="flex items-start gap-4">
