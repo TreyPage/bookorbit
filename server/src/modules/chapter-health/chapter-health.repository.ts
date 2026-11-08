@@ -195,6 +195,22 @@ export class ChapterHealthRepository {
     return result.rows.map((row) => Number(row.book_id));
   }
 
+  /** Every unqueued audiobook with an ASIN that currently belongs to a lookup category. */
+  async findAllLookupCandidates(libraryIds: number[], filters?: ContentFilterRules): Promise<number[]> {
+    if (libraryIds.length === 0) return [];
+    const result = await this.db.execute<{ book_id: number }>(sql`${this.shaped(libraryIds, filters)}
+      SELECT book_id FROM shaped
+      WHERE audible_id IS NOT NULL
+        AND queue_status IS NULL
+        AND (
+          ${this.category('no_chapters')}
+          OR ${this.category('one_per_file')}
+          OR ${this.category('numbered_tracks')}
+        )
+      ORDER BY book_id`);
+    return result.rows.map((row) => Number(row.book_id));
+  }
+
   /** Of the given books, the ones in these libraries that have an ASIN. */
   async filterLookupCandidates(libraryIds: number[], bookIds: number[], filters?: ContentFilterRules): Promise<number[]> {
     if (libraryIds.length === 0 || bookIds.length === 0) return [];
