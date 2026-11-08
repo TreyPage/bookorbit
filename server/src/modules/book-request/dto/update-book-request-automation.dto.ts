@@ -6,7 +6,7 @@ export class UpdateBookRequestAutomationDto {
   @IsBoolean()
   automaticRetryPaused?: boolean;
 
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsBoolean()
   seedCleanupProtected?: boolean;
 }
