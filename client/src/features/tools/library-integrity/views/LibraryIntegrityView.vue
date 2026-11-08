@@ -331,7 +331,9 @@ function openBookMerge(): void {
             </dd>
           </div>
         </dl>
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-live="polite">
+        <div class="space-y-2">
+          <h3 class="text-sm font-semibold text-foreground">{{ t('tools.libraryIntegrity.scanStatus.relatedChecks') }}</h3>
+          <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-live="polite">
           <div class="rounded-lg bg-muted/50 px-3 py-2">
             <dt class="text-xs text-muted-foreground">{{ t('tools.header.duplicateBooks') }}</dt>
             <dd class="text-lg font-semibold tabular-nums text-foreground">
@@ -348,6 +350,7 @@ function openBookMerge(): void {
             <dt class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.title') }}</dt>
             <dd class="text-lg font-semibold tabular-nums text-foreground">{{ relatedChecks.seriesCleanup.status === 'complete' ? `${relatedChecks.seriesCleanup.count ?? 0}${relatedChecks.seriesCleanup.truncated ? '+' : ''}` : relatedChecks.seriesCleanup.status === 'failed' ? '—' : relatedChecks.seriesCleanup.status === 'running' ? 'Scanning…' : 'Not scanned' }}</dd>
             <Button v-if="relatedChecks.seriesCleanup.status === 'complete' && (relatedChecks.seriesCleanup.count ?? 0) > 0" size="sm" variant="link" class="h-auto p-0" @click="openSeriesCleanup">{{ t('tools.libraryIntegrity.openCheck') }}</Button>
+          </div>
           </div>
         </div>
         <p v-if="scanStatus.summary?.sidecarScanTruncated || scanStatus.summary?.filesystemScanTruncated" class="text-sm text-warning">
