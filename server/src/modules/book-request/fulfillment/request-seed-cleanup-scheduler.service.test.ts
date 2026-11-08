@@ -142,6 +142,18 @@ describe('RequestSeedCleanupSchedulerService', () => {
     expect(adapter.status).not.toHaveBeenCalled();
   });
 
+  it('continues to later pages when earlier imported seeds have not reached a goal', async () => {
+    const firstPage = Array.from({ length: 500 }, (_, index) => download(index + 1, index.toString(16).padStart(40, '0')));
+    const finalRow = download(501, HASH_B);
+    const { service, downloads, removal } = makeService([finalRow], [status(HASH_B, { ratio: 2, ratioGoal: 2 })]);
+    downloads.findImportedTorrentSeeds.mockImplementation(async (afterId: number) => (afterId === 0 ? firstPage : [finalRow]));
+
+    await service.tick();
+
+    expect(downloads.findImportedTorrentSeeds).toHaveBeenCalledTimes(2);
+    expect(removal.detachAttempt).toHaveBeenCalledWith(finalRow, false);
+  });
+
   it('does not overlap two scheduler ticks', async () => {
     const { service, downloads } = makeService();
     let release!: () => void;
