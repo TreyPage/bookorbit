@@ -11,7 +11,7 @@ function makeService(
     findLiveDirectClientKeys: vi.fn().mockResolvedValue([]),
     findActiveDirect: vi.fn().mockResolvedValue([]),
   };
-  const fulfillment = { failDownload: vi.fn().mockResolvedValue(undefined) };
+  const fulfillment = { failDownload: vi.fn().mockResolvedValue(true) };
   const requests = {
     findAbandonedSelfServe: vi.fn().mockResolvedValue(abandoned),
     cancelAbandoned: vi.fn().mockResolvedValue(true),
