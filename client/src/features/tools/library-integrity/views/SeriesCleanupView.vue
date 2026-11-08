@@ -111,7 +111,16 @@ onMounted(() => void load())
     </p>
     <div class="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3">
       <label class="text-sm font-medium text-foreground" for="series-similarity">Minimum similarity: {{ similarityPercent }}%</label>
-      <input id="series-similarity" v-model.number="similarityPercent" type="range" min="70" max="100" step="1" class="min-w-40 flex-1" @change="load" />
+      <input
+        id="series-similarity"
+        v-model.number="similarityPercent"
+        type="range"
+        min="70"
+        max="100"
+        step="1"
+        class="min-w-40 flex-1"
+        @change="load"
+      />
     </div>
     <p class="text-sm text-muted-foreground" aria-live="polite">
       {{ t('tools.libraryIntegrity.seriesCleanup.resultCount', { count: items.length }) }}
@@ -168,7 +177,9 @@ onMounted(() => void load())
             </select>
           </label>
           <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(pair.left.id, true)">Ignore {{ pair.left.name }}</Button>
-          <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(pair.right.id, true)">Ignore {{ pair.right.name }}</Button>
+          <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(pair.right.id, true)">
+            Ignore {{ pair.right.name }}
+          </Button>
           <Button size="sm" :disabled="!pair.mergeAllowed || busy !== null" @click="merge(pair)">
             <Loader2 v-if="busy === keyOf(pair)" class="size-4 animate-spin" aria-hidden="true" />
             <GitMerge v-else class="size-4" aria-hidden="true" />
