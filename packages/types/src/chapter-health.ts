@@ -52,6 +52,8 @@ export interface EnqueueChapterLookupRequest {
   bookIds?: number[];
   category?: ChapterHealthCategory;
   libraryId?: number;
+  /** Queue every unprocessed audiobook with an Audible ASIN that needs chapter repair. */
+  allEligible?: boolean;
 }
 
 export interface EnqueueChapterLookupResult {

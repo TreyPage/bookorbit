@@ -1,6 +1,6 @@
 import { CHAPTER_HEALTH_CATEGORIES, type ChapterHealthCategory, type EnqueueChapterLookupRequest } from '@bookorbit/types';
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
 
 export class ChapterHealthScopeDto {
   @IsOptional()
@@ -45,4 +45,8 @@ export class EnqueueChapterLookupDto implements EnqueueChapterLookupRequest {
   @IsInt()
   @Min(1)
   libraryId?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  allEligible?: boolean;
 }

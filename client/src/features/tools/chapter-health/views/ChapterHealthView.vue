@@ -83,6 +83,22 @@ async function handleLookUp() {
   }
 }
 
+async function handleLookUpAll() {
+  enqueueing.value = true
+  try {
+    const result = await health.lookUpAll()
+    toast.success(
+      result.skipped > 0
+        ? t('tools.chapterHealth.lookup.queuedWithSkipped', { count: result.queued, skipped: result.skipped })
+        : t('tools.chapterHealth.lookup.queued', { count: result.queued }),
+    )
+  } catch (reason) {
+    toast.error(errorMessage(reason, 'tools.chapterHealth.errors.enqueue'))
+  } finally {
+    enqueueing.value = false
+  }
+}
+
 async function handleCancel() {
   try {
     await health.cancel()
@@ -117,10 +133,12 @@ async function handleDismiss(bookId: number) {
     <ChapterHealthLookupPanel
       :lookup="health.lookup.value"
       :candidates="health.lookupCandidates.value"
+      :all-candidates="health.allLookupCandidates.value"
       :selected-count="health.selected.value.size"
       :can-look-up="health.canLookUp.value"
       :busy="enqueueing"
       @look-up="handleLookUp"
+      @look-up-all="handleLookUpAll"
       @cancel="handleCancel"
       @clear-finished="handleClearFinished"
     />

@@ -41,6 +41,7 @@ function setup(editableLibraryIds = [2, 3]) {
     summarize: vi.fn().mockResolvedValue(totals()),
     list: vi.fn().mockResolvedValue({ rows: [], total: 0 }),
     findLookupCandidates: vi.fn().mockResolvedValue([]),
+    findAllLookupCandidates: vi.fn().mockResolvedValue([]),
     filterLookupCandidates: vi.fn().mockResolvedValue([]),
     enqueue: vi.fn().mockImplementation((ids: number[]) => Promise.resolve(ids.length)),
     stateFor: vi.fn().mockResolvedValue({ counts: new Map(), processing: null }),
@@ -73,6 +74,16 @@ describe('ChapterHealthService.summary', () => {
     await service.summary(USER, 3);
 
     expect(repo.summarize).toHaveBeenCalledWith([3], USER.contentFilters);
+  });
+
+  it('queues every eligible Audible audiobook across categories in one request', async () => {
+    const { service, repo } = setup();
+    repo.findAllLookupCandidates.mockResolvedValue([41, 42, 43]);
+    repo.enqueue.mockResolvedValue(3);
+
+    await expect(service.enqueue(USER, { allEligible: true })).resolves.toEqual({ queued: 3, skipped: 0 });
+    expect(repo.findAllLookupCandidates).toHaveBeenCalledWith([2, 3], USER.contentFilters);
+    expect(repo.enqueue).toHaveBeenCalledWith([41, 42, 43], USER.id);
   });
 
   it('refuses a library the user cannot reach without counting anything', async () => {

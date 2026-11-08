@@ -45,6 +45,10 @@ export function useChapterHealth() {
   const lookupActive = computed(() => Boolean(lookup.value && (lookup.value.queued > 0 || lookup.value.processing)))
   const canLookUp = computed(() => LOOKUP_CATEGORIES.has(category.value))
   const lookupCandidates = computed(() => summary.value?.withAsin[category.value] ?? 0)
+  const allLookupCandidates = computed(() => {
+    if (!summary.value) return 0
+    return summary.value.withAsin.no_chapters + summary.value.withAsin.one_per_file + summary.value.withAsin.numbered_tracks
+  })
 
   async function loadSummary(): Promise<void> {
     const mine = ++summaryToken
@@ -149,6 +153,14 @@ export function useChapterHealth() {
     return result
   }
 
+  /** Queues every eligible, unprocessed Audible audiobook in one operation. */
+  async function lookUpAll(): Promise<{ queued: number; skipped: number }> {
+    const result = await enqueueChapterLookups({ allEligible: true, ...(libraryId.value === null ? {} : { libraryId: libraryId.value }) })
+    selected.value = new Set()
+    await loadLookup()
+    return result
+  }
+
   async function cancel(): Promise<void> {
     await cancelChapterLookups()
     await loadLookup()
@@ -189,6 +201,7 @@ export function useChapterHealth() {
     lookupActive,
     canLookUp,
     lookupCandidates,
+    allLookupCandidates,
     selected,
     refresh,
     setCategory,
@@ -197,6 +210,7 @@ export function useChapterHealth() {
     toggle,
     clearSelection,
     lookUp,
+    lookUpAll,
     cancel,
     clearFinished,
     dismiss,

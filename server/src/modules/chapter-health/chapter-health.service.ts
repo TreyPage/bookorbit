@@ -78,6 +78,9 @@ export class ChapterHealthService {
       const unique = [...new Set(dto.bookIds)];
       bookIds = await this.repo.filterLookupCandidates(libraryIds, unique, user.isSuperuser ? undefined : user.contentFilters);
       requested = unique.length;
+    } else if (dto.allEligible === true) {
+      bookIds = await this.repo.findAllLookupCandidates(libraryIds, user.isSuperuser ? undefined : user.contentFilters);
+      requested = bookIds.length;
     } else if (dto.category) {
       bookIds = await this.repo.findLookupCandidates(
         libraryIds,
@@ -87,7 +90,7 @@ export class ChapterHealthService {
       );
       requested = bookIds.length;
     } else {
-      throw new BadRequestException('Choose books or a category to look up');
+      throw new BadRequestException('Choose books, a category, or all eligible books to look up');
     }
     const queued = await this.repo.enqueue(bookIds, user.id);
     return { queued, skipped: requested - queued };
