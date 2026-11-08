@@ -395,9 +395,9 @@ function openBookMerge(): void {
                 {{ t('tools.libraryIntegrity.openCheck') }}
               </Button>
             </div>
-          </div>          </div>
+          </div>
         </div>
-        <p v-if="scanStatus.summary?.sidecarScanTruncated || scanStatus.summary?.filesystemScanTruncated" class="text-sm text-warning">
+        <p v-if="scanStatus?.summary?.sidecarScanTruncated || scanStatus?.summary?.filesystemScanTruncated" class="text-sm text-warning">
           {{ t('tools.libraryIntegrity.scanStatus.truncated') }}
         </p>
       </div>
