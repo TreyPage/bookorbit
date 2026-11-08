@@ -18,11 +18,13 @@ import {
   MAX_AUTO_GRAB_ATTEMPTS_LIMIT,
   MAX_AUTO_SEARCH_INTERVAL_HOURS,
   MAX_AUTO_SEARCH_MAX_AGE_DAYS,
+  MAX_STALLED_DOWNLOAD_TIMEOUT_HOURS,
   MAX_RELEASE_TIER_NAME_LENGTH,
   MAX_RELEASE_TIERS,
   MIN_AUTO_GRAB_SCORE_FLOOR,
   MIN_AUTO_SEARCH_INTERVAL_HOURS,
   MIN_AUTO_SEARCH_MAX_AGE_DAYS,
+  MIN_STALLED_DOWNLOAD_TIMEOUT_HOURS,
 } from '@bookorbit/types';
 import type { BookRequestImportFormats, ReleaseFileLayout } from '@bookorbit/types';
 
@@ -204,6 +206,13 @@ export class UpdateAutomationSettingsDto {
   @Min(MIN_AUTO_SEARCH_MAX_AGE_DAYS)
   @Max(MAX_AUTO_SEARCH_MAX_AGE_DAYS)
   autoSearchMaxAgeDays?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(MIN_STALLED_DOWNLOAD_TIMEOUT_HOURS)
+  @Max(MAX_STALLED_DOWNLOAD_TIMEOUT_HOURS)
+  stalledDownloadTimeoutHours?: number;
 
   @IsOptional()
   @IsBoolean()
