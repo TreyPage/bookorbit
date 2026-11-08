@@ -43,9 +43,32 @@ export class RequestSeedCleanupSchedulerService {
   }
 
   private async cleanupDueSeeds(): Promise<void> {
-    const candidates = await this.downloads.findImportedTorrentSeeds();
-    if (candidates.length === 0) return;
+    let afterId = 0;
+    let candidatesTotal = 0;
+    let checkedTotal = 0;
+    let removedTotal = 0;
 
+    // Keyset pagination prevents the oldest 500 rows without goals from starving newer torrents.
+    while (true) {
+      const candidates = await this.downloads.findImportedTorrentSeeds(afterId);
+      if (candidates.length === 0) break;
+      afterId = candidates[candidates.length - 1].id;
+      candidatesTotal += candidates.length;
+
+      const result = await this.cleanupBatch(candidates);
+      checkedTotal += result.checked;
+      removedTotal += result.removed;
+      if (candidates.length < 500) break;
+    }
+
+    if (checkedTotal > 0 || removedTotal > 0) {
+      this.logger.log(
+        `[book_request.seed_cleanup] [sweep] candidates=${candidatesTotal} checked=${checkedTotal} removed=${removedTotal} - seed cleanup sweep finished`,
+      );
+    }
+  }
+
+  private async cleanupBatch(candidates: Awaited<ReturnType<BookRequestDownloadRepository['findImportedTorrentSeeds']>>): Promise<{ checked: number; removed: number }> {
     const byClient = new Map<number, typeof candidates>();
     for (const download of candidates) {
       if (download.downloadClientId === null || download.clientKey === null) continue;
@@ -90,11 +113,7 @@ export class RequestSeedCleanupSchedulerService {
       }
     }
 
-    if (checked > 0 || removed > 0) {
-      this.logger.log(
-        `[book_request.seed_cleanup] [sweep] candidates=${candidates.length} checked=${checked} removed=${removed} - seed cleanup sweep finished`,
-      );
-    }
+    return { checked, removed };
   }
 
   private goalReached(status: DownloadStatus): boolean {
