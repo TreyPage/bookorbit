@@ -139,7 +139,7 @@ export class RequestAutomationSettingsService {
       writes.push(this.appSettings.setValue(KEYS.AUTO_SEARCH_INTERVAL_HOURS, String(payload.autoSearchIntervalHours)));
     }
     if (payload.stalledDownloadTimeoutHours !== undefined) {
-      assertRange("The stalled download timeout", payload.stalledDownloadTimeoutHours, MIN_STALLED_DOWNLOAD_TIMEOUT_HOURS, MAX_STALLED_DOWNLOAD_TIMEOUT_HOURS);
+      assertRange('The stalled download timeout', payload.stalledDownloadTimeoutHours, MIN_STALLED_DOWNLOAD_TIMEOUT_HOURS, MAX_STALLED_DOWNLOAD_TIMEOUT_HOURS);
       writes.push(this.appSettings.setValue(KEYS.STALLED_DOWNLOAD_TIMEOUT_HOURS, String(payload.stalledDownloadTimeoutHours)));
     }
     if (payload.autoSearchMaxAgeDays !== undefined) {
