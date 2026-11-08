@@ -58,6 +58,20 @@ describe('RequestWatchdogService.sweep', () => {
     expect(cutoff.getTime()).toBeLessThanOrEqual(after - 12 * 60 * 60 * 1000);
   });
 
+  it('falls back to twelve hours when settings cannot be read and still runs the rest of the watchdog', async () => {
+    const { service, downloads, automationSettings, requests } = makeService();
+    automationSettings.get.mockRejectedValue(new Error('settings store unavailable'));
+    const before = Date.now();
+
+    await service.sweep();
+
+    const after = Date.now();
+    const [, cutoff] = downloads.findByStatusOlderThan.mock.calls.find((call) => call[0].includes('queued')) as [string[], Date, string];
+    expect(cutoff.getTime()).toBeGreaterThanOrEqual(before - 12 * 60 * 60 * 1000);
+    expect(cutoff.getTime()).toBeLessThanOrEqual(after - 12 * 60 * 60 * 1000);
+    expect(requests.findStrandedSearching).toHaveBeenCalled();
+  });
+
   it('uses the configured stalled timeout and reports that threshold in the failure reason', async () => {
     const { service, downloads, fulfillment, automationSettings } = makeService({
       'queued,downloading': [{ id: 21 } as BookRequestDownloadRow],
