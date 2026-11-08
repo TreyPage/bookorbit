@@ -845,6 +845,22 @@ describe('RequestAutomationService retry', () => {
  * request declined for want of a good enough release, or for a book whose first release is posted
  * next month, sits at `approved` forever and looks like work somebody has already taken.
  */
+describe('RequestAutomationService request-scoped retry controls', () => {
+  it('does not retry a failed attempt when automatic retries are paused for that request', async () => {
+    const { service, events, downloads, requests, releases } = makeService({ request: { automaticRetryPaused: true } });
+    service.onModuleInit();
+    const handler = events.on.mock.calls.find(([event]) => event === BOOK_REQUEST_DOWNLOAD_FAILED)?.[1] as ((downloadId: number) => void) | undefined;
+
+    expect(handler).toBeDefined();
+    handler!(11);
+    await settle();
+
+    expect(downloads.findById).toHaveBeenCalledWith(11);
+    expect(requests.findById).toHaveBeenCalledWith(7);
+    expect(releases.search).not.toHaveBeenCalled();
+  });
+});
+
 describe('RequestAutomationService.sweepUnfulfilled', () => {
   const searchable = { autoSearchEnabled: true, autoGrabEnabled: true };
 

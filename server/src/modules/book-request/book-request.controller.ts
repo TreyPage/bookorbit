@@ -13,6 +13,7 @@ import { CreateBookRequestPairDto } from './dto/create-book-request-pair.dto';
 import { BulkBookRequestsDto } from './dto/bulk-book-requests.dto';
 import { ListBookRequestsDto } from './dto/list-book-requests.dto';
 import { UpdateBookRequestLanguageDto } from './dto/update-book-request-language.dto';
+import { UpdateBookRequestAutomationDto } from './dto/update-book-request-automation.dto';
 
 @Controller('book-requests')
 @RequirePermission(Permission.BookRequestAccess)
@@ -102,6 +103,12 @@ export class BookRequestController {
    * Not audited alongside the decisions: this changes what the request is asking for, not whether
    * it was allowed, and the service logs the before and after either way.
    */
+  @Post(':id/automation')
+  @HttpCode(HttpStatus.OK)
+  updateAutomationControls(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateBookRequestAutomationDto, @CurrentUser() user: RequestUser) {
+    return this.service.updateAutomationControls(id, dto, user);
+  }
+
   @Post(':id/language')
   @HttpCode(HttpStatus.OK)
   setLanguage(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateBookRequestLanguageDto, @CurrentUser() user: RequestUser) {

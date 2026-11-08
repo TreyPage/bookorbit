@@ -446,6 +446,10 @@ export interface BookRequestItem extends BookRequestWorkSnapshot {
    * moderation queue, and never waiting on a decision.
    */
   selfServe: boolean;
+  /** Whether automatic release retries are paused for this request. */
+  automaticRetryPaused: boolean;
+  /** Whether automatic seed-goal cleanup must leave this request's torrent attached. */
+  seedCleanupProtected: boolean;
   /**
    * Who may drive fulfilment when that is not the requester, which happens when a self-fulfiller's
    * own submission collides with somebody else's undriven request and they take it on. Null

@@ -105,6 +105,10 @@ export const bookRequests = pgTable(
      * decision, so it reads very differently from an ordinary request.
      */
     selfServe: boolean('self_serve').notNull().default(false),
+    /** Per-request opt-out from automatic retry after a failed release. */
+    automaticRetryPaused: boolean('automatic_retry_paused').notNull().default(false),
+    /** Keep this request's imported torrent in the client after its configured seed goal. */
+    seedCleanupProtected: boolean('seed_cleanup_protected').notNull().default(false),
 
     /**
      * Who may drive fulfilment, when that is somebody other than the requester.

@@ -39,6 +39,7 @@ function status(clientKey: string, seed: Partial<NonNullable<DownloadStatus['see
 function makeService(rows = [download(1, HASH_A), download(2, HASH_B)], statuses: DownloadStatus[] = []) {
   const downloads = {
     findImportedTorrentSeeds: vi.fn().mockResolvedValue(rows),
+    isSeedCleanupProtected: vi.fn().mockResolvedValue(false),
     updateIf: vi.fn().mockResolvedValue({}),
   };
   const clients = { resolveConfig: vi.fn().mockResolvedValue({ id: 4, adapterType: 'qbittorrent' }) };
@@ -65,6 +66,17 @@ describe('RequestSeedCleanupSchedulerService', () => {
     expect(adapter.status).toHaveBeenCalledWith([HASH_A], expect.anything());
     expect(removal.detachAttempt).toHaveBeenCalledWith(row, false);
     expect(downloads.updateIf).toHaveBeenCalledWith(1, ['imported'], { clientKey: null });
+  });
+
+  it('leaves a torrent attached when request protection is enabled, even after its goal is reached', async () => {
+    const row = download(1, HASH_A);
+    const { service, downloads, removal } = makeService([row], [status(HASH_A, { ratio: 2, ratioGoal: 2 })]);
+    downloads.isSeedCleanupProtected.mockResolvedValue(true);
+
+    await service.tick();
+
+    expect(downloads.isSeedCleanupProtected).toHaveBeenCalledWith(row.requestId);
+    expect(removal.detachAttempt).not.toHaveBeenCalled();
   });
 
   it('removes a torrent when its configured seeding-time goal is reached', async () => {

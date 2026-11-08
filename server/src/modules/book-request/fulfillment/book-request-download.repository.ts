@@ -181,11 +181,13 @@ export class BookRequestDownloadRepository {
    * Bounded so a large historical library is drained over successive scheduler ticks.
    */
   async findImportedTorrentSeeds(afterId = 0, limit = 500): Promise<BookRequestDownloadRow[]> {
-    return this.db
-      .select()
+    const rows = await this.db
+      .select({ download: bookRequestDownloads })
       .from(bookRequestDownloads)
+      .innerJoin(bookRequests, eq(bookRequests.id, bookRequestDownloads.requestId))
       .where(
         and(
+          eq(bookRequests.seedCleanupProtected, false),
           eq(bookRequestDownloads.status, 'imported'),
           inArray(bookRequestDownloads.source, ['magnet', 'torrent_file']),
           isNotNull(bookRequestDownloads.downloadClientId),
@@ -195,6 +197,18 @@ export class BookRequestDownloadRepository {
       )
       .orderBy(bookRequestDownloads.id)
       .limit(limit);
+    return rows.map((row) => row.download);
+  }
+
+  /** Re-check immediately before detaching: the protection toggle may change while client status is loading. */
+  async isSeedCleanupProtected(requestId: number): Promise<boolean> {
+    const [row] = await this.db
+      .select({ protected: bookRequests.seedCleanupProtected })
+      .from(bookRequests)
+      .where(eq(bookRequests.id, requestId))
+      .limit(1);
+    // Missing request rows should fail safe rather than detach a torrent we can no longer attribute.
+    return row?.protected ?? true;
   }
 
   /**

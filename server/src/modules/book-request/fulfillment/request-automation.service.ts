@@ -201,9 +201,6 @@ export class RequestAutomationService implements OnModuleInit {
     if (!settings.autoRetryEnabled) return;
 
     const download = await this.downloads.findById(downloadId);
-    // Recovery applies to every failed attempt, including releases an approver picked by hand.
-    // The request-level retry switch and attempt budget are the operator's controls; a manual
-    // grab is not a promise that somebody will watch it fail and restart it themselves.
     if (!download) return;
 
     await this.runAttempt(download.requestId, 'retry', settings);
@@ -215,6 +212,8 @@ export class RequestAutomationService implements OnModuleInit {
     const joined = await this.requests.findById(requestId);
     if (!joined) return;
     const request = joined.request;
+    // Re-check after loading the current row: a person may pause retries while a failure event is queued.
+    if (trigger === 'retry' && request.automaticRetryPaused) return;
     if (!isGrabbableBookRequestStatus(request.status as BookRequestStatus)) return;
     // A retired medium has nothing to search for; the request waits for a person to close it.
     if (!isBookRequestMediaKind(request.mediaKind)) return;
