@@ -201,10 +201,11 @@ export class RequestAutomationService implements OnModuleInit {
     if (!settings.autoRetryEnabled) return;
 
     const download = await this.downloads.findById(downloadId);
-    // Recovery applies to every failed attempt, including releases an approver picked by hand.
-    // The request-level retry switch and attempt budget are the operator's controls; a manual
-    // grab is not a promise that somebody will watch it fail and restart it themselves.
     if (!download) return;
+    const joined = await this.requests.findById(download.requestId);
+    // This switch is deliberately request-scoped: a difficult or intentionally hand-picked
+    // release can be left for a person without disabling recovery for every other request.
+    if (!joined || joined.request.automaticRetryPaused) return;
 
     await this.runAttempt(download.requestId, 'retry', settings);
   }
