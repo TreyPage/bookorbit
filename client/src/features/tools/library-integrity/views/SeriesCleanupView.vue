@@ -111,7 +111,16 @@ onMounted(() => void load())
     </p>
     <div class="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3">
       <label class="text-sm font-medium text-foreground" for="series-similarity">Minimum similarity: {{ similarityPercent }}%</label>
-      <input id="series-similarity" v-model.number="similarityPercent" type="range" min="70" max="100" step="1" class="min-w-40 flex-1" @change="load" />
+      <input
+        id="series-similarity"
+        v-model.number="similarityPercent"
+        type="range"
+        min="70"
+        max="100"
+        step="1"
+        class="min-w-40 flex-1"
+        @change="load"
+      />
     </div>
     <p class="text-sm text-muted-foreground" aria-live="polite">
       {{ t('tools.libraryIntegrity.seriesCleanup.resultCount', { count: items.length }) }}
@@ -167,8 +176,12 @@ onMounted(() => void load())
               <option :value="pair.right.id">{{ pair.right.name }}</option>
             </select>
           </label>
-          <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(pair.left.id, true)">Ignore {{ pair.left.name }}</Button>
-          <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(pair.right.id, true)">Ignore {{ pair.right.name }}</Button>
+          <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(pair.left.id, true)">
+            Ignore {{ pair.left.name }}
+          </Button>
+          <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(pair.right.id, true)">
+            Ignore {{ pair.right.name }}
+          </Button>
           <Button size="sm" :disabled="!pair.mergeAllowed || busy !== null" @click="merge(pair)">
             <Loader2 v-if="busy === keyOf(pair)" class="size-4 animate-spin" aria-hidden="true" />
             <GitMerge v-else class="size-4" aria-hidden="true" />
@@ -176,7 +189,9 @@ onMounted(() => void load())
           </Button>
         </div>
         <div v-if="confirmKey === keyOf(pair)" class="mt-3 rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
-          <p class="text-sm text-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.positionConflictWarning', { count: conflictCount }) }}</p>
+          <p class="text-sm text-foreground">
+            {{ t('tools.libraryIntegrity.seriesCleanup.positionConflictWarning', { count: conflictCount }) }}
+          </p>
           <div class="mt-2 flex justify-end">
             <Button size="sm" variant="destructive" :disabled="busy !== null" @click="merge(pair, true)">{{
               t('tools.libraryIntegrity.seriesCleanup.confirmPositionMerge')
@@ -187,7 +202,11 @@ onMounted(() => void load())
     </section>
     <section v-if="ignoredSeries.length" class="flex flex-col gap-2 border-t border-border pt-4">
       <h2 class="font-semibold text-foreground">Ignored series</h2>
-      <div v-for="series in ignoredSeries" :key="series.id" class="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
+      <div
+        v-for="series in ignoredSeries"
+        :key="series.id"
+        class="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
+      >
         <span class="text-sm">{{ series.name }} <span class="text-muted-foreground">({{ series.bookCount }} books)</span></span>
         <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(series.id, false)">Restore</Button>
       </div>
