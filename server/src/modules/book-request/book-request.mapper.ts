@@ -56,6 +56,8 @@ export function mapBookRequestRow(
     matchedBookId: r.matchedBookId,
     bookDockFileId: r.bookDockFileId,
     selfServe: r.selfServe,
+    automaticRetryPaused: r.automaticRetryPaused,
+    seedCleanupProtected: r.seedCleanupProtected,
     fulfillerUserId: r.fulfillerUserId,
     statusReason: r.statusReason,
     failureCode: (r.failureCode as BookRequestHandbackCode | null) ?? null,
