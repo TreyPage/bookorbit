@@ -37,7 +37,10 @@ function status(clientKey: string, seed: Partial<NonNullable<DownloadStatus['see
 }
 
 function makeService(rows = [download(1, HASH_A), download(2, HASH_B)], statuses: DownloadStatus[] = []) {
-  const downloads = { findImportedTorrentSeeds: vi.fn().mockResolvedValue(rows) };
+  const downloads = {
+    findImportedTorrentSeeds: vi.fn().mockResolvedValue(rows),
+    updateIf: vi.fn().mockResolvedValue({}),
+  };
   const clients = { resolveConfig: vi.fn().mockResolvedValue({ id: 4, adapterType: 'qbittorrent' }) };
   const adapter = { status: vi.fn().mockResolvedValue(statuses) };
   const registry = { require: vi.fn().mockReturnValue(adapter) };
@@ -61,6 +64,7 @@ describe('RequestSeedCleanupSchedulerService', () => {
 
     expect(adapter.status).toHaveBeenCalledWith([HASH_A], expect.anything());
     expect(removal.detachAttempt).toHaveBeenCalledWith(row, false);
+    expect(downloads.updateIf).toHaveBeenCalledWith(1, ['imported'], { clientKey: null });
   });
 
   it('removes a torrent when its configured seeding-time goal is reached', async () => {
