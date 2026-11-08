@@ -408,7 +408,9 @@ export class RequestAutomationService implements OnModuleInit {
           action: AuditAction.BookRequestAutoRelease,
           resource: AuditResource.BookRequest,
           resourceId: requestId,
-          description: `Automatically selected release "${release.title}" from ${release.indexerName}`,
+          description: trigger === 'retry'
+            ? `Replaced the failed release by automatically selecting "${release.title}" from ${release.indexerName}`
+            : `Automatically selected release "${release.title}" from ${release.indexerName}`,
           meta: { requestId, trigger, indexerId: release.indexerId, indexerName: release.indexerName, releaseTitle: release.title, score: release.score },
         });
         this.logger.log(
