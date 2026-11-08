@@ -4,7 +4,12 @@ import { useI18n } from 'vue-i18n'
 import { AlertCircle, GitMerge, Loader2, RefreshCw } from '@lucide/vue'
 import type { SimilarSeriesPair } from '@bookorbit/types'
 import { Button } from '@/components/ui/button'
-import { getSimilarSeriesCandidates, mergeSimilarSeries, setSeriesMergeIgnored, type SeriesMergeError } from '../../api/library-integrity'
+import {
+  getSimilarSeriesCandidates,
+  mergeSimilarSeries,
+  setSeriesMergeIgnored,
+  type SeriesMergeError,
+} from '../../api/library-integrity'
 
 const { t } = useI18n()
 const items = ref<SimilarSeriesPair[]>([])
@@ -90,8 +95,12 @@ onMounted(() => void load())
   <div class="flex h-full min-h-0 flex-col gap-4 overflow-y-auto pr-1">
     <header class="flex flex-wrap items-start justify-between gap-3">
       <div class="space-y-1">
-        <h1 class="text-2xl font-semibold tracking-tight text-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.title') }}</h1>
-        <p class="max-w-3xl text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.description') }}</p>
+        <h1 class="text-2xl font-semibold tracking-tight text-foreground">
+          {{ t('tools.libraryIntegrity.seriesCleanup.title') }}
+        </h1>
+        <p class="max-w-3xl text-sm text-muted-foreground">
+          {{ t('tools.libraryIntegrity.seriesCleanup.description') }}
+        </p>
       </div>
       <Button variant="outline" size="sm" :disabled="loading || busy !== null" @click="load">
         <RefreshCw class="size-4" :class="{ 'animate-spin': loading }" aria-hidden="true" />
@@ -106,11 +115,17 @@ onMounted(() => void load())
     >
       <AlertCircle class="size-4 shrink-0" aria-hidden="true" />{{ error }}
     </div>
-    <p v-if="truncated" role="status" class="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+    <p
+      v-if="truncated"
+      role="status"
+      class="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground"
+    >
       {{ t('tools.libraryIntegrity.seriesCleanup.truncated') }}
     </p>
     <div class="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3">
-      <label class="text-sm font-medium text-foreground" for="series-similarity">Minimum similarity: {{ similarityPercent }}%</label>
+      <label class="text-sm font-medium text-foreground" for="series-similarity">
+        Minimum similarity: {{ similarityPercent }}%
+      </label>
       <input
         id="series-similarity"
         v-model.number="similarityPercent"
@@ -136,7 +151,9 @@ onMounted(() => void load())
     >
       <GitMerge class="size-6 text-muted-foreground" aria-hidden="true" />
       <p class="font-semibold text-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.emptyTitle') }}</p>
-      <p class="max-w-md text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.emptyDescription') }}</p>
+      <p class="max-w-md text-sm text-muted-foreground">
+        {{ t('tools.libraryIntegrity.seriesCleanup.emptyDescription') }}
+      </p>
     </div>
     <section v-else class="flex flex-col gap-3">
       <article v-for="pair in items" :key="keyOf(pair)" class="rounded-lg border border-border bg-card p-4">
@@ -151,7 +168,12 @@ onMounted(() => void load())
           }}</span>
         </div>
         <p class="mt-1 text-xs text-muted-foreground">
-          {{ t('tools.libraryIntegrity.seriesCleanup.bookCounts', { left: pair.left.bookCount, right: pair.right.bookCount }) }}
+          {{
+            t('tools.libraryIntegrity.seriesCleanup.bookCounts', {
+              left: pair.left.bookCount,
+              right: pair.right.bookCount,
+            })
+          }}
         </p>
         <p
           v-if="!pair.mergeAllowed"
@@ -166,7 +188,9 @@ onMounted(() => void load())
         </p>
         <div class="mt-4 flex flex-wrap items-end gap-3 border-t border-border pt-3">
           <label class="min-w-0 flex-1 space-y-1 text-sm">
-            <span class="font-medium text-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.canonicalLabel') }}</span>
+            <span class="font-medium text-foreground">
+              {{ t('tools.libraryIntegrity.seriesCleanup.canonicalLabel') }}
+            </span>
             <select
               v-model.number="targets[keyOf(pair)]"
               class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -176,7 +200,9 @@ onMounted(() => void load())
               <option :value="pair.right.id">{{ pair.right.name }}</option>
             </select>
           </label>
-          <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(pair.left.id, true)">Ignore {{ pair.left.name }}</Button>
+          <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(pair.left.id, true)">
+            Ignore {{ pair.left.name }}
+          </Button>
           <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(pair.right.id, true)">
             Ignore {{ pair.right.name }}
           </Button>
@@ -187,7 +213,9 @@ onMounted(() => void load())
           </Button>
         </div>
         <div v-if="confirmKey === keyOf(pair)" class="mt-3 rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
-          <p class="text-sm text-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.positionConflictWarning', { count: conflictCount }) }}</p>
+          <p class="text-sm text-foreground">
+            {{ t('tools.libraryIntegrity.seriesCleanup.positionConflictWarning', { count: conflictCount }) }}
+          </p>
           <div class="mt-2 flex justify-end">
             <Button size="sm" variant="destructive" :disabled="busy !== null" @click="merge(pair, true)">{{
               t('tools.libraryIntegrity.seriesCleanup.confirmPositionMerge')
@@ -198,9 +226,17 @@ onMounted(() => void load())
     </section>
     <section v-if="ignoredSeries.length" class="flex flex-col gap-2 border-t border-border pt-4">
       <h2 class="font-semibold text-foreground">Ignored series</h2>
-      <div v-for="series in ignoredSeries" :key="series.id" class="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
-        <span class="text-sm">{{ series.name }} <span class="text-muted-foreground">({{ series.bookCount }} books)</span></span>
-        <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(series.id, false)">Restore</Button>
+      <div
+        v-for="series in ignoredSeries"
+        :key="series.id"
+        class="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
+      >
+        <span class="text-sm">
+          {{ series.name }} <span class="text-muted-foreground">({{ series.bookCount }} books)</span>
+        </span>
+        <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(series.id, false)">
+          Restore
+        </Button>
       </div>
     </section>
   </div>
