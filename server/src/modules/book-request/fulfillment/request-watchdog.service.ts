@@ -199,7 +199,19 @@ export class RequestWatchdogService implements OnApplicationBootstrap {
     const timeoutMs = timeoutHours * 60 * 60 * 1000;
     const rows = await this.downloads.findByStatusOlderThan(STALLABLE, new Date(Date.now() - timeoutMs), 'progress');
     for (const row of rows) {
-      await this.fulfillment.failDownload(row, `The download made no progress for ${timeoutHours} hours`);
+      const reason = `The download made no progress for ${timeoutHours} hours`;
+      await this.fulfillment.failDownload(row, reason);
+      const latest = await this.downloads.findById(row.id);
+      if (latest?.status !== 'failed' || latest.errorMessage !== reason) continue;
+      this.auditEvents.emit(AUDIT_EVENT, {
+        userId: null,
+        actorUsername: 'system',
+        action: AuditAction.BookRequestStalled,
+        resource: AuditResource.BookRequest,
+        resourceId: row.requestId,
+        description: `Download stalled after ${timeoutHours} hours without progress; automatic recovery was started`,
+        meta: { requestId: row.requestId, downloadId: row.id, timeoutHours },
+      });
     }
   }
 
