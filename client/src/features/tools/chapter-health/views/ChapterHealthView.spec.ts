@@ -80,7 +80,11 @@ function buttonNamed(name: string) {
 }
 
 function lookupButton() {
-  return wrapper!.findAll('button').find((candidate) => candidate.text().startsWith('Look up'))
+  return wrapper!.findAll('button').find((candidate) => candidate.text().startsWith('Look up the') || (candidate.text().startsWith('Look up ') && !candidate.text().startsWith('Look up all')))
+}
+
+function lookupAllButton() {
+  return wrapper!.findAll('button').find((candidate) => candidate.text().startsWith('Look up all'))
 }
 
 describe('ChapterHealthView', () => {
@@ -145,6 +149,18 @@ describe('ChapterHealthView', () => {
 
     expect(lookupButton()!.text()).toBe('Look up the 2 books with an ASIN')
     expect(wrapper!.text()).toContain('No lookups waiting.')
+  })
+
+  it('offers one action to queue all eligible books across chapter categories', async () => {
+    await mountView()
+
+    expect(lookupAllButton()!.text()).toBe('Look up all 3 eligible books')
+    vi.mocked(api.enqueueChapterLookups).mockResolvedValue({ queued: 3, skipped: 0 })
+    await lookupAllButton()!.trigger('click')
+    await flushPromises()
+
+    expect(api.enqueueChapterLookups).toHaveBeenCalledWith({ allEligible: true })
+    expect(toast.success).toHaveBeenCalledWith('3 books queued')
   })
 
   it('hides the lookup and the checkboxes in the review list', async () => {
