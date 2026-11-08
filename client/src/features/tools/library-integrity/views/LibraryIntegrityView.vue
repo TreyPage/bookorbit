@@ -7,13 +7,12 @@ import { ArrowRight, Copy, Files, GitMerge, Merge, RefreshCw, ShieldCheck } from
 import type { BookDuplicateScan, LibraryFilesystemFindingsResult, LibraryIntegrityScanStatus } from '@bookorbit/types'
 import { createBookDuplicateScan, getActiveBookDuplicateScan, getBookDuplicateScan } from '@/features/tools/api/book-duplicates'
 import { getBookMergeCandidates } from '@/features/tools/api/book-merge'
-import { getSimilarSeriesCandidates } from '@/features/tools/api/library-integrity'
-
 import {
   cleanupEmptyBookFolder,
   cleanupOrphanedFile,
   getLibraryFilesystemFindings,
   getLibraryIntegrityScanStatus,
+  getSimilarSeriesCandidates,
   startLibraryIntegrityScan,
 } from '@/features/tools/api/library-integrity'
 import MissingResourcesView from '@/features/tools/missing-resources/views/MissingResourcesView.vue'
@@ -334,23 +333,23 @@ function openBookMerge(): void {
         <div class="space-y-2">
           <h3 class="text-sm font-semibold text-foreground">{{ t('tools.libraryIntegrity.scanStatus.relatedChecks') }}</h3>
           <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-live="polite">
-          <div class="rounded-lg bg-muted/50 px-3 py-2">
-            <dt class="text-xs text-muted-foreground">{{ t('tools.header.duplicateBooks') }}</dt>
-            <dd class="text-lg font-semibold tabular-nums text-foreground">
-              {{ relatedChecks.duplicateBooks.status === 'complete' ? relatedChecks.duplicateBooks.count : relatedChecks.duplicateBooks.status === 'running' ? `${relatedChecks.duplicateBooks.progress ?? 0}%` : relatedChecks.duplicateBooks.status === 'failed' ? '—' : 'Not scanned' }}
-            </dd>
-            <Button v-if="relatedChecks.duplicateBooks.status === 'complete' && (relatedChecks.duplicateBooks.count ?? 0) > 0" size="sm" variant="link" class="h-auto p-0" @click="openDuplicateBooks">{{ t('tools.libraryIntegrity.openCheck') }}</Button>
-          </div>
-          <div class="rounded-lg bg-muted/50 px-3 py-2">
-            <dt class="text-xs text-muted-foreground">{{ t('tools.header.bookMerge') }}</dt>
-            <dd class="text-lg font-semibold tabular-nums text-foreground">{{ relatedChecks.mergeCandidates.status === 'complete' ? relatedChecks.mergeCandidates.count : relatedChecks.mergeCandidates.status === 'failed' ? '—' : relatedChecks.mergeCandidates.status === 'running' ? 'Scanning…' : 'Not scanned' }}</dd>
-            <Button v-if="relatedChecks.mergeCandidates.status === 'complete' && (relatedChecks.mergeCandidates.count ?? 0) > 0" size="sm" variant="link" class="h-auto p-0" @click="openBookMerge">{{ t('tools.libraryIntegrity.openCheck') }}</Button>
-          </div>
-          <div class="rounded-lg bg-muted/50 px-3 py-2">
-            <dt class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.title') }}</dt>
-            <dd class="text-lg font-semibold tabular-nums text-foreground">{{ relatedChecks.seriesCleanup.status === 'complete' ? `${relatedChecks.seriesCleanup.count ?? 0}${relatedChecks.seriesCleanup.truncated ? '+' : ''}` : relatedChecks.seriesCleanup.status === 'failed' ? '—' : relatedChecks.seriesCleanup.status === 'running' ? 'Scanning…' : 'Not scanned' }}</dd>
-            <Button v-if="relatedChecks.seriesCleanup.status === 'complete' && (relatedChecks.seriesCleanup.count ?? 0) > 0" size="sm" variant="link" class="h-auto p-0" @click="openSeriesCleanup">{{ t('tools.libraryIntegrity.openCheck') }}</Button>
-          </div>
+            <div class="rounded-lg bg-muted/50 px-3 py-2">
+              <dt class="text-xs text-muted-foreground">{{ t('tools.header.duplicateBooks') }}</dt>
+              <dd class="text-lg font-semibold tabular-nums text-foreground">
+                {{ relatedChecks.duplicateBooks.status === 'complete' ? relatedChecks.duplicateBooks.count : relatedChecks.duplicateBooks.status === 'running' ? `${relatedChecks.duplicateBooks.progress ?? 0}%` : relatedChecks.duplicateBooks.status === 'failed' ? '—' : 'Not scanned' }}
+              </dd>
+              <Button v-if="relatedChecks.duplicateBooks.status === 'complete' && (relatedChecks.duplicateBooks.count ?? 0) > 0" size="sm" variant="link" class="h-auto p-0" @click="openDuplicateBooks">{{ t('tools.libraryIntegrity.openCheck') }}</Button>
+            </div>
+            <div class="rounded-lg bg-muted/50 px-3 py-2">
+              <dt class="text-xs text-muted-foreground">{{ t('tools.header.bookMerge') }}</dt>
+              <dd class="text-lg font-semibold tabular-nums text-foreground">{{ relatedChecks.mergeCandidates.status === 'complete' ? relatedChecks.mergeCandidates.count : relatedChecks.mergeCandidates.status === 'failed' ? '—' : relatedChecks.mergeCandidates.status === 'running' ? 'Scanning…' : 'Not scanned' }}</dd>
+              <Button v-if="relatedChecks.mergeCandidates.status === 'complete' && (relatedChecks.mergeCandidates.count ?? 0) > 0" size="sm" variant="link" class="h-auto p-0" @click="openBookMerge">{{ t('tools.libraryIntegrity.openCheck') }}</Button>
+            </div>
+            <div class="rounded-lg bg-muted/50 px-3 py-2">
+              <dt class="text-xs text-muted-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.title') }}</dt>
+              <dd class="text-lg font-semibold tabular-nums text-foreground">{{ relatedChecks.seriesCleanup.status === 'complete' ? `${relatedChecks.seriesCleanup.count ?? 0}${relatedChecks.seriesCleanup.truncated ? '+' : ''}` : relatedChecks.seriesCleanup.status === 'failed' ? '—' : relatedChecks.seriesCleanup.status === 'running' ? 'Scanning…' : 'Not scanned' }}</dd>
+              <Button v-if="relatedChecks.seriesCleanup.status === 'complete' && (relatedChecks.seriesCleanup.count ?? 0) > 0" size="sm" variant="link" class="h-auto p-0" @click="openSeriesCleanup">{{ t('tools.libraryIntegrity.openCheck') }}</Button>
+            </div>
           </div>
         </div>
         <p v-if="scanStatus.summary?.sidecarScanTruncated || scanStatus.summary?.filesystemScanTruncated" class="text-sm text-warning">
