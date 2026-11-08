@@ -107,6 +107,7 @@ function makeService(
   const events = { on: vi.fn() };
   const notifier = { notifyApprovers: vi.fn().mockResolvedValue(undefined) };
   const searchDelay = { wait: vi.fn().mockResolvedValue(undefined) };
+  const auditEvents = { emit: vi.fn() };
 
   const service = new RequestAutomationService(
     settings as never,
@@ -117,9 +118,10 @@ function makeService(
     events as never,
     notifier as never,
     searchDelay as never,
+    auditEvents as never,
   );
 
-  return { service, settings, requests, downloads, releases, fulfillment, events, notifier, searchDelay };
+  return { service, settings, requests, downloads, releases, fulfillment, events, notifier, searchDelay, auditEvents };
 }
 
 /**
