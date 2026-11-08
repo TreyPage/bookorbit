@@ -14274,6 +14274,7 @@
         "description": "Looks up each book that has an Audible ASIN. When Audible marks its timings exact and its runtime matches your files, the chapters are applied and protected, and the old list stays in the book's history. Everything else waits under Needs review.",
         "lookUpCategory": "{count, plural, =0 {No book here has an ASIN} one {Look up the # book with an ASIN} other {Look up the # books with an ASIN}}",
         "lookUpSelected": "{count, plural, one {Look up # selected book} other {Look up # selected books}}",
+        "lookUpAll": "Look up all {count} eligible books",
         "waiting": "{count, plural, =0 {Finishing up} one {# book waiting} other {# books waiting}}",
         "current": "Looking up {title}",
         "idle": "No lookups waiting.",
