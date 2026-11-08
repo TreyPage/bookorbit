@@ -68,6 +68,7 @@ describe('RequestSeedCleanupSchedulerService', () => {
     expect(adapter.status).toHaveBeenCalledWith([HASH_A], expect.anything());
     expect(removal.detachAttempt).toHaveBeenCalledWith(row, false);
     expect(downloads.updateIf).toHaveBeenCalledWith(1, ['imported'], { clientKey: null });
+    expect(auditEvents.emit).toHaveBeenCalledWith('audit.log', expect.objectContaining({ action: 'book_request.seed_cleanup', resourceId: row.requestId }));
   });
 
   it('leaves a torrent attached when request protection is enabled, even after its goal is reached', async () => {
