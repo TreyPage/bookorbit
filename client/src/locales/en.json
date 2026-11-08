@@ -9139,7 +9139,16 @@
       "entityName": "Request",
       "pairSwitchLabel": "Formats in this request",
       "joinsBook": "Joins a book you have",
-      "joinsBookHint": "When this arrives it is added to the book already in your library"
+      "joinsBookHint": "When this arrives it is added to the book already in your library",
+      "automation": {
+        "title": "Automation for this request",
+        "pauseRetries": "Pause automatic retries",
+        "pauseRetriesHint": "If a release fails, leave this request for someone to choose the next release manually.",
+        "protectSeed": "Keep the torrent seeding",
+        "protectSeedHint": "Do not automatically remove this request's torrent when its seed ratio or time goal is reached.",
+        "saved": "Request automation settings saved",
+        "saveFailed": "Could not save request automation settings"
+      }
     },
     "actions": {
       "approve": "Approve",
