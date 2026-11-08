@@ -200,9 +200,8 @@ export class RequestWatchdogService implements OnApplicationBootstrap {
     const rows = await this.downloads.findByStatusOlderThan(STALLABLE, new Date(Date.now() - timeoutMs), 'progress');
     for (const row of rows) {
       const reason = `The download made no progress for ${timeoutHours} hours`;
-      await this.fulfillment.failDownload(row, reason);
-      const latest = await this.downloads.findById(row.id);
-      if (latest?.status !== 'failed' || latest.errorMessage !== reason) continue;
+      const failed = await this.fulfillment.failDownload(row, reason);
+      if (!failed) continue;
       this.auditEvents.emit(AUDIT_EVENT, {
         userId: null,
         actorUsername: 'system',
