@@ -583,7 +583,9 @@ function openBookMerge(): void {
         <section class="min-w-0 space-y-2">
           <h4 class="text-sm font-medium">
             {{
-              t('tools.libraryIntegrity.findings.unreadableDirectories', { count: findings.unreadableDirectories.total })
+              t('tools.libraryIntegrity.findings.unreadableDirectories', {
+                count: findings.unreadableDirectories.total,
+              })
             }}
           </h4>
           <p
