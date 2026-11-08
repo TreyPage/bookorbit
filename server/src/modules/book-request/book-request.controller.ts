@@ -118,10 +118,7 @@ export class BookRequestController {
     };
   }
 
-  /**
-   * Not audited alongside the decisions: this changes what the request is asking for, not whether
-   * it was allowed, and the service logs the before and after either way.
-   */
+  /** Request-level automation switches are audited because they change future lifecycle behavior. */
   @Post(':id/automation')
   @HttpCode(HttpStatus.OK)
   @Auditable({
