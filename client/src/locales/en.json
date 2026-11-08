@@ -5551,7 +5551,14 @@
       "MaintenanceMissingBooksClean": "Cleaned missing books",
       "MaintenanceBrokenCoversClean": "Cleaned broken covers",
       "MaintenanceOrphanedCoversClean": "Cleaned orphaned cover folders",
-      "BookMerge": "Merge books"
+      "BookMerge": "Merge books",
+      "BookRequestAutoRetry": "Automatically retry book request",
+      "BookRequestAutoRelease": "Automatically select book request release",
+      "BookRequestAutomationExhausted": "Automatic release selection exhausted",
+      "BookRequestStalled": "Fail stalled book request download",
+      "BookRequestImportStalled": "Fail stalled book import",
+      "BookRequestSeedCleanup": "Remove torrent after seed goal",
+      "BookRequestAutomationControlsUpdate": "Update request automation controls"
     },
     "views": {
       "label": "Show",
