@@ -95,6 +95,8 @@ export interface BookRequestAutomationSettings {
   autoSearchIntervalHours: number;
   /** How long a request keeps being searched for before it is left to a person. */
   autoSearchMaxAgeDays: number;
+  /** Hours without byte progress before the watchdog marks an active download stalled. */
+  stalledDownloadTimeoutHours: number;
   /**
    * Whether an imported file is checked against the request before it is filed. On, a poor match
    * waits in the Book Dock for a human. Off, whatever was downloaded goes straight into the target
