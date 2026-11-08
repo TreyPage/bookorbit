@@ -13,7 +13,10 @@ const libraries = ref([
 const fetchLibraries = vi.fn<() => Promise<void>>()
 
 vi.mock('@/features/auth/composables/usePermissions', () => ({
-  usePermissions: () => ({ hasPermission: (name: string) => permissions.value.includes(name), isSuperuser: computed(() => false) }),
+  usePermissions: () => ({
+    hasPermission: (name: string) => permissions.value.includes(name),
+    isSuperuser: computed(() => false),
+  }),
 }))
 
 vi.mock('@/features/library/composables/useLibraries', () => ({
@@ -30,7 +33,9 @@ vi.mock('../../api/chapter-health', () => ({
   getChapterLookupState: vi.fn<(...args: unknown[]) => unknown>(),
 }))
 
-vi.mock('vue-sonner', () => ({ toast: { success: vi.fn<(...args: unknown[]) => void>(), error: vi.fn<(...args: unknown[]) => void>() } }))
+vi.mock('vue-sonner', () => ({
+  toast: { success: vi.fn<(...args: unknown[]) => void>(), error: vi.fn<(...args: unknown[]) => void>() },
+}))
 
 import { toast } from 'vue-sonner'
 import { setI18nLocale } from '@/i18n'
@@ -43,7 +48,11 @@ const summary: ChapterHealthSummary = {
   withAsin: { no_chapters: 2, one_per_file: 1, numbered_tracks: 0, needs_review: 1, edited: 0 },
 }
 
-const idle: ChapterLookupQueueState = { queued: 0, processing: null, finished: { applied: 0, review: 0, not_found: 0, failed: 0, skipped: 0 } }
+const idle: ChapterLookupQueueState = {
+  queued: 0,
+  processing: null,
+  finished: { applied: 0, review: 0, not_found: 0, failed: 0, skipped: 0 },
+}
 
 function book(bookId: number, overrides: Partial<ChapterHealthBook> = {}): ChapterHealthBook {
   return {
@@ -80,7 +89,11 @@ function buttonNamed(name: string) {
 }
 
 function lookupButton() {
-  return wrapper!.findAll('button').find((candidate) => candidate.text().startsWith('Look up the') || (candidate.text().startsWith('Look up ') && !candidate.text().startsWith('Look up all')))
+  return wrapper!.findAll('button').find(
+    (candidate) =>
+      candidate.text().startsWith('Look up the') ||
+      (candidate.text().startsWith('Look up ') && !candidate.text().startsWith('Look up all')),
+  )
 }
 
 function lookupAllButton() {
@@ -173,9 +186,16 @@ describe('ChapterHealthView', () => {
     await wrapper!.findAll('[role="tab"]')[3]!.trigger('click')
     await flushPromises()
 
-    expect(api.getChapterHealthBooks).toHaveBeenLastCalledWith({ category: 'needs_review', libraryId: null, page: 1, pageSize: 50 })
+    expect(api.getChapterHealthBooks).toHaveBeenLastCalledWith({
+      category: 'needs_review',
+      libraryId: null,
+      page: 1,
+      pageSize: 50,
+    })
     expect(wrapper!.findAll('[role="tab"]')[3]!.attributes('aria-selected')).toBe('true')
-    expect(wrapper!.text()).toContain('Audible lookups that did not match your files well enough to apply on their own.')
+    expect(wrapper!.text()).toContain(
+      'Audible lookups that did not match your files well enough to apply on their own.',
+    )
     expect(lookupButton()).toBeUndefined()
     expect(wrapper!.find('li input[type="checkbox"]').exists()).toBe(false)
     expect(wrapper!.text()).toContain('Audible does not mark these timings as exact.')
@@ -239,7 +259,12 @@ describe('ChapterHealthView', () => {
     await flushPromises()
 
     expect(api.getChapterHealthSummary).toHaveBeenLastCalledWith(2)
-    expect(api.getChapterHealthBooks).toHaveBeenLastCalledWith({ category: 'no_chapters', libraryId: 2, page: 1, pageSize: 50 })
+    expect(api.getChapterHealthBooks).toHaveBeenLastCalledWith({
+      category: 'no_chapters',
+      libraryId: 2,
+      page: 1,
+      pageSize: 50,
+    })
   })
 
   it('dismisses a review and reloads the list', async () => {
@@ -266,7 +291,10 @@ describe('ChapterHealthView', () => {
     expect(buttonNamed('Clear')).toBeUndefined()
 
     wrapper!.unmount()
-    vi.mocked(api.getChapterLookupState).mockResolvedValue({ ...idle, finished: { ...idle.finished, review: 1, applied: 2 } })
+    vi.mocked(api.getChapterLookupState).mockResolvedValue({
+      ...idle,
+      finished: { ...idle.finished, review: 1, applied: 2 },
+    })
     await mountView()
 
     expect(buttonNamed('Clear')).toBeDefined()
