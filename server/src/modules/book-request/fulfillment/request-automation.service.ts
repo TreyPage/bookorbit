@@ -201,9 +201,10 @@ export class RequestAutomationService implements OnModuleInit {
     if (!settings.autoRetryEnabled) return;
 
     const download = await this.downloads.findById(downloadId);
-    // A release an approver picked by hand failed for a reason they chose. Replacing it with the
-    // runner-up behind their back is not automation, it is overruling them.
-    if (!download?.automated) return;
+    // Recovery applies to every failed attempt, including releases an approver picked by hand.
+    // The request-level retry switch and attempt budget are the operator's controls; a manual
+    // grab is not a promise that somebody will watch it fail and restart it themselves.
+    if (!download) return;
 
     await this.runAttempt(download.requestId, 'retry', settings);
   }
