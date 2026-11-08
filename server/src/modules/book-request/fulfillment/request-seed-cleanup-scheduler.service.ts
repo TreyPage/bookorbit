@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { AuditAction, AuditResource } from '@bookorbit/types';
 import { CronExpression } from '@nestjs/schedule';
 
 import { SystemCron } from '../../../common/decorators/system-cron.decorator';
+import { AUDIT_EVENT, AuditEventsService } from '../../audit/audit-events.service';
 import { sanitizeLogValue } from '../../../common/utils/log-sanitize.utils';
 import { DownloadClientConfigService } from '../download-clients/download-client-config.service';
 import { DownloadClientRegistry } from '../download-clients/download-client-registry';
@@ -27,6 +29,7 @@ export class RequestSeedCleanupSchedulerService {
     private readonly clients: DownloadClientConfigService,
     private readonly registry: DownloadClientRegistry,
     private readonly removal: DownloadRemovalService,
+    private readonly auditEvents: AuditEventsService,
   ) {}
 
   @SystemCron(CronExpression.EVERY_MINUTE)
@@ -106,6 +109,15 @@ export class RequestSeedCleanupSchedulerService {
           // Retire the client identity after a successful detach. The imported attempt stays
           // in history, but no longer needs to be queried on every future scheduler tick.
           await this.downloads.updateIf(download.id, ['imported'], { clientKey: null });
+          this.auditEvents.emit(AUDIT_EVENT, {
+            userId: null,
+            actorUsername: 'system',
+            action: AuditAction.BookRequestSeedCleanup,
+            resource: AuditResource.BookRequest,
+            resourceId: download.requestId,
+            description: 'Removed the torrent from the download client after its seed goal was reached; retained downloaded files',
+            meta: { requestId: download.requestId, downloadId: download.id, downloadClientId: clientId },
+          });
           removed++;
           this.logger.log(
             `[book_request.seed_cleanup] [end] requestId=${download.requestId} downloadId=${download.id} clientId=${clientId} - removed torrent after its seed goal was reached; retained downloaded files`,
