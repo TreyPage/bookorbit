@@ -125,7 +125,11 @@ onMounted(() => void load())
     </div>
 
     <section v-else class="flex flex-col gap-3">
-      <article v-for="group in items" :key="`${group.bookId}-${group.format}-${group.partLabel ?? 'all'}`" class="rounded-lg border border-border bg-card p-4">
+      <article
+        v-for="group in items"
+        :key="`${group.bookId}-${group.format}-${group.partLabel ?? 'all'}`"
+        class="rounded-lg border border-border bg-card p-4"
+      >
         <div class="flex flex-wrap items-start justify-between gap-2">
           <div class="min-w-0 space-y-1">
             <h2 class="font-semibold text-foreground">{{ group.title || t('tools.libraryIntegrity.duplicateFormats.untitled') }}</h2>
@@ -138,9 +142,12 @@ onMounted(() => void load())
             <span class="rounded-md border border-border px-2 py-1 text-xs">{{
               t('tools.libraryIntegrity.duplicateFormats.fileCount', { count: group.fileCount })
             }}</span>
-            <span v-if="hasIdenticalContent(group)" class="rounded-md border border-border bg-muted px-2 py-1 text-xs text-muted-foreground">{{
-              t('tools.libraryIntegrity.duplicateFormats.identical')
-            }}</span>
+            <span
+              v-if="hasIdenticalContent(group)"
+              class="rounded-md border border-border bg-muted px-2 py-1 text-xs text-muted-foreground"
+            >
+              {{ t('tools.libraryIntegrity.duplicateFormats.identical') }}
+            </span>
           </div>
         </div>
         <ul class="mt-3 space-y-2 border-t border-border pt-3">
@@ -160,7 +167,9 @@ onMounted(() => void load())
 
     <nav v-if="totalPages > 1" class="flex items-center justify-center gap-3">
       <Button variant="outline" size="sm" :disabled="page <= 1 || loading" @click="previousPage">{{ t('common.previous') }}</Button>
-      <span class="text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.duplicateFormats.page', { page, total: totalPages }) }}</span>
+      <span class="text-sm text-muted-foreground">
+        {{ t('tools.libraryIntegrity.duplicateFormats.page', { page, total: totalPages }) }}
+      </span>
       <Button variant="outline" size="sm" :disabled="page >= totalPages || loading" @click="nextPage">{{ t('common.next') }}</Button>
     </nav>
   </div>
