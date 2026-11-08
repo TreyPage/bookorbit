@@ -8,7 +8,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
 import { BookPlus, X, Settings } from '@lucide/vue'
-import { Permission } from '@bookorbit/types'
+import { BOOK_REQUEST_STATUSES, Permission } from '@bookorbit/types'
+import type { BookRequestStatus } from '@bookorbit/types'
 import type { BookRequestBulkResult, BookRequestItem, BookRequestSortField } from '@bookorbit/types'
 
 import PageTitleRow from '@/components/page-header/PageTitleRow.vue'
@@ -128,6 +129,7 @@ const DEFAULT_COLUMNS: TableColumn[] = [
 ]
 
 const columns = ref<TableColumn[]>(DEFAULT_COLUMNS.map((column) => ({ ...column })))
+const requestStatuses = BOOK_REQUEST_STATUSES
 const showColumnControls = ref(false)
 const draggedColumnName = ref<string | null>(null)
 const columnLayout = computed(() => columns.value.map((column) => ({ ...column })))
@@ -384,7 +386,7 @@ function loadColumnPreferences() {
       if (!fallback || restored.some((column) => column.name === fallback.name)) continue
       restored.push({
         name: fallback.name,
-        visible: typeof value.visible === 'boolean' ? value.visible : fallback.visible,
+        visible: fallback.name === 'title' ? true : typeof value.visible === 'boolean' ? value.visible : fallback.visible,
         width:
           typeof value.width === 'number' && Number.isFinite(value.width) ? Math.min(700, Math.max(80, Math.round(value.width))) : fallback.width,
       })
@@ -411,8 +413,16 @@ watch(
 )
 
 function toggleColumn(name: string) {
+  if (name === 'title') return
   const column = columns.value.find((item) => item.name === name)
   if (column) column.visible = !column.visible
+}
+
+function handleStatusFilter(event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  activeList.value.status.value = value as BookRequestStatus | ''
+  clearSelection()
+  void activeList.value.applyFilters()
 }
 
 function moveColumn(name: string, direction: -1 | 1) {
@@ -947,7 +957,7 @@ function goToNextPage() {
           @dragend="draggedColumnName = null"
         >
           <label class="flex min-w-0 items-center gap-2 text-sm">
-            <input type="checkbox" :checked="column.visible" @change="toggleColumn(column.name)" />
+            <input type="checkbox" :checked="column.visible" :disabled="column.name === 'title'" @change="toggleColumn(column.name)" />
             <span class="truncate">{{ t(`bookRequests.table.${column.name}`) }}</span>
           </label>
           <div class="flex items-center gap-1">
@@ -996,6 +1006,20 @@ function goToNextPage() {
         flash rather than feedback: the rows stay put and go quiet instead.
 
       -->
+
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="flex items-center gap-2 text-sm text-muted-foreground">
+          {{ t('bookRequests.filters.status') }}
+          <select
+            class="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            :value="activeList.status.value"
+            @change="handleStatusFilter"
+          >
+            <option value="">{{ t('bookRequests.filters.anyStatus') }}</option>
+            <option v-for="status in requestStatuses" :key="status" :value="status">{{ t(`bookRequests.status.${status}`) }}</option>
+          </select>
+        </label>
+      </div>
 
       <RequestListSkeleton v-if="activeList.loading.value && activeList.items.value.length === 0" />
 
