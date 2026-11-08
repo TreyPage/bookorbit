@@ -5,11 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { ArrowRight, Copy, Files, GitMerge, Merge, RefreshCw, ShieldCheck } from '@lucide/vue'
 
 import type { BookDuplicateScan, LibraryFilesystemFindingsResult, LibraryIntegrityScanStatus } from '@bookorbit/types'
-import {
-  createBookDuplicateScan,
-  getActiveBookDuplicateScan,
-  getBookDuplicateScan,
-} from '@/features/tools/api/book-duplicates'
+import { createBookDuplicateScan, getActiveBookDuplicateScan, getBookDuplicateScan } from '@/features/tools/api/book-duplicates'
 import { getBookMergeCandidates } from '@/features/tools/api/book-merge'
 import {
   cleanupEmptyBookFolder,
@@ -226,7 +222,7 @@ async function runRelatedChecks(): Promise<void> {
   }
   try {
     const active = await getActiveBookDuplicateScan()
-    const scan = active ?? await createBookDuplicateScan({ similarityPercent: 85 })
+    const scan = active ?? (await createBookDuplicateScan({ similarityPercent: 85 }))
     duplicateScanId.value = scan.id
     if (scan.status === 'completed') {
       relatedChecks.value.duplicateBooks = { status: 'complete', count: scan.totalGroups ?? 0, progress: 100 }
@@ -243,12 +239,12 @@ async function runRelatedChecks(): Promise<void> {
   }
 
   const [mergeCount, series] = await Promise.allSettled([countMergeCandidates(), getSimilarSeriesCandidates(85)])
-  relatedChecks.value.mergeCandidates = mergeCount.status === 'fulfilled'
-    ? { status: 'complete', count: mergeCount.value }
-    : { status: 'failed', count: null }
-  relatedChecks.value.seriesCleanup = series.status === 'fulfilled'
-    ? { status: 'complete', count: series.value.items.length, truncated: series.value.truncated }
-    : { status: 'failed', count: null, truncated: false }
+  relatedChecks.value.mergeCandidates =
+    mergeCount.status === 'fulfilled' ? { status: 'complete', count: mergeCount.value } : { status: 'failed', count: null }
+  relatedChecks.value.seriesCleanup =
+    series.status === 'fulfilled'
+      ? { status: 'complete', count: series.value.items.length, truncated: series.value.truncated }
+      : { status: 'failed', count: null, truncated: false }
 }
 
 async function runScan(): Promise<void> {
@@ -320,11 +316,7 @@ function openBookMerge(): void {
             <RefreshCw class="size-4" aria-hidden="true" /> {{ t('tools.libraryIntegrity.scanStatus.refresh') }}
           </Button>
           <Button size="sm" :disabled="scanLoading || scanStatus?.status === 'running'" @click="runScan">
-            {{
-              scanStatus?.status === 'running'
-                ? t('tools.libraryIntegrity.scanStatus.running')
-                : t('tools.libraryIntegrity.scanStatus.runNow')
-            }}
+            {{ scanStatus?.status === 'running' ? t('tools.libraryIntegrity.scanStatus.running') : t('tools.libraryIntegrity.scanStatus.runNow') }}
           </Button>
         </div>
       </div>
@@ -372,17 +364,13 @@ function openBookMerge(): void {
                   <span v-if="relatedChecks.duplicateBooks.status === 'complete'">
                     {{ relatedChecks.duplicateBooks.count }}
                   </span>
-                  <span v-else-if="relatedChecks.duplicateBooks.status === 'running'">
-                    {{ relatedChecks.duplicateBooks.progress ?? 0 }}%
-                  </span>
+                  <span v-else-if="relatedChecks.duplicateBooks.status === 'running'"> {{ relatedChecks.duplicateBooks.progress ?? 0 }}% </span>
                   <span v-else-if="relatedChecks.duplicateBooks.status === 'failed'">—</span>
                   <span v-else>Not scanned</span>
                 </dd>
               </dl>
               <Button
-                v-if="
-                  relatedChecks.duplicateBooks.status === 'complete' && (relatedChecks.duplicateBooks.count ?? 0) > 0
-                "
+                v-if="relatedChecks.duplicateBooks.status === 'complete' && (relatedChecks.duplicateBooks.count ?? 0) > 0"
                 size="sm"
                 variant="link"
                 class="h-auto p-0"
@@ -404,9 +392,7 @@ function openBookMerge(): void {
                 </dd>
               </dl>
               <Button
-                v-if="
-                  relatedChecks.mergeCandidates.status === 'complete' && (relatedChecks.mergeCandidates.count ?? 0) > 0
-                "
+                v-if="relatedChecks.mergeCandidates.status === 'complete' && (relatedChecks.mergeCandidates.count ?? 0) > 0"
                 size="sm"
                 variant="link"
                 class="h-auto p-0"
@@ -439,10 +425,7 @@ function openBookMerge(): void {
             </div>
           </div>
         </div>
-        <p
-          v-if="scanStatus?.summary?.sidecarScanTruncated || scanStatus?.summary?.filesystemScanTruncated"
-          class="text-sm text-warning"
-        >
+        <p v-if="scanStatus?.summary?.sidecarScanTruncated || scanStatus?.summary?.filesystemScanTruncated" class="text-sm text-warning">
           {{ t('tools.libraryIntegrity.scanStatus.truncated') }}
         </p>
       </div>
@@ -468,14 +451,9 @@ function openBookMerge(): void {
       <div v-if="findings" class="mt-3 grid gap-4 lg:grid-cols-2">
         <section class="min-w-0 space-y-2">
           <h4 class="text-sm font-medium">
-            {{
-              t('tools.libraryIntegrity.findings.orphanedBookFolders', { count: findings.orphanedBookFolders.total })
-            }}
+            {{ t('tools.libraryIntegrity.findings.orphanedBookFolders', { count: findings.orphanedBookFolders.total }) }}
           </h4>
-          <p
-            v-if="findings.orphanedBookFolders.total > findings.orphanedBookFolders.items.length"
-            class="text-xs text-muted-foreground"
-          >
+          <p v-if="findings.orphanedBookFolders.total > findings.orphanedBookFolders.items.length" class="text-xs text-muted-foreground">
             {{
               t('tools.libraryIntegrity.findings.showingCount', {
                 shown: findings.orphanedBookFolders.items.length,
@@ -497,10 +475,7 @@ function openBookMerge(): void {
           <h4 class="text-sm font-medium">
             {{ t('tools.libraryIntegrity.findings.orphanedFiles', { count: findings.orphanedFiles.total }) }}
           </h4>
-          <p
-            v-if="findings.orphanedFiles.total > findings.orphanedFiles.items.length"
-            class="text-xs text-muted-foreground"
-          >
+          <p v-if="findings.orphanedFiles.total > findings.orphanedFiles.items.length" class="text-xs text-muted-foreground">
             {{
               t('tools.libraryIntegrity.findings.showingCount', {
                 shown: findings.orphanedFiles.items.length,
@@ -512,27 +487,16 @@ function openBookMerge(): void {
             {{ t('tools.libraryIntegrity.findings.none') }}
           </p>
           <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
-            <li
-              v-for="item in findings.orphanedFiles.items"
-              :key="item.path"
-              class="flex items-start justify-between gap-2 text-xs"
-            >
+            <li v-for="item in findings.orphanedFiles.items" :key="item.path" class="flex items-start justify-between gap-2 text-xs">
               <div class="min-w-0 space-y-0.5">
                 <span class="block text-muted-foreground"
                   >{{ item.libraryName }} · {{ t('tools.libraryIntegrity.findings.fileReasons.' + item.reason) }}</span
                 >
                 <code class="block break-all text-foreground">{{ item.path }}</code>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                :disabled="cleaningFile !== null || cleaningFolder !== null"
-                @click="removeOrphanedFile(item)"
-              >
+              <Button size="sm" variant="outline" :disabled="cleaningFile !== null || cleaningFolder !== null" @click="removeOrphanedFile(item)">
                 {{
-                  cleaningFile === item.path
-                    ? t('tools.libraryIntegrity.findings.cleaning')
-                    : t('tools.libraryIntegrity.findings.removeOrphanedFile')
+                  cleaningFile === item.path ? t('tools.libraryIntegrity.findings.cleaning') : t('tools.libraryIntegrity.findings.removeOrphanedFile')
                 }}
               </Button>
             </li>
@@ -542,10 +506,7 @@ function openBookMerge(): void {
           <h4 class="text-sm font-medium">
             {{ t('tools.libraryIntegrity.findings.emptyFolders', { count: findings.emptyBookFolders.total }) }}
           </h4>
-          <p
-            v-if="findings.emptyBookFolders.total > findings.emptyBookFolders.items.length"
-            class="text-xs text-muted-foreground"
-          >
+          <p v-if="findings.emptyBookFolders.total > findings.emptyBookFolders.items.length" class="text-xs text-muted-foreground">
             {{
               t('tools.libraryIntegrity.findings.showingCount', {
                 shown: findings.emptyBookFolders.items.length,
@@ -557,11 +518,7 @@ function openBookMerge(): void {
             {{ t('tools.libraryIntegrity.findings.none') }}
           </p>
           <ul v-else class="max-h-64 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-3">
-            <li
-              v-for="item in findings.emptyBookFolders.items"
-              :key="item.path"
-              class="flex items-start justify-between gap-2 text-xs"
-            >
+            <li v-for="item in findings.emptyBookFolders.items" :key="item.path" class="flex items-start justify-between gap-2 text-xs">
               <div class="min-w-0 space-y-0.5">
                 <span class="block text-muted-foreground">{{ item.libraryName }}</span>
                 <code class="block break-all text-foreground">{{ item.path }}</code>
@@ -584,10 +541,7 @@ function openBookMerge(): void {
               })
             }}
           </h4>
-          <p
-            v-if="findings.unreadableDirectories.total > findings.unreadableDirectories.items.length"
-            class="text-xs text-muted-foreground"
-          >
+          <p v-if="findings.unreadableDirectories.total > findings.unreadableDirectories.items.length" class="text-xs text-muted-foreground">
             {{
               t('tools.libraryIntegrity.findings.showingCount', {
                 shown: findings.unreadableDirectories.items.length,
@@ -611,9 +565,7 @@ function openBookMerge(): void {
       </p>
       <div v-if="findings?.hasMore" class="mt-3 flex justify-center">
         <Button size="sm" variant="outline" :disabled="findingsLoading" @click="loadFilesystemFindings(true)">{{
-          findingsLoading
-            ? t('tools.libraryIntegrity.findings.loadingMore')
-            : t('tools.libraryIntegrity.findings.loadMore')
+          findingsLoading ? t('tools.libraryIntegrity.findings.loadingMore') : t('tools.libraryIntegrity.findings.loadMore')
         }}</Button>
       </div>
     </section>

@@ -89,11 +89,12 @@ function buttonNamed(name: string) {
 }
 
 function lookupButton() {
-  return wrapper!.findAll('button').find(
-    (candidate) =>
-      candidate.text().startsWith('Look up the') ||
-      (candidate.text().startsWith('Look up ') && !candidate.text().startsWith('Look up all')),
-  )
+  return wrapper!
+    .findAll('button')
+    .find(
+      (candidate) =>
+        candidate.text().startsWith('Look up the') || (candidate.text().startsWith('Look up ') && !candidate.text().startsWith('Look up all')),
+    )
 }
 
 function lookupAllButton() {
@@ -193,9 +194,7 @@ describe('ChapterHealthView', () => {
       pageSize: 50,
     })
     expect(wrapper!.findAll('[role="tab"]')[3]!.attributes('aria-selected')).toBe('true')
-    expect(wrapper!.text()).toContain(
-      'Audible lookups that did not match your files well enough to apply on their own.',
-    )
+    expect(wrapper!.text()).toContain('Audible lookups that did not match your files well enough to apply on their own.')
     expect(lookupButton()).toBeUndefined()
     expect(wrapper!.find('li input[type="checkbox"]').exists()).toBe(false)
     expect(wrapper!.text()).toContain('Audible does not mark these timings as exact.')

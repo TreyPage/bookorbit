@@ -154,31 +154,20 @@ onMounted(() => void load())
             <span class="rounded-md border border-border px-2 py-1 text-xs">{{
               t('tools.libraryIntegrity.duplicateFormats.fileCount', { count: group.fileCount })
             }}</span>
-            <span
-              v-if="hasIdenticalContent(group)"
-              class="rounded-md border border-border bg-muted px-2 py-1 text-xs text-muted-foreground"
-            >
+            <span v-if="hasIdenticalContent(group)" class="rounded-md border border-border bg-muted px-2 py-1 text-xs text-muted-foreground">
               {{ t('tools.libraryIntegrity.duplicateFormats.identical') }}
             </span>
           </div>
         </div>
         <ul class="mt-3 space-y-2 border-t border-border pt-3">
-          <li
-            v-for="file in group.files"
-            :key="file.id"
-            class="flex flex-wrap items-start justify-between gap-2 text-sm"
-          >
+          <li v-for="file in group.files" :key="file.id" class="flex flex-wrap items-start justify-between gap-2 text-sm">
             <span class="min-w-0 break-all text-foreground">{{ file.absolutePath }}</span>
             <div class="flex shrink-0 items-center gap-2">
               <span class="text-xs text-muted-foreground">{{ formatBytes(file.sizeBytes) }}</span>
               <Button size="sm" variant="outline" :disabled="deletingFileId !== null" @click="removeFile(file)">
                 <Trash2 class="size-4" aria-hidden="true" />
                 <span>
-                  {{
-                    deletingFileId === file.id
-                      ? t('tools.libraryIntegrity.duplicateFormats.deleting')
-                      : t('common.delete')
-                  }}
+                  {{ deletingFileId === file.id ? t('tools.libraryIntegrity.duplicateFormats.deleting') : t('common.delete') }}
                 </span>
               </Button>
             </div>

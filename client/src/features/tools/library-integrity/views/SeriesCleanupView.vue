@@ -4,12 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { AlertCircle, GitMerge, Loader2, RefreshCw } from '@lucide/vue'
 import type { SimilarSeriesPair } from '@bookorbit/types'
 import { Button } from '@/components/ui/button'
-import {
-  getSimilarSeriesCandidates,
-  mergeSimilarSeries,
-  setSeriesMergeIgnored,
-  type SeriesMergeError,
-} from '../../api/library-integrity'
+import { getSimilarSeriesCandidates, mergeSimilarSeries, setSeriesMergeIgnored, type SeriesMergeError } from '../../api/library-integrity'
 
 const { t } = useI18n()
 const items = ref<SimilarSeriesPair[]>([])
@@ -115,17 +110,11 @@ onMounted(() => void load())
     >
       <AlertCircle class="size-4 shrink-0" aria-hidden="true" />{{ error }}
     </div>
-    <p
-      v-if="truncated"
-      role="status"
-      class="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground"
-    >
+    <p v-if="truncated" role="status" class="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
       {{ t('tools.libraryIntegrity.seriesCleanup.truncated') }}
     </p>
     <div class="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3">
-      <label class="text-sm font-medium text-foreground" for="series-similarity">
-        Minimum similarity: {{ similarityPercent }}%
-      </label>
+      <label class="text-sm font-medium text-foreground" for="series-similarity"> Minimum similarity: {{ similarityPercent }}% </label>
       <input
         id="series-similarity"
         v-model.number="similarityPercent"
@@ -226,17 +215,11 @@ onMounted(() => void load())
     </section>
     <section v-if="ignoredSeries.length" class="flex flex-col gap-2 border-t border-border pt-4">
       <h2 class="font-semibold text-foreground">Ignored series</h2>
-      <div
-        v-for="series in ignoredSeries"
-        :key="series.id"
-        class="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
-      >
+      <div v-for="series in ignoredSeries" :key="series.id" class="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
         <span class="text-sm">
           {{ series.name }} <span class="text-muted-foreground">({{ series.bookCount }} books)</span>
         </span>
-        <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(series.id, false)">
-          Restore
-        </Button>
+        <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(series.id, false)"> Restore </Button>
       </div>
     </section>
   </div>
