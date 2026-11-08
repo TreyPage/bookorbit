@@ -716,16 +716,19 @@ describe('RequestAutomationService retry', () => {
     expect(fulfillment.grab).toHaveBeenCalledWith(7, { indexerId: 9, releaseGuid: 'next-best' }, null);
   });
 
-  /**
-   * A release an approver picked failed for a reason they chose. Swapping in the runner-up behind
-   * their back is not automation, it is overruling them.
-   */
-  it('leaves a hand-picked release alone', async () => {
-    const { service, events, fulfillment } = makeService({ request: { status: 'failed' }, download: { automated: false } });
+  /** Manual selection does not disable lifecycle recovery: a failed hand-picked release gets a fresh search. */
+  it('recovers a failed hand-picked release using the next eligible candidate', async () => {
+    const { service, events, fulfillment } = makeService({
+      request: { status: 'failed' },
+      download: { automated: false },
+      releases: [release({ guid: 'manual-release' }), release({ guid: 'replacement-release', indexerId: 8, score: 89 })],
+      tried: ['9:manual-release'],
+      attempts: 0,
+    });
 
     await fail(service, events);
 
-    expect(fulfillment.grab).not.toHaveBeenCalled();
+    expect(fulfillment.grab).toHaveBeenCalledWith(7, { indexerId: 8, releaseGuid: 'replacement-release' }, null);
   });
 
   /**
