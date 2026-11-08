@@ -176,9 +176,7 @@ onMounted(() => void load())
               <option :value="pair.right.id">{{ pair.right.name }}</option>
             </select>
           </label>
-          <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(pair.left.id, true)">
-            Ignore {{ pair.left.name }}
-          </Button>
+          <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(pair.left.id, true)">Ignore {{ pair.left.name }}</Button>
           <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(pair.right.id, true)">
             Ignore {{ pair.right.name }}
           </Button>
