@@ -254,6 +254,15 @@ export class RequestAutomationService implements OnModuleInit {
 
     const spent = await this.downloads.countAutomatedForRequest(requestId);
     if (spent >= settings.maxAutoGrabAttempts) {
+      this.auditEvents.emit(AUDIT_EVENT, {
+        userId: null,
+        actorUsername: 'system',
+        action: AuditAction.BookRequestAutomationExhausted,
+        resource: AuditResource.BookRequest,
+        resourceId: requestId,
+        description: `Automatic release selection stopped after reaching the ${spent}-attempt limit`,
+        meta: { requestId, trigger, attempts: spent, limit: settings.maxAutoGrabAttempts },
+      });
       this.logger.log(
         `[book_request.auto_grab] [end] requestId=${requestId} trigger=${trigger} attempts=${spent} limit=${settings.maxAutoGrabAttempts} - attempt limit reached, leaving it for an approver`,
       );
@@ -304,6 +313,15 @@ export class RequestAutomationService implements OnModuleInit {
 
     // A search that threw must not leave the request sitting at "searching" with nobody told.
     if (pick instanceof Error) {
+      this.auditEvents.emit(AUDIT_EVENT, {
+        userId: null,
+        actorUsername: 'system',
+        action: AuditAction.BookRequestAutomationExhausted,
+        resource: AuditResource.BookRequest,
+        resourceId: requestId,
+        description: 'Automatic release search failed; manual selection is required',
+        meta: { requestId, trigger, failureCode: 'SEARCH_FAILED', detail: pick.message },
+      });
       await this.decline(requestId, trigger, CLAIMED_BY_THIS_PASS, {
         code: 'SEARCH_FAILED',
         reason: `Could not search for a release: ${pick.message}`,
@@ -417,6 +435,15 @@ export class RequestAutomationService implements OnModuleInit {
       }
     }
 
+    this.auditEvents.emit(AUDIT_EVENT, {
+      userId: null,
+      actorUsername: 'system',
+      action: AuditAction.BookRequestAutomationExhausted,
+      resource: AuditResource.BookRequest,
+      resourceId: requestId,
+      description: 'Automatic release attempts were refused; manual selection is required',
+      meta: { requestId, trigger, attempts: spent, limit, refused: failures.length, skipped, candidateCount: pick.candidates.length },
+    });
     this.logger.log(
       `[book_request.auto_grab] [end] requestId=${requestId} trigger=${trigger} attempts=${spent}/${limit} refused=${failures.length} skipped=${skipped} candidates=${pick.candidates.length} - no release could be started`,
     );
