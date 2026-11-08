@@ -189,9 +189,7 @@ onMounted(() => void load())
           </Button>
         </div>
         <div v-if="confirmKey === keyOf(pair)" class="mt-3 rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
-          <p class="text-sm text-foreground">
-            {{ t('tools.libraryIntegrity.seriesCleanup.positionConflictWarning', { count: conflictCount }) }}
-          </p>
+          <p class="text-sm text-foreground">{{ t('tools.libraryIntegrity.seriesCleanup.positionConflictWarning', { count: conflictCount }) }}</p>
           <div class="mt-2 flex justify-end">
             <Button size="sm" variant="destructive" :disabled="busy !== null" @click="merge(pair, true)">{{
               t('tools.libraryIntegrity.seriesCleanup.confirmPositionMerge')
@@ -202,11 +200,7 @@ onMounted(() => void load())
     </section>
     <section v-if="ignoredSeries.length" class="flex flex-col gap-2 border-t border-border pt-4">
       <h2 class="font-semibold text-foreground">Ignored series</h2>
-      <div
-        v-for="series in ignoredSeries"
-        :key="series.id"
-        class="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
-      >
+      <div v-for="series in ignoredSeries" :key="series.id" class="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
         <span class="text-sm">{{ series.name }} <span class="text-muted-foreground">({{ series.bookCount }} books)</span></span>
         <Button size="sm" variant="outline" :disabled="busy !== null" @click="ignoreSeries(series.id, false)">Restore</Button>
       </div>
