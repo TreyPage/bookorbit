@@ -167,9 +167,7 @@ onMounted(() => void load())
 
     <nav v-if="totalPages > 1" class="flex items-center justify-center gap-3">
       <Button variant="outline" size="sm" :disabled="page <= 1 || loading" @click="previousPage">{{ t('common.previous') }}</Button>
-      <span class="text-sm text-muted-foreground">
-        {{ t('tools.libraryIntegrity.duplicateFormats.page', { page, total: totalPages }) }}
-      </span>
+      <span class="text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.duplicateFormats.page', { page, total: totalPages }) }}</span>
       <Button variant="outline" size="sm" :disabled="page >= totalPages || loading" @click="nextPage">{{ t('common.next') }}</Button>
     </nav>
   </div>
