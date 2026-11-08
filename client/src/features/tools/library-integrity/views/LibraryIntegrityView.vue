@@ -340,18 +340,14 @@ function openBookMerge(): void {
             ><strong>{{ t('tools.libraryIntegrity.scanStatus.status') }}:</strong>
             {{ t('tools.libraryIntegrity.scanStatus.states.' + scanStatus.status) }}</span
           >
-          <span
-            >
+          <span>
             <strong>{{ t('tools.libraryIntegrity.scanStatus.started') }}:</strong>
             {{ formatScanDate(scanStatus.startedAt) }}
-          </span
-          >
-          <span v-if="scanStatus.completedAt"
-            >
+          </span>
+          <span v-if="scanStatus.completedAt">
             <strong>{{ t('tools.libraryIntegrity.scanStatus.completed') }}:</strong>
             {{ formatScanDate(scanStatus.completedAt) }}
-          </span
-          >
+          </span>
         </div>
         <p v-if="scanStatus.errorMessage" class="text-sm text-destructive">{{ scanStatus.errorMessage }}</p>
         <dl v-if="scanStatus.summary" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
