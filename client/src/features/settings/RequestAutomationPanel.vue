@@ -78,7 +78,7 @@ const searchInterval = ref(settings.value.autoSearchIntervalHours)
 const searchMaxAge = ref(settings.value.autoSearchMaxAgeDays)
 const stalledTimeout = ref(settings.value.stalledDownloadTimeoutHours)
 
-/** What these five refs were last taken from, so an unrelated save can be told apart from a change. */
+/** What these local numeric controls were last taken from, so unrelated saves do not overwrite edits. */
 let adopted = {
   autoGrabMinScore: settings.value.autoGrabMinScore,
   maxAutoGrabAttempts: settings.value.maxAutoGrabAttempts,
