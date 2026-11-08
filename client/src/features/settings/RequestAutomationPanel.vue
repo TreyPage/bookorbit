@@ -9,9 +9,11 @@ import {
   MAX_AUTO_GRAB_ATTEMPTS_LIMIT,
   MAX_AUTO_SEARCH_INTERVAL_HOURS,
   MAX_AUTO_SEARCH_MAX_AGE_DAYS,
+  MAX_STALLED_DOWNLOAD_TIMEOUT_HOURS,
   MIN_AUTO_GRAB_SCORE_FLOOR,
   MIN_AUTO_SEARCH_INTERVAL_HOURS,
   MIN_AUTO_SEARCH_MAX_AGE_DAYS,
+  MIN_STALLED_DOWNLOAD_TIMEOUT_HOURS,
 } from '@bookorbit/types'
 import type {
   BookRequestImportFormats,
@@ -74,6 +76,7 @@ const attempts = ref(settings.value.maxAutoGrabAttempts)
 const threshold = ref(settings.value.verificationThreshold)
 const searchInterval = ref(settings.value.autoSearchIntervalHours)
 const searchMaxAge = ref(settings.value.autoSearchMaxAgeDays)
+const stalledTimeout = ref(settings.value.stalledDownloadTimeoutHours)
 
 /** What these five refs were last taken from, so an unrelated save can be told apart from a change. */
 let adopted = {
@@ -82,6 +85,7 @@ let adopted = {
   verificationThreshold: settings.value.verificationThreshold,
   autoSearchIntervalHours: settings.value.autoSearchIntervalHours,
   autoSearchMaxAgeDays: settings.value.autoSearchMaxAgeDays,
+  stalledDownloadTimeoutHours: settings.value.stalledDownloadTimeoutHours,
 }
 
 /**
@@ -99,6 +103,7 @@ watch(settings, (next) => {
   if (next.verificationThreshold !== adopted.verificationThreshold) threshold.value = next.verificationThreshold
   if (next.autoSearchIntervalHours !== adopted.autoSearchIntervalHours) searchInterval.value = next.autoSearchIntervalHours
   if (next.autoSearchMaxAgeDays !== adopted.autoSearchMaxAgeDays) searchMaxAge.value = next.autoSearchMaxAgeDays
+  if (next.stalledDownloadTimeoutHours !== adopted.stalledDownloadTimeoutHours) stalledTimeout.value = next.stalledDownloadTimeoutHours
 
   adopted = {
     autoGrabMinScore: next.autoGrabMinScore,
@@ -106,6 +111,7 @@ watch(settings, (next) => {
     verificationThreshold: next.verificationThreshold,
     autoSearchIntervalHours: next.autoSearchIntervalHours,
     autoSearchMaxAgeDays: next.autoSearchMaxAgeDays,
+    stalledDownloadTimeoutHours: next.stalledDownloadTimeoutHours,
   }
 })
 
@@ -275,6 +281,15 @@ function handleSearchMaxAgeChange() {
   void persist({ autoSearchMaxAgeDays: next }, 'settings.system.requests.automation.saved')
 }
 
+function handleStalledTimeoutChange() {
+  const next = Number(stalledTimeout.value)
+  if (!Number.isInteger(next) || next < MIN_STALLED_DOWNLOAD_TIMEOUT_HOURS || next > MAX_STALLED_DOWNLOAD_TIMEOUT_HOURS) {
+    stalledTimeout.value = settings.value.stalledDownloadTimeoutHours
+    return
+  }
+  void persist({ stalledDownloadTimeoutHours: next }, 'settings.system.requests.automation.saved')
+}
+
 function handleThresholdChange() {
   void persist({ verificationThreshold: threshold.value }, 'settings.system.requests.automation.saved')
 }
@@ -372,6 +387,28 @@ function handleVerificationChange(enabled: boolean) {
             class="input-field w-20"
             @change="handleAttemptsChange"
           />
+        </SettingsRow>
+
+        <SettingsRow
+          class="pl-3 md:pl-4"
+          control-id="stalled-download-timeout"
+          :label="t('settings.system.requests.automation.stalledTimeout')"
+          :hint="t('settings.system.requests.automation.stalledTimeoutHint')"
+        >
+          <div class="flex items-center gap-2">
+            <input
+              id="stalled-download-timeout"
+              v-model.number="stalledTimeout"
+              type="number"
+              inputmode="numeric"
+              :min="MIN_STALLED_DOWNLOAD_TIMEOUT_HOURS"
+              :max="MAX_STALLED_DOWNLOAD_TIMEOUT_HOURS"
+              step="1"
+              class="input-field w-20"
+              @change="handleStalledTimeoutChange"
+            />
+            <span class="text-xs text-muted-foreground">{{ t('settings.system.requests.automation.stalledTimeoutUnit') }}</span>
+          </div>
         </SettingsRow>
 
         <SettingsRow
