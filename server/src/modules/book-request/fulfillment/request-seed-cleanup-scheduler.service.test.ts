@@ -61,7 +61,7 @@ function makeService(rows = [download(1, HASH_A), download(2, HASH_B)], statuses
 describe('RequestSeedCleanupSchedulerService', () => {
   it('removes a torrent when its configured ratio goal is reached and keeps its files', async () => {
     const row = download(1, HASH_A);
-    const { service, downloads, adapter, removal } = makeService([row], [status(HASH_A, { ratio: 2.1, ratioGoal: 2 })]);
+    const { service, downloads, adapter, removal, auditEvents } = makeService([row], [status(HASH_A, { ratio: 2.1, ratioGoal: 2 })]);
 
     await service.tick();
 
