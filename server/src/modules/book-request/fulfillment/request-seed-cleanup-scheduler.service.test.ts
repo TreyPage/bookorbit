@@ -39,6 +39,7 @@ function status(clientKey: string, seed: Partial<NonNullable<DownloadStatus['see
 function makeService(rows = [download(1, HASH_A), download(2, HASH_B)], statuses: DownloadStatus[] = []) {
   const downloads = {
     findImportedTorrentSeeds: vi.fn().mockResolvedValue(rows),
+    isSeedCleanupProtected: vi.fn().mockResolvedValue(false),
     updateIf: vi.fn().mockResolvedValue({}),
   };
   const clients = { resolveConfig: vi.fn().mockResolvedValue({ id: 4, adapterType: 'qbittorrent' }) };
