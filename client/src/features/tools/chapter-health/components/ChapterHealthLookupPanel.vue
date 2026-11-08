@@ -54,11 +54,11 @@ function handleClear(): void {
         <h2 class="text-sm font-semibold text-foreground">{{ t('tools.chapterHealth.lookup.title') }}</h2>
         <p class="text-sm text-muted-foreground">{{ t('tools.chapterHealth.lookup.description') }}</p>
       </div>
-      <div v-if="canLookUp" class="flex flex-wrap gap-2">
+      <div class="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" :disabled="busy || allCandidates === 0" @click="emit('lookUpAll')">
           {{ t('tools.chapterHealth.lookup.lookUpAll', { count: allCandidates }) }}
         </Button>
-        <Button size="sm" :disabled="actionDisabled" @click="handleLookUp">
+        <Button v-if="canLookUp" size="sm" :disabled="actionDisabled" @click="handleLookUp">
           <Loader2 v-if="busy" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
           <Search v-else aria-hidden="true" />
           {{ actionLabel }}
