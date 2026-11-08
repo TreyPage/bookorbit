@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import {
@@ -180,7 +180,7 @@ export class BookRequestDownloadRepository {
    *
    * Bounded so a large historical library is drained over successive scheduler ticks.
    */
-  async findImportedTorrentSeeds(limit = 500): Promise<BookRequestDownloadRow[]> {
+  async findImportedTorrentSeeds(afterId = 0, limit = 500): Promise<BookRequestDownloadRow[]> {
     return this.db
       .select()
       .from(bookRequestDownloads)
@@ -190,6 +190,7 @@ export class BookRequestDownloadRepository {
           inArray(bookRequestDownloads.source, ['magnet', 'torrent_file']),
           isNotNull(bookRequestDownloads.downloadClientId),
           isNotNull(bookRequestDownloads.clientKey),
+          gt(bookRequestDownloads.id, afterId),
         ),
       )
       .orderBy(bookRequestDownloads.id)
