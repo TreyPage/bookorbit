@@ -78,6 +78,12 @@ export class RequestAutomationSettingsService {
         MIN_AUTO_SEARCH_MAX_AGE_DAYS,
         MAX_AUTO_SEARCH_MAX_AGE_DAYS,
       ),
+      stalledDownloadTimeoutHours: parseInteger(
+        values.get(KEYS.STALLED_DOWNLOAD_TIMEOUT_HOURS),
+        defaults.stalledDownloadTimeoutHours,
+        MIN_STALLED_DOWNLOAD_TIMEOUT_HOURS,
+        MAX_STALLED_DOWNLOAD_TIMEOUT_HOURS,
+      ),
       verificationEnabled: parseBoolean(values.get(KEYS.VERIFICATION_ENABLED), defaults.verificationEnabled),
       verificationThreshold: parseInteger(values.get(KEYS.VERIFICATION_THRESHOLD), defaults.verificationThreshold, 0, 100),
       importFormats: parseImportFormats(values.get(KEYS.IMPORT_FORMATS), defaults.importFormats),
