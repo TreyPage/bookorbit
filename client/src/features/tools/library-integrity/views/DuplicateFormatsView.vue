@@ -85,8 +85,12 @@ onMounted(() => void load())
   <div class="flex h-full min-h-0 flex-col gap-4 overflow-y-auto pr-1">
     <header class="flex flex-wrap items-start justify-between gap-3">
       <div class="space-y-1">
-        <h1 class="text-2xl font-semibold tracking-tight text-foreground">{{ t('tools.libraryIntegrity.duplicateFormats.title') }}</h1>
-        <p class="max-w-3xl text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.duplicateFormats.description') }}</p>
+        <h1 class="text-2xl font-semibold tracking-tight text-foreground">
+          {{ t('tools.libraryIntegrity.duplicateFormats.title') }}
+        </h1>
+        <p class="max-w-3xl text-sm text-muted-foreground">
+          {{ t('tools.libraryIntegrity.duplicateFormats.description') }}
+        </p>
       </div>
       <Button variant="outline" size="sm" :disabled="loading" @click="load">
         <RefreshCw class="size-4" :class="{ 'animate-spin': loading }" aria-hidden="true" />
@@ -120,8 +124,12 @@ onMounted(() => void load())
       <div class="flex size-14 items-center justify-center rounded-full bg-muted/70">
         <FileWarning class="size-6 text-muted-foreground" aria-hidden="true" />
       </div>
-      <p class="text-base font-semibold text-foreground">{{ t('tools.libraryIntegrity.duplicateFormats.emptyTitle') }}</p>
-      <p class="max-w-md text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.duplicateFormats.emptyDescription') }}</p>
+      <p class="text-base font-semibold text-foreground">
+        {{ t('tools.libraryIntegrity.duplicateFormats.emptyTitle') }}
+      </p>
+      <p class="max-w-md text-sm text-muted-foreground">
+        {{ t('tools.libraryIntegrity.duplicateFormats.emptyDescription') }}
+      </p>
     </div>
 
     <section v-else class="flex flex-col gap-3">
@@ -132,13 +140,17 @@ onMounted(() => void load())
       >
         <div class="flex flex-wrap items-start justify-between gap-2">
           <div class="min-w-0 space-y-1">
-            <h2 class="font-semibold text-foreground">{{ group.title || t('tools.libraryIntegrity.duplicateFormats.untitled') }}</h2>
+            <h2 class="font-semibold text-foreground">
+              {{ group.title || t('tools.libraryIntegrity.duplicateFormats.untitled') }}
+            </h2>
             <p class="break-all text-xs text-muted-foreground">{{ group.folderPath }}</p>
             <p class="text-xs text-muted-foreground">{{ group.libraryName }}</p>
           </div>
           <div class="flex shrink-0 flex-wrap items-center gap-2">
             <span class="rounded-md bg-muted px-2 py-1 text-xs font-medium uppercase">{{ group.format }}</span>
-            <span v-if="group.partLabel" class="rounded-md border border-border px-2 py-1 text-xs">{{ group.partLabel }}</span>
+            <span v-if="group.partLabel" class="rounded-md border border-border px-2 py-1 text-xs">
+              {{ group.partLabel }}
+            </span>
             <span class="rounded-md border border-border px-2 py-1 text-xs">{{
               t('tools.libraryIntegrity.duplicateFormats.fileCount', { count: group.fileCount })
             }}</span>
@@ -151,13 +163,23 @@ onMounted(() => void load())
           </div>
         </div>
         <ul class="mt-3 space-y-2 border-t border-border pt-3">
-          <li v-for="file in group.files" :key="file.id" class="flex flex-wrap items-start justify-between gap-2 text-sm">
+          <li
+            v-for="file in group.files"
+            :key="file.id"
+            class="flex flex-wrap items-start justify-between gap-2 text-sm"
+          >
             <span class="min-w-0 break-all text-foreground">{{ file.absolutePath }}</span>
             <div class="flex shrink-0 items-center gap-2">
               <span class="text-xs text-muted-foreground">{{ formatBytes(file.sizeBytes) }}</span>
               <Button size="sm" variant="outline" :disabled="deletingFileId !== null" @click="removeFile(file)">
                 <Trash2 class="size-4" aria-hidden="true" />
-                <span>{{ deletingFileId === file.id ? t('tools.libraryIntegrity.duplicateFormats.deleting') : t('common.delete') }}</span>
+                <span>
+                  {{
+                    deletingFileId === file.id
+                      ? t('tools.libraryIntegrity.duplicateFormats.deleting')
+                      : t('common.delete')
+                  }}
+                </span>
               </Button>
             </div>
           </li>
@@ -166,9 +188,15 @@ onMounted(() => void load())
     </section>
 
     <nav v-if="totalPages > 1" class="flex items-center justify-center gap-3">
-      <Button variant="outline" size="sm" :disabled="page <= 1 || loading" @click="previousPage">{{ t('common.previous') }}</Button>
-      <span class="text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.duplicateFormats.page', { page, total: totalPages }) }}</span>
-      <Button variant="outline" size="sm" :disabled="page >= totalPages || loading" @click="nextPage">{{ t('common.next') }}</Button>
+      <Button variant="outline" size="sm" :disabled="page <= 1 || loading" @click="previousPage">
+        {{ t('common.previous') }}
+      </Button>
+      <span class="text-sm text-muted-foreground">
+        {{ t('tools.libraryIntegrity.duplicateFormats.page', { page, total: totalPages }) }}
+      </span>
+      <Button variant="outline" size="sm" :disabled="page >= totalPages || loading" @click="nextPage">
+        {{ t('common.next') }}
+      </Button>
     </nav>
   </div>
 </template>
