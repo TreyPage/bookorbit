@@ -175,6 +175,28 @@ export class BookRequestDownloadRepository {
   }
 
   /**
+   * Imported torrent attempts that may still be seeding. Direct downloads and Usenet have no
+   * swarm, and unsettled attempts must never be removed by the seed cleanup worker.
+   *
+   * Bounded so a large historical library is drained over successive scheduler ticks.
+   */
+  async findImportedTorrentSeeds(limit = 500): Promise<BookRequestDownloadRow[]> {
+    return this.db
+      .select()
+      .from(bookRequestDownloads)
+      .where(
+        and(
+          eq(bookRequestDownloads.status, 'imported'),
+          inArray(bookRequestDownloads.source, ['magnet', 'torrent_file']),
+          isNotNull(bookRequestDownloads.downloadClientId),
+          isNotNull(bookRequestDownloads.clientKey),
+        ),
+      )
+      .orderBy(bookRequestDownloads.id)
+      .limit(limit);
+  }
+
+  /**
    * `basis` picks what "old" means. A stalled download is measured from the last time bytes
    * moved; a stuck import is measured from its last state change, because its `lastProgressAt`
    * belongs to the download that already finished and would make every import look ancient.
