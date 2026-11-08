@@ -701,12 +701,28 @@ function dockFileMeta(file: BookDockFile): string {
         <section v-if="canFulfilThis" class="mb-4 rounded-lg border border-border p-3">
           <h3 class="mb-2 text-sm font-semibold">{{ t('bookRequests.detail.automation.title') }}</h3>
           <label class="flex items-start gap-2 py-1.5 text-sm">
-            <input type="checkbox" class="mt-0.5" :checked="request.automaticRetryPaused" @change="updateAutomationControl('automaticRetryPaused', ($event.target as HTMLInputElement).checked)" />
-            <span><span class="block">{{ t('bookRequests.detail.automation.pauseRetries') }}</span><span class="block text-xs text-muted-foreground">{{ t('bookRequests.detail.automation.pauseRetriesHint') }}</span></span>
+            <input
+              type="checkbox"
+              class="mt-0.5"
+              :checked="request.automaticRetryPaused"
+              @change="updateAutomationControl('automaticRetryPaused', ($event.target as HTMLInputElement).checked)"
+            />
+            <span>
+              <span class="block">{{ t('bookRequests.detail.automation.pauseRetries') }}</span>
+              <span class="block text-xs text-muted-foreground">{{ t('bookRequests.detail.automation.pauseRetriesHint') }}</span>
+            </span>
           </label>
           <label class="flex items-start gap-2 py-1.5 text-sm">
-            <input type="checkbox" class="mt-0.5" :checked="request.seedCleanupProtected" @change="updateAutomationControl('seedCleanupProtected', ($event.target as HTMLInputElement).checked)" />
-            <span><span class="block">{{ t('bookRequests.detail.automation.protectSeed') }}</span><span class="block text-xs text-muted-foreground">{{ t('bookRequests.detail.automation.protectSeedHint') }}</span></span>
+            <input
+              type="checkbox"
+              class="mt-0.5"
+              :checked="request.seedCleanupProtected"
+              @change="updateAutomationControl('seedCleanupProtected', ($event.target as HTMLInputElement).checked)"
+            />
+            <span>
+              <span class="block">{{ t('bookRequests.detail.automation.protectSeed') }}</span>
+              <span class="block text-xs text-muted-foreground">{{ t('bookRequests.detail.automation.protectSeedHint') }}</span>
+            </span>
           </label>
         </section>
         <RequestPairSwitch v-if="companion" :request="request" :companion="companion" :progress-by-request="progressByRequest" />
