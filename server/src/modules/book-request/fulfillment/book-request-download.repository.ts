@@ -181,11 +181,13 @@ export class BookRequestDownloadRepository {
    * Bounded so a large historical library is drained over successive scheduler ticks.
    */
   async findImportedTorrentSeeds(afterId = 0, limit = 500): Promise<BookRequestDownloadRow[]> {
-    return this.db
-      .select()
+    const rows = await this.db
+      .select({ download: bookRequestDownloads })
       .from(bookRequestDownloads)
+      .innerJoin(bookRequests, eq(bookRequests.id, bookRequestDownloads.requestId))
       .where(
         and(
+          eq(bookRequests.seedCleanupProtected, false),
           eq(bookRequestDownloads.status, 'imported'),
           inArray(bookRequestDownloads.source, ['magnet', 'torrent_file']),
           isNotNull(bookRequestDownloads.downloadClientId),
@@ -195,6 +197,7 @@ export class BookRequestDownloadRepository {
       )
       .orderBy(bookRequestDownloads.id)
       .limit(limit);
+    return rows.map((row) => row.download);
   }
 
   /**
