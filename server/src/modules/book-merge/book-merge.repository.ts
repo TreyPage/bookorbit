@@ -170,6 +170,13 @@ export class BookMergeRepository {
           AND lower(btrim(regexp_replace(regexp_replace(public.bookorbit_unaccent(author_a.name), '[^[:alnum:]]+', ' ', 'g'), '[[:space:]]+', ' ', 'g')))
             = lower(btrim(regexp_replace(regexp_replace(public.bookorbit_unaccent(author_b.name), '[^[:alnum:]]+', ' ', 'g'), '[[:space:]]+', ' ', 'g')))
         WHERE ${cursorClause}
+          -- Merge only complementary media families. If both records contain an ebook
+          -- or both contain an audiobook, the overlap belongs in duplicate detection.
+          AND (
+            (a.has_ebook = true AND a.has_audiobook = false AND b.has_ebook = false AND b.has_audiobook = true)
+            OR
+            (a.has_ebook = false AND a.has_audiobook = true AND b.has_ebook = true AND b.has_audiobook = false)
+          )
           AND similarity(
             lower(btrim(regexp_replace(regexp_replace(public.bookorbit_unaccent(a.title), '[^[:alnum:]]+', ' ', 'g'), '[[:space:]]+', ' ', 'g'))),
             lower(btrim(regexp_replace(regexp_replace(public.bookorbit_unaccent(b.title), '[^[:alnum:]]+', ' ', 'g'), '[[:space:]]+', ' ', 'g')))
