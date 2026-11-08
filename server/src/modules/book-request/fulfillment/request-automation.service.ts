@@ -216,6 +216,8 @@ export class RequestAutomationService implements OnModuleInit {
     const joined = await this.requests.findById(requestId);
     if (!joined) return;
     const request = joined.request;
+    // Re-check after loading the current row: a person may pause retries while a failure event is queued.
+    if (trigger === 'retry' && request.automaticRetryPaused) return;
     if (!isGrabbableBookRequestStatus(request.status as BookRequestStatus)) return;
     // A retired medium has nothing to search for; the request waits for a person to close it.
     if (!isBookRequestMediaKind(request.mediaKind)) return;
