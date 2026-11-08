@@ -1,8 +1,8 @@
-import { IsBoolean, IsOptional } from 'class-validator';
+import { IsBoolean, ValidateIf } from 'class-validator';
 
 /** Partial update: callers may change either request-scoped automation control independently. */
 export class UpdateBookRequestAutomationDto {
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsBoolean()
   automaticRetryPaused?: boolean;
 
