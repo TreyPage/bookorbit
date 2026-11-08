@@ -68,6 +68,17 @@ describe('RequestSeedCleanupSchedulerService', () => {
     expect(downloads.updateIf).toHaveBeenCalledWith(1, ['imported'], { clientKey: null });
   });
 
+  it('leaves a torrent attached when request protection is enabled, even after its goal is reached', async () => {
+    const row = download(1, HASH_A);
+    const { service, downloads, removal } = makeService([row], [status(HASH_A, { ratio: 2, ratioGoal: 2 })]);
+    downloads.isSeedCleanupProtected.mockResolvedValue(true);
+
+    await service.tick();
+
+    expect(downloads.isSeedCleanupProtected).toHaveBeenCalledWith(row.requestId);
+    expect(removal.detachAttempt).not.toHaveBeenCalled();
+  });
+
   it('removes a torrent when its configured seeding-time goal is reached', async () => {
     const row = download(1, HASH_A);
     const { service, removal } = makeService([row], [
