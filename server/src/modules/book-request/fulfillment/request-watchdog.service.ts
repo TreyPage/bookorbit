@@ -182,10 +182,20 @@ export class RequestWatchdogService implements OnApplicationBootstrap {
   }
 
   private async failStalled(): Promise<void> {
-    const { stalledDownloadTimeoutHours } = await this.automationSettings.get();
-    const timeoutHours = Number.isInteger(stalledDownloadTimeoutHours) && stalledDownloadTimeoutHours > 0
-      ? stalledDownloadTimeoutHours
-      : DEFAULT_STALL_TIMEOUT_HOURS;
+    let timeoutHours = DEFAULT_STALL_TIMEOUT_HOURS;
+    try {
+      const settings = await this.automationSettings.get();
+      if (Number.isInteger(settings.stalledDownloadTimeoutHours) && settings.stalledDownloadTimeoutHours > 0) {
+        timeoutHours = settings.stalledDownloadTimeoutHours;
+      }
+    } catch (error) {
+      // A settings-store outage must not prevent the rest of the watchdog from running.
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `[book_request.watchdog] [fail] event=stalled_settings error="${sanitizeLogValue(message)}" - using the 12-hour default`,
+      );
+    }
+
     const timeoutMs = timeoutHours * 60 * 60 * 1000;
     const rows = await this.downloads.findByStatusOlderThan(STALLABLE, new Date(Date.now() - timeoutMs), 'progress');
     for (const row of rows) {
