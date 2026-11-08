@@ -224,7 +224,7 @@ async function runRelatedChecks(): Promise<void> {
     relatedChecks.value.duplicateBooks = { status: 'failed', count: null, progress: null }
   }
 
-  const [mergeCount, series] = await Promise.allSettled([countMergeCandidates(), getSimilarSeriesCandidates(30)])
+  const [mergeCount, series] = await Promise.allSettled([countMergeCandidates(), getSimilarSeriesCandidates(85)])
   relatedChecks.value.mergeCandidates = mergeCount.status === 'fulfilled'
     ? { status: 'complete', count: mergeCount.value }
     : { status: 'failed', count: null }
