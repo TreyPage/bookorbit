@@ -218,22 +218,24 @@ onUnmounted(() => {
               class="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs"
             />
             <div class="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                :disabled="item.stale || reviewingFileId !== null"
-                @click="review(item, 'confirmed_mismatch')"
-              >
-                {{ t('tools.libraryIntegrity.contentVerification.review.confirmMismatch') }}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                :disabled="item.stale || reviewingFileId !== null"
-                @click="review(item, 'false_positive')"
-              >
-                {{ t('tools.libraryIntegrity.contentVerification.review.falsePositive') }}
-              </Button>
+              <template v-if="item.status === 'mismatch'">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  :disabled="item.stale || reviewingFileId !== null"
+                  @click="review(item, 'confirmed_mismatch')"
+                >
+                  {{ t('tools.libraryIntegrity.contentVerification.review.confirmMismatch') }}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  :disabled="item.stale || reviewingFileId !== null"
+                  @click="review(item, 'false_positive')"
+                >
+                  {{ t('tools.libraryIntegrity.contentVerification.review.falsePositive') }}
+                </Button>
+              </template>
               <Button
                 size="sm"
                 variant="outline"
