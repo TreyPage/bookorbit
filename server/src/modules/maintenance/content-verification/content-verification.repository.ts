@@ -47,6 +47,7 @@ export class ContentVerificationRepository {
         detectedAuthor: bookContentVerifications.detectedAuthor,
         confidence: bookContentVerifications.confidence,
         explanation: bookContentVerifications.explanation,
+        evidence: bookContentVerifications.evidence,
         reviewStatus: bookContentVerifications.reviewStatus,
         reviewNote: bookContentVerifications.reviewNote,
         reviewedAt: bookContentVerifications.reviewedAt,
