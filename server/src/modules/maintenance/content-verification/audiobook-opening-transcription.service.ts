@@ -74,6 +74,10 @@ export function extractOpeningAudioSample(absolutePath: string, ffmpegPath = 'ff
 export class AudiobookOpeningTranscriptionService {
   constructor(private readonly config: ConfigService) {}
 
+  isConfigured(): boolean {
+    return Boolean(this.config.get<string>('contentVerification.sttBaseUrl'));
+  }
+
   async transcribe(absolutePath: string): Promise<OpeningAudioTranscript> {
     const baseUrl = this.config.get<string>('contentVerification.sttBaseUrl')?.replace(/\/$/, '');
     const model = this.config.get<string>('contentVerification.sttModel') || 'Systran/faster-whisper-small';
