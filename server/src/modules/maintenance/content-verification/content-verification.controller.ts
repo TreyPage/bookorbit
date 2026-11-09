@@ -5,12 +5,26 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import type { RequestUser } from '../../common/types/request-user';
 import { ContentVerificationService } from './content-verification.service';
+import { ContentVerificationSchedulerService } from './content-verification-scheduler.service';
 import { ListContentVerificationDto } from './dto/list-content-verification.dto';
 
 @Controller('maintenance/content-verification')
 @RequirePermission(Permission.LibraryDownload)
 export class ContentVerificationController {
-  constructor(private readonly service: ContentVerificationService) {}
+  constructor(
+    private readonly service: ContentVerificationService,
+    private readonly scheduler: ContentVerificationSchedulerService,
+  ) {}
+
+  @Get('background/status')
+  getBackgroundStatus() {
+    return this.scheduler.getStatus();
+  }
+
+  @Post('background/run')
+  runBackgroundBatch() {
+    return this.scheduler.startBatch();
+  }
 
   @Get()
   list(@Query() dto: ListContentVerificationDto, @CurrentUser() user: RequestUser) {
