@@ -161,7 +161,7 @@ describe('RequestSeedCleanupSchedulerService', () => {
     const firstPage = Array.from({ length: 500 }, (_, index) => download(index + 1, index.toString(16).padStart(40, '0')));
     const finalRow = download(501, HASH_B);
     const { service, downloads, removal } = makeService([finalRow], [status(HASH_B, { ratio: 2, ratioGoal: 2 })]);
-    downloads.findImportedTorrentSeeds.mockImplementation(async (afterId: number) => (afterId === 0 ? firstPage : [finalRow]));
+    downloads.findImportedTorrentSeeds.mockImplementation((afterId: number) => (afterId === 0 ? firstPage : [finalRow]));
 
     await service.tick();
 
