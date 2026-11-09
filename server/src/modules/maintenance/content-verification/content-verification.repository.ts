@@ -40,6 +40,7 @@ export class ContentVerificationRepository {
       .select({ total: count() })
       .from(bookFiles)
       .innerJoin(books, eq(books.id, bookFiles.bookId))
+      .leftJoin(bookContentVerifications, eq(bookContentVerifications.bookFileId, bookFiles.id))
       .where(where);
     const items = await this.db
       .select({
