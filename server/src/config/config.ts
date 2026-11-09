@@ -86,7 +86,7 @@ export const audioToolsConfig = registerAs('audioTools', () => ({
 }));
 
 export const contentVerificationConfig = registerAs('contentVerification', () => ({
-  aiBaseUrl: process.env.CONTENT_VERIFICATION_AI_BASE_URL?.trim().replace(/\\/$/, '') || undefined,
+  aiBaseUrl: process.env.CONTENT_VERIFICATION_AI_BASE_URL?.trim().replace(/\/$/, '') || undefined,
   aiModel: process.env.CONTENT_VERIFICATION_AI_MODEL?.trim() || 'qwen3.5:4b',
   aiApiKey: process.env.CONTENT_VERIFICATION_AI_API_KEY?.trim() || undefined,
 }));
