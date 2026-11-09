@@ -73,6 +73,21 @@ describe('ContentVerificationService', () => {
     expect(result).toMatchObject({ status: 'match', stale: false });
   });
 
+  it('does not mark a low-confidence title detection as a verified match', async () => {
+    ai.compare.mockResolvedValue({
+      status: 'match',
+      detectedTitle: 'Dune',
+      detectedAuthor: 'Frank Herbert',
+      confidence: 0.6,
+      evidence: 'Dune',
+      explanation: 'The sample is too short to be certain.',
+    });
+
+    await service.verifyFile({ id: 10 } as never, 7);
+
+    expect(repository.saveResult).toHaveBeenCalledWith(expect.objectContaining({ status: 'inconclusive' }));
+  });
+
   it('uses only the opening audiobook transcript as comparison evidence', async () => {
     repository.findFileForVerification.mockResolvedValue({
       ...file,
