@@ -105,13 +105,12 @@ export async function extractEpubContentEvidence(absolutePath: string): Promise<
       )
       .append(' ');
     const rawText = $('body').text() || $.root().text();
-    const text = rawText
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, Math.min(MAX_DOCUMENT_TEXT_CHARS, MAX_TOTAL_TEXT_CHARS - totalChars));
+    const normalizedText = rawText.replace(/\s+/g, ' ').trim();
+    const text = normalizedText.slice(0, Math.min(MAX_DOCUMENT_TEXT_CHARS, MAX_TOTAL_TEXT_CHARS - totalChars));
     if (!text) continue;
 
     totalChars += text.length;
+    if (normalizedText.length > text.length) truncated = true;
     documents.push({
       path: file.path,
       text,
@@ -119,7 +118,6 @@ export async function extractEpubContentEvidence(absolutePath: string): Promise<
         /title|cover|frontmatter|copyright|half.?title/i.test(file.path) ||
         /\b(all rights reserved|published by|copyright|by [A-Z])/i.test(text.slice(0, 1500)),
     });
-    if (rawText.length > text.length) truncated = true;
   }
 
   return { documents, truncated };
