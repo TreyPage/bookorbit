@@ -79,6 +79,12 @@ export class ContentVerificationRepository {
           eq(bookFiles.role, 'content'),
           sql`btrim(${bookMetadata.title}) <> ''`,
           inArray(sql<string>`lower(${bookFiles.format})`, supportedFormats),
+          // A multipart audiobook is one book: verify its first segment, not every track as a separate title.
+          or(
+            sql`lower(${bookFiles.format}) not in ('m4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav')`,
+            isNull(bookFiles.sortOrder),
+            eq(bookFiles.sortOrder, 0),
+          ),
           or(
             isNull(bookContentVerifications.id),
             sql`${bookContentVerifications.fileHash} is distinct from ${bookFiles.fileHash}`,
@@ -107,6 +113,12 @@ export class ContentVerificationRepository {
           eq(bookFiles.role, 'content'),
           sql`btrim(${bookMetadata.title}) <> ''`,
           inArray(sql<string>`lower(${bookFiles.format})`, supportedFormats),
+          // A multipart audiobook is one book: verify its first segment, not every track as a separate title.
+          or(
+            sql`lower(${bookFiles.format}) not in ('m4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav')`,
+            isNull(bookFiles.sortOrder),
+            eq(bookFiles.sortOrder, 0),
+          ),
           or(
             isNull(bookContentVerifications.id),
             sql`${bookContentVerifications.fileHash} is distinct from ${bookFiles.fileHash}`,
