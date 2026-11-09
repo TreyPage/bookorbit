@@ -18,7 +18,7 @@ CREATE TABLE book_content_verifications (
   CONSTRAINT book_content_verifications_source_chk CHECK (source IN ('ebook', 'audiobook')),
   CONSTRAINT book_content_verifications_status_chk CHECK (status IN ('match', 'mismatch', 'inconclusive', 'error')),
   CONSTRAINT book_content_verifications_confidence_chk CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1))
- );
+);
 
 --> statement-breakpoint
 CREATE UNIQUE INDEX book_content_verifications_book_file_uidx ON book_content_verifications (book_file_id);
