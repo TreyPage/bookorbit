@@ -2,6 +2,7 @@ import { api } from '@/lib/api'
 
 export type ContentVerificationStatus = 'match' | 'mismatch' | 'inconclusive' | 'error'
 export type ContentVerificationReviewStatus = 'confirmed_mismatch' | 'false_positive' | 'needs_recheck'
+export type ContentVerificationFilter = 'all' | 'needs_review' | 'reviewed' | 'mismatch'
 
 export interface ContentVerificationEvidence {
   label: string
@@ -37,8 +38,8 @@ export interface ContentVerificationPage {
   totalPages: number
 }
 
-export async function getContentVerificationPage(params: { page: number; pageSize: number }): Promise<ContentVerificationPage> {
-  const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize) })
+export async function getContentVerificationPage(params: { page: number; pageSize: number; filter: ContentVerificationFilter }): Promise<ContentVerificationPage> {
+  const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize), filter: params.filter })
   const response = await api(`/api/v1/maintenance/content-verification?${query.toString()}`)
   if (!response.ok) throw new Error('content_verification_list_failed')
   return response.json() as Promise<ContentVerificationPage>
