@@ -27,7 +27,7 @@ describe('ContentVerificationController', () => {
 
   it('delegates manual verification with the current user', async () => {
     const service = { verifyFile: vi.fn().mockResolvedValue({ status: 'inconclusive' }) };
-    const controller = new ContentVerificationController(service as never);
+    const controller = new ContentVerificationController(service as never, {} as never);
     const user = { id: 12 } as never;
 
     await expect(controller.verifyFile(44, user)).resolves.toEqual({ status: 'inconclusive' });
