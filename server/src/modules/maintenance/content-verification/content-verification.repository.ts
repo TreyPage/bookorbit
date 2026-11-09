@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, eq, gt, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { DB } from '../../db';
@@ -60,6 +60,33 @@ export class ContentVerificationRepository {
       .limit(limit);
 
     return { items, total: countRow?.total ?? 0 };
+  }
+
+  async listPendingCandidates(afterFileId: number, limit: number, includeAudiobooks: boolean) {
+    const supportedFormats = includeAudiobooks
+      ? ['epub', 'm4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav']
+      : ['epub'];
+    return this.db
+      .select({ fileId: bookFiles.id, format: bookFiles.format })
+      .from(bookFiles)
+      .innerJoin(books, eq(books.id, bookFiles.bookId))
+      .innerJoin(bookMetadata, eq(bookMetadata.bookId, books.id))
+      .leftJoin(bookContentVerifications, eq(bookContentVerifications.bookFileId, bookFiles.id))
+      .where(
+        and(
+          gt(bookFiles.id, afterFileId),
+          eq(books.status, 'present'),
+          eq(bookFiles.role, 'content'),
+          isNotNull(bookMetadata.title),
+          inArray(sql<string>`lower(${bookFiles.format})`, supportedFormats),
+          or(
+            isNull(bookContentVerifications.id),
+            sql`${bookContentVerifications.fileHash} is distinct from ${bookFiles.fileHash}`,
+          ),
+        ),
+      )
+      .orderBy(asc(bookFiles.id))
+      .limit(limit);
   }
 
   async findFileForVerification(fileId: number, libraryIds: number[]) {
