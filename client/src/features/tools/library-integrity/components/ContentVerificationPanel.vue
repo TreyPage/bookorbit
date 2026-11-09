@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { Button } from '@/components/ui/button'
 import {
   getContentVerificationPage,
+  getContentVerificationJobStatus,
+  startContentVerificationBatch,
   verifyBookFileContent,
   type ContentVerificationEntry,
+  type ContentVerificationJobStatus,
 } from '@/features/tools/api/content-verification'
 
 const { t } = useI18n()
@@ -17,6 +20,37 @@ const pageSize = 25
 const loading = ref(false)
 const error = ref(false)
 const verifyingFileId = ref<number | null>(null)
+const jobStatus = ref<ContentVerificationJobStatus | null>(null)
+const startingBatch = ref(false)
+let statusRefresh: ReturnType<typeof setInterval> | undefined
+
+async function loadJobStatus(): Promise<void> {
+  try {
+    jobStatus.value = await getContentVerificationJobStatus()
+  } catch {
+    // Keep the file list usable when background status is temporarily unavailable.
+  }
+}
+
+async function startBatch(): Promise<void> {
+  startingBatch.value = true
+  try {
+    jobStatus.value = await startContentVerificationBatch()
+    if (statusRefresh) clearInterval(statusRefresh)
+    statusRefresh = setInterval(() => {
+      void loadJobStatus()
+      if (jobStatus.value?.status !== 'running' && statusRefresh) {
+        clearInterval(statusRefresh)
+        statusRefresh = undefined
+        void load()
+      }
+    }, 3000)
+  } catch {
+    error.value = true
+  } finally {
+    startingBatch.value = false
+  }
+}
 
 async function load(): Promise<void> {
   loading.value = true
@@ -51,7 +85,14 @@ function statusLabel(item: ContentVerificationEntry): string {
   return t(`tools.libraryIntegrity.contentVerification.status.${item.status}`)
 }
 
-onMounted(() => void load())
+onMounted(() => {
+  void load()
+  void loadJobStatus()
+})
+
+onUnmounted(() => {
+  if (statusRefresh) clearInterval(statusRefresh)
+})
 </script>
 
 <template>
@@ -65,9 +106,29 @@ onMounted(() => void load())
           {{ t('tools.libraryIntegrity.contentVerification.description') }}
         </p>
       </div>
+      <div class="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" :disabled="startingBatch || jobStatus?.status === 'running'" @click="startBatch">
+          {{ jobStatus?.status === 'running' ? t('tools.libraryIntegrity.contentVerification.background.running') : t('tools.libraryIntegrity.contentVerification.background.run') }}
+        </Button>
+        <Button size="sm" variant="outline" :disabled="loading" @click="load">
+          {{ t('tools.libraryIntegrity.contentVerification.refresh') }}
+        </Button>
+      </div>
+    </div>
+
+    <div v-if="jobStatus" class="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+      <p>{{ t('tools.libraryIntegrity.contentVerification.background.status') }}: {{ t('tools.libraryIntegrity.contentVerification.background.states.' + jobStatus.status) }}</p>
+      <p>{{ t('tools.libraryIntegrity.contentVerification.background.counts', { processed: jobStatus.processed, matches: jobStatus.matches, mismatches: jobStatus.mismatches, inconclusive: jobStatus.inconclusive, errors: jobStatus.errors }) }}</p>
+      <p v-if="jobStatus.lastError" class="text-destructive">{{ jobStatus.lastError }}</p>
+    </div>
+
+    <template v-if="false"></template>
+
+    <div class="hidden">
       <Button size="sm" variant="outline" :disabled="loading" @click="load">
         {{ t('tools.libraryIntegrity.contentVerification.refresh') }}
       </Button>
+    </div>
     </div>
 
     <p v-if="error" class="text-sm text-destructive">
