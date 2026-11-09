@@ -13,6 +13,7 @@ import { MissingResourcesController } from './missing-resources.controller';
 import { MissingResourcesRepository } from './missing-resources.repository';
 import { MissingResourcesService } from './missing-resources.service';
 import { ContentVerificationAiService } from './content-verification/content-verification-ai.service';
+import { AudiobookOpeningTranscriptionService } from './content-verification/audiobook-opening-transcription.service';
 
 @Module({
   imports: [BookModule, BookCoverStoreModule, LibraryModule, ReadingAttemptEventsModule],
@@ -20,6 +21,7 @@ import { ContentVerificationAiService } from './content-verification/content-ver
   providers: [
     MissingResourcesService,
     ContentVerificationAiService,
+    AudiobookOpeningTranscriptionService,
     MissingResourcesRepository,
     CoverSweepStore,
     LibraryIntegrityRepository,
