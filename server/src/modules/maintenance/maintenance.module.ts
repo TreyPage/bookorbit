@@ -12,12 +12,14 @@ import { LibraryIntegrityScanSchedulerService } from './library-integrity-scan-s
 import { MissingResourcesController } from './missing-resources.controller';
 import { MissingResourcesRepository } from './missing-resources.repository';
 import { MissingResourcesService } from './missing-resources.service';
+import { ContentVerificationAiService } from './content-verification/content-verification-ai.service';
 
 @Module({
   imports: [BookModule, BookCoverStoreModule, LibraryModule, ReadingAttemptEventsModule],
   controllers: [MissingResourcesController, LibraryIntegrityController],
   providers: [
     MissingResourcesService,
+    ContentVerificationAiService,
     MissingResourcesRepository,
     CoverSweepStore,
     LibraryIntegrityRepository,
