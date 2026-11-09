@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { DB } from '../../db';
@@ -18,6 +18,49 @@ type Db = NodePgDatabase<typeof schema>;
 @Injectable()
 export class ContentVerificationRepository {
   constructor(@Inject(DB) private readonly db: Db) {}
+
+  async listCandidates(libraryIds: number[], offset: number, limit: number) {
+    if (libraryIds.length === 0) return { items: [], total: 0 };
+    const supportedFormats = ['epub', 'm4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav'];
+    const where = and(
+      inArray(books.libraryId, libraryIds),
+      eq(books.status, 'present'),
+      eq(bookFiles.role, 'content'),
+      inArray(sql<string>`lower(${bookFiles.format})`, supportedFormats),
+    )!;
+
+    const [countRow] = await this.db
+      .select({ total: count() })
+      .from(bookFiles)
+      .innerJoin(books, eq(books.id, bookFiles.bookId))
+      .where(where);
+    const items = await this.db
+      .select({
+        fileId: bookFiles.id,
+        bookId: books.id,
+        title: bookMetadata.title,
+        format: bookFiles.format,
+        fileHash: bookFiles.fileHash,
+        status: bookContentVerifications.status,
+        source: bookContentVerifications.source,
+        detectedTitle: bookContentVerifications.detectedTitle,
+        detectedAuthor: bookContentVerifications.detectedAuthor,
+        confidence: bookContentVerifications.confidence,
+        explanation: bookContentVerifications.explanation,
+        verifiedAt: bookContentVerifications.verifiedAt,
+        stale: sql<boolean>`case when ${bookContentVerifications.id} is null then false else ${bookContentVerifications.fileHash} is distinct from ${bookFiles.fileHash} end`,
+      })
+      .from(bookFiles)
+      .innerJoin(books, eq(books.id, bookFiles.bookId))
+      .leftJoin(bookMetadata, eq(bookMetadata.bookId, books.id))
+      .leftJoin(bookContentVerifications, eq(bookContentVerifications.bookFileId, bookFiles.id))
+      .where(where)
+      .orderBy(asc(bookMetadata.title), asc(books.id), asc(bookFiles.id))
+      .offset(offset)
+      .limit(limit);
+
+    return { items, total: countRow?.total ?? 0 };
+  }
 
   async findFileForVerification(fileId: number, libraryIds: number[]) {
     if (libraryIds.length === 0) return null;
