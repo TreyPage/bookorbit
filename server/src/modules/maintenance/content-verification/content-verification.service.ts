@@ -48,6 +48,24 @@ export class ContentVerificationService {
     return { ...result, stale: result.fileHash !== file.fileHash };
   }
 
+  async reviewFile(
+    user: RequestUser,
+    fileId: number,
+    reviewStatus: 'confirmed_mismatch' | 'false_positive' | 'needs_recheck',
+    reviewNote?: string,
+  ) {
+    await this.getAccessibleFile(user, fileId);
+    const existing = await this.repository.findResultForFile(fileId);
+    if (!existing) throw new NotFoundException('Content verification result not found');
+    const result = await this.repository.updateReview(fileId, {
+      reviewStatus,
+      reviewNote: reviewNote?.trim() || null,
+      reviewedBy: user.id,
+      reviewedAt: new Date(),
+    });
+    return { ...result, stale: result?.fileHash !== existing.fileHash };
+  }
+
   async verifyFile(user: RequestUser, fileId: number) {
     const file = await this.getAccessibleFile(user, fileId);
     const title = file.title?.trim();
