@@ -25290,6 +25290,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "book_content_verifications_review_status_idx": {
+          "name": "book_content_verifications_review_status_idx",
+          "columns": [
+            {
+              "expression": "review_status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
