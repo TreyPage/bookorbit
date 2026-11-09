@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, eq, gt, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { DB } from '../../db';
@@ -77,7 +77,7 @@ export class ContentVerificationRepository {
           gt(bookFiles.id, afterFileId),
           eq(books.status, 'present'),
           eq(bookFiles.role, 'content'),
-          isNotNull(bookMetadata.title),
+          sql`btrim(${bookMetadata.title}) <> ''`,
           inArray(sql<string>`lower(${bookFiles.format})`, supportedFormats),
           or(
             isNull(bookContentVerifications.id),
