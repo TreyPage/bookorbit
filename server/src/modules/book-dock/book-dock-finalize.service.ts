@@ -452,7 +452,6 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
 
       // After the metadata, whose duration it supersedes, and before any write-back touches the files.
       await this.measureAudioDurations(written.bookIds, row.id);
-      void this.contentVerificationScheduler?.enqueueBooks(written.bookIds);
       this.processor.reconcileCoversAsync(written.bookIds);
       await this.cleanupBookDockRecord(row);
       if (library.fileWriteEnabled) {
@@ -460,6 +459,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
           this.fileWriteService.scheduleWrite(created, 'auto', row.uploadedBy ?? undefined);
         }
       }
+      void this.contentVerificationScheduler?.enqueueBooks(written.bookIds);
       existingDestinations.set(this.destinationKey(library.id, destPath), bookId);
       existingDestinations.set(this.destinationKey(library.id, persistedDestPath), bookId);
 
