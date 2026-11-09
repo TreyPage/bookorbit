@@ -5551,7 +5551,14 @@
       "MaintenanceMissingBooksClean": "Cleaned missing books",
       "MaintenanceBrokenCoversClean": "Cleaned broken covers",
       "MaintenanceOrphanedCoversClean": "Cleaned orphaned cover folders",
-      "BookMerge": "Merge books"
+      "BookMerge": "Merge books",
+      "BookRequestAutoRetry": "Automatically retry book request",
+      "BookRequestAutoRelease": "Automatically select book request release",
+      "BookRequestAutomationExhausted": "Automatic release selection exhausted",
+      "BookRequestStalled": "Fail stalled book request download",
+      "BookRequestImportStalled": "Fail stalled book import",
+      "BookRequestSeedCleanup": "Remove torrent after seed goal",
+      "BookRequestAutomationControlsUpdate": "Update request automation controls"
     },
     "views": {
       "label": "Show",
@@ -9148,6 +9155,12 @@
         "protectSeedHint": "Do not automatically remove this request's torrent when its seed ratio or time goal is reached.",
         "saved": "Request automation settings saved",
         "saveFailed": "Could not save request automation settings"
+      },
+      "activity": {
+        "title": "Request activity",
+        "empty": "No activity has been recorded yet.",
+        "system": "BookOrbit automation",
+        "loadFailed": "Could not load request activity"
       }
     },
     "actions": {

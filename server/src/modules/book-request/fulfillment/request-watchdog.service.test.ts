@@ -11,7 +11,7 @@ function makeService(
     findLiveDirectClientKeys: vi.fn().mockResolvedValue([]),
     findActiveDirect: vi.fn().mockResolvedValue([]),
   };
-  const fulfillment = { failDownload: vi.fn().mockResolvedValue(undefined) };
+  const fulfillment = { failDownload: vi.fn().mockResolvedValue(true) };
   const requests = {
     findAbandonedSelfServe: vi.fn().mockResolvedValue(abandoned),
     cancelAbandoned: vi.fn().mockResolvedValue(true),
@@ -56,6 +56,20 @@ describe('RequestWatchdogService.sweep', () => {
     const [, cutoff] = downloads.findByStatusOlderThan.mock.calls.find((call) => call[0].includes('queued')) as [string[], Date, string];
     expect(cutoff.getTime()).toBeGreaterThanOrEqual(before - 12 * 60 * 60 * 1000);
     expect(cutoff.getTime()).toBeLessThanOrEqual(after - 12 * 60 * 60 * 1000);
+  });
+
+  it('records a stalled event only when the watchdog successfully fails the download', async () => {
+    const row = { id: 11, requestId: 7 } as BookRequestDownloadRow;
+    const { service, auditEvents, fulfillment } = makeService({ 'queued,downloading': [row] });
+
+    await service.sweep();
+
+    expect(fulfillment.failDownload).toHaveBeenCalledWith(row, 'The download made no progress for 12 hours');
+    expect(auditEvents.emit).toHaveBeenCalledWith('audit.log', expect.objectContaining({
+      action: 'book_request.stalled',
+      resourceId: 7,
+      meta: { requestId: 7, downloadId: 11, timeoutHours: 12 },
+    }));
   });
 
   it('falls back to twelve hours when settings cannot be read and still runs the rest of the watchdog', async () => {

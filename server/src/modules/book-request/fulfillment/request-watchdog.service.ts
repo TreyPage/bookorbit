@@ -199,7 +199,18 @@ export class RequestWatchdogService implements OnApplicationBootstrap {
     const timeoutMs = timeoutHours * 60 * 60 * 1000;
     const rows = await this.downloads.findByStatusOlderThan(STALLABLE, new Date(Date.now() - timeoutMs), 'progress');
     for (const row of rows) {
-      await this.fulfillment.failDownload(row, `The download made no progress for ${timeoutHours} hours`);
+      const reason = `The download made no progress for ${timeoutHours} hours`;
+      const failed = await this.fulfillment.failDownload(row, reason);
+      if (!failed) continue;
+      this.auditEvents.emit(AUDIT_EVENT, {
+        userId: null,
+        actorUsername: 'system',
+        action: AuditAction.BookRequestStalled,
+        resource: AuditResource.BookRequest,
+        resourceId: row.requestId,
+        description: `Download stalled after ${timeoutHours} hours without progress; automatic recovery was started`,
+        meta: { requestId: row.requestId, downloadId: row.id, timeoutHours },
+      });
     }
   }
 
@@ -258,7 +269,18 @@ export class RequestWatchdogService implements OnApplicationBootstrap {
   private async failStuckImports(): Promise<void> {
     const rows = await this.downloads.findByStatusOlderThan(IMPORT_STUCK, new Date(Date.now() - IMPORT_TIMEOUT_MS), 'state-change');
     for (const row of rows) {
-      await this.fulfillment.failDownload(row, 'The import did not finish within an hour');
+      const reason = 'The import did not finish within an hour';
+      const failed = await this.fulfillment.failDownload(row, reason);
+      if (!failed) continue;
+      this.auditEvents.emit(AUDIT_EVENT, {
+        userId: null,
+        actorUsername: 'system',
+        action: AuditAction.BookRequestImportStalled,
+        resource: AuditResource.BookRequest,
+        resourceId: row.requestId,
+        description: 'Import did not finish within an hour and the download attempt was failed',
+        meta: { requestId: row.requestId, downloadId: row.id, timeoutMinutes: 60 },
+      });
     }
   }
 }

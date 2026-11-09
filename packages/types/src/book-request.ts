@@ -416,6 +416,15 @@ export interface BookRequestWorkSnapshot {
   metadataSources: BookRequestMetadataSource[];
 }
 
+export interface BookRequestActivityItem {
+  id: number;
+  action: string;
+  description: string;
+  actorUsername: string;
+  actorName: string | null;
+  createdAt: string;
+}
+
 export interface BookRequestSubscriber {
   userId: number;
   username: string;

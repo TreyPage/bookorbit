@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
 import { AuditAction, AuditResource, Permission } from '@bookorbit/types';
+import { AuditService } from '../audit/audit.service';
 
 import { Auditable } from '../../common/decorators/auditable.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -18,7 +19,7 @@ import { UpdateBookRequestAutomationDto } from './dto/update-book-request-automa
 @Controller('book-requests')
 @RequirePermission(Permission.BookRequestAccess)
 export class BookRequestController {
-  constructor(private readonly service: BookRequestService) {}
+  constructor(private readonly service: BookRequestService, private readonly audit: AuditService) {}
 
   @Post()
   @Auditable({
@@ -99,12 +100,33 @@ export class BookRequestController {
     return this.service.getOne(id, user);
   }
 
-  /**
-   * Not audited alongside the decisions: this changes what the request is asking for, not whether
-   * it was allowed, and the service logs the before and after either way.
-   */
+  @Get(':id/activity')
+  async getActivity(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: RequestUser) {
+    // Reuse the request's visibility rules before exposing its scoped audit history.
+    await this.service.getOne(id, user);
+    const { data, total } = await this.audit.getAuditLogs({ resource: AuditResource.BookRequest, resourceId: id, page: 1, pageSize: 50 });
+    return {
+      data: data.map((event) => ({
+        id: event.id,
+        action: event.action,
+        description: event.description,
+        actorUsername: event.actorUsername,
+        actorName: event.actorName,
+        createdAt: new Date(event.createdAt).toISOString(),
+      })),
+      total,
+    };
+  }
+
+  /** Request-level automation switches are audited because they change future lifecycle behavior. */
   @Post(':id/automation')
   @HttpCode(HttpStatus.OK)
+  @Auditable({
+    action: AuditAction.BookRequestAutomationControlsUpdate,
+    resource: AuditResource.BookRequest,
+    getResourceId: (req) => Number(req.params.id),
+    description: 'Updated request automation controls',
+  })
   updateAutomationControls(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateBookRequestAutomationDto, @CurrentUser() user: RequestUser) {
     return this.service.updateAutomationControls(id, dto, user);
   }

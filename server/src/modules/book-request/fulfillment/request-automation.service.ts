@@ -1,6 +1,8 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
 import {
+  AuditAction,
+  AuditResource,
   AUTO_SEARCH_BACKOFF_WEEK_MS,
   compareByTier,
   findGrabRefusal,
@@ -22,6 +24,7 @@ import type {
 } from '@bookorbit/types';
 
 import { SystemCron } from '../../../common/decorators/system-cron.decorator';
+import { AUDIT_EVENT, AuditEventsService } from '../../audit/audit-events.service';
 import { sanitizeLogValue } from '../../../common/utils/log-sanitize.utils';
 import type { BookRequestRow } from '../../../db/schema';
 import { BOOK_REQUEST_DOWNLOAD_FAILED, BookRequestEventsService } from '../book-request-events.service';
@@ -94,6 +97,7 @@ export class RequestAutomationService implements OnModuleInit {
     private readonly events: BookRequestEventsService,
     private readonly notifier: BookRequestNotifier,
     private readonly searchDelay: RequestAutomationSearchDelay,
+    private readonly auditEvents: AuditEventsService,
   ) {}
 
   onModuleInit(): void {
@@ -250,6 +254,15 @@ export class RequestAutomationService implements OnModuleInit {
 
     const spent = await this.downloads.countAutomatedForRequest(requestId);
     if (spent >= settings.maxAutoGrabAttempts) {
+      this.auditEvents.emit(AUDIT_EVENT, {
+        userId: null,
+        actorUsername: 'system',
+        action: AuditAction.BookRequestAutomationExhausted,
+        resource: AuditResource.BookRequest,
+        resourceId: requestId,
+        description: `Automatic release selection stopped after reaching the ${spent}-attempt limit`,
+        meta: { requestId, trigger, attempts: spent, limit: settings.maxAutoGrabAttempts },
+      });
       this.logger.log(
         `[book_request.auto_grab] [end] requestId=${requestId} trigger=${trigger} attempts=${spent} limit=${settings.maxAutoGrabAttempts} - attempt limit reached, leaving it for an approver`,
       );
@@ -278,6 +291,17 @@ export class RequestAutomationService implements OnModuleInit {
       );
       return;
     }
+    if (trigger === 'retry') {
+      this.auditEvents.emit(AUDIT_EVENT, {
+        userId: null,
+        actorUsername: 'system',
+        action: AuditAction.BookRequestAutoRetry,
+        resource: AuditResource.BookRequest,
+        resourceId: requestId,
+        description: 'Automatically retrying the request after a previous release failed',
+        meta: { requestId, trigger },
+      });
+    }
 
     const pick = await this.pickReleases(request, settings).catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
@@ -289,6 +313,15 @@ export class RequestAutomationService implements OnModuleInit {
 
     // A search that threw must not leave the request sitting at "searching" with nobody told.
     if (pick instanceof Error) {
+      this.auditEvents.emit(AUDIT_EVENT, {
+        userId: null,
+        actorUsername: 'system',
+        action: AuditAction.BookRequestAutomationExhausted,
+        resource: AuditResource.BookRequest,
+        resourceId: requestId,
+        description: 'Automatic release search failed; manual selection is required',
+        meta: { requestId, trigger, failureCode: 'SEARCH_FAILED', detail: pick.message },
+      });
       await this.decline(requestId, trigger, CLAIMED_BY_THIS_PASS, {
         code: 'SEARCH_FAILED',
         reason: `Could not search for a release: ${pick.message}`,
@@ -318,6 +351,15 @@ export class RequestAutomationService implements OnModuleInit {
               meta: { floor: settings.autoGrabMinScore },
             };
       const handback = this.nothingSearched(pick) ?? scoredNothing;
+      this.auditEvents.emit(AUDIT_EVENT, {
+        userId: null,
+        actorUsername: 'system',
+        action: AuditAction.BookRequestAutomationExhausted,
+        resource: AuditResource.BookRequest,
+        resourceId: requestId,
+        description: 'Automatic release selection found no eligible release; manual selection is required',
+        meta: { requestId, trigger, failureCode: handback.code },
+      });
       this.logger.log(
         `[book_request.auto_grab] [end] requestId=${requestId} trigger=${trigger} attempt=${spent + 1} picked=none code=${handback.code} enabled=${pick.enabledIndexerCount} allTried=${pick.allTried} floor=${settings.autoGrabMinScore} - nothing left to grab`,
       );
@@ -360,6 +402,17 @@ export class RequestAutomationService implements OnModuleInit {
       spent++;
       try {
         await this.fulfillment.grab(requestId, { indexerId: release.indexerId, releaseGuid: release.guid }, null);
+        this.auditEvents.emit(AUDIT_EVENT, {
+          userId: null,
+          actorUsername: 'system',
+          action: AuditAction.BookRequestAutoRelease,
+          resource: AuditResource.BookRequest,
+          resourceId: requestId,
+          description: trigger === 'retry'
+            ? `Replaced the failed release by automatically selecting "${release.title}" from ${release.indexerName}`
+            : `Automatically selected release "${release.title}" from ${release.indexerName}`,
+          meta: { requestId, trigger, indexerId: release.indexerId, indexerName: release.indexerName, releaseTitle: release.title, score: release.score },
+        });
         this.logger.log(
           `[book_request.auto_grab] [end] requestId=${requestId} trigger=${trigger} attempt=${spent}/${limit} indexerId=${release.indexerId} indexer="${sanitizeLogValue(release.indexerName)}" score=${release.score} skipped=${skipped} refused=${failures.length} floor=${settings.autoGrabMinScore} - grabbed unattended`,
         );
@@ -384,6 +437,15 @@ export class RequestAutomationService implements OnModuleInit {
       }
     }
 
+    this.auditEvents.emit(AUDIT_EVENT, {
+      userId: null,
+      actorUsername: 'system',
+      action: AuditAction.BookRequestAutomationExhausted,
+      resource: AuditResource.BookRequest,
+      resourceId: requestId,
+      description: 'Automatic release attempts were refused; manual selection is required',
+      meta: { requestId, trigger, attempts: spent, limit, refused: failures.length, skipped, candidateCount: pick.candidates.length },
+    });
     this.logger.log(
       `[book_request.auto_grab] [end] requestId=${requestId} trigger=${trigger} attempts=${spent}/${limit} refused=${failures.length} skipped=${skipped} candidates=${pick.candidates.length} - no release could be started`,
     );

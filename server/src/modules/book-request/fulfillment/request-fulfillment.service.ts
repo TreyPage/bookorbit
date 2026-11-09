@@ -454,7 +454,7 @@ export class RequestFulfillmentService {
    * The single way an attempt ends badly, so every caller produces the same request state, the
    * same audit trail and the same approver notification.
    */
-  async failDownload(download: BookRequestDownloadRow, reason: string): Promise<void> {
+  async failDownload(download: BookRequestDownloadRow, reason: string): Promise<boolean> {
     // Both writes are conditional, and both callers are sweeps over rows read some time ago: the
     // poll loop and the watchdog. An attempt somebody already settled keeps the reason it settled
     // for, and a request somebody already cancelled, rejected or filed stays that way rather than
@@ -466,14 +466,14 @@ export class RequestFulfillmentService {
         ...(download.source === 'direct_url' ? { directUrl: null, directEtag: null, directLastModified: null } : {}),
       }))
     ) {
-      return;
+      return false;
     }
     if (!(await this.requests.updateIf(download.requestId, WORKER_WRITABLE_BOOK_REQUEST_STATUSES, { status: 'failed', statusReason: reason }))) {
       this.logger.log(
         `[book_request.download] [end] requestId=${download.requestId} downloadId=${download.id} - the attempt failed after the request was settled, so the request was left alone`,
       );
       this.gateway.emitChanged();
-      return;
+      return false;
     }
 
     const joined = await this.requests.findById(download.requestId);
@@ -497,6 +497,7 @@ export class RequestFulfillmentService {
     // Last, so a retry policy listening here sees a request already marked failed and a
     // notification already sent, whatever it decides to do next.
     this.events.emit(BOOK_REQUEST_DOWNLOAD_FAILED, download.id);
+    return true;
   }
 
   /**
