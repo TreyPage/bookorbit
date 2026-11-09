@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { extname } from 'node:path';
 
 import type { RequestUser } from '../../common/types/request-user';
 import { LibraryService } from '../library/library.service';
@@ -38,7 +39,7 @@ export class ContentVerificationService {
     const title = file.title?.trim();
     if (!title) throw new BadRequestException('Book metadata must have a title before content can be verified');
 
-    const extension = file.absolutePath.slice(file.absolutePath.lastIndexOf('.')).toLowerCase();
+    const extension = extname(file.absolutePath).toLowerCase();
     let source: 'ebook' | 'audiobook';
     let evidence: Array<{ label: string; text: string }>;
     let transcriptionModel: string | null = null;
