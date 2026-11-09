@@ -9,6 +9,7 @@ import { ContentVerificationAiService } from './content-verification-ai.service'
 import { extractEpubContentEvidence } from './epub-content-evidence';
 import { ContentVerificationRepository } from './content-verification.repository';
 
+const MIN_VERIFICATION_CONFIDENCE = 0.85;
 const AUDIO_EXTENSIONS = new Set(['.m4b', '.m4a', '.mp3', '.aac', '.flac', '.ogg', '.opus', '.wav']);
 
 @Injectable()
@@ -68,12 +69,13 @@ export class ContentVerificationService {
       evidence,
     });
     const aiModel = this.config.get<string>('contentVerification.aiModel') || 'qwen3.5:4b';
+    const status = comparison.confidence < MIN_VERIFICATION_CONFIDENCE || !comparison.detectedTitle ? 'inconclusive' : comparison.status;
     const model = transcriptionModel ? `${transcriptionModel} + ${aiModel}` : aiModel;
     const result = await this.repository.saveResult({
       bookFileId: file.fileId,
       fileHash: file.fileHash,
       source,
-      status: comparison.status,
+      status,
       expectedTitle: title,
       expectedAuthors: file.authors,
       detectedTitle: comparison.detectedTitle,
