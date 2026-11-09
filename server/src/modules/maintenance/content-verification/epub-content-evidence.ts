@@ -2,7 +2,7 @@ import { XMLParser } from 'fast-xml-parser';
 import { load } from 'cheerio';
 import * as unzipper from 'unzipper';
 
-import { findInZip, resolvePath, toRecordArray } from '../../metadata/lib/epub-zip-utils';
+import { findInZip, toRecordArray } from '../../metadata/lib/epub-zip-utils';
 
 const MAX_PACKAGE_DOCUMENT_BYTES = 1024 * 1024;
 const MAX_DOCUMENTS = 8;
@@ -57,7 +57,7 @@ export async function extractEpubContentEvidence(absolutePath: string): Promise<
   const spine = packageNode?.['spine'] as Record<string, unknown> | undefined;
   if (!manifest || !spine) throw new Error('EPUB package document has no manifest or spine');
 
-  const manifestItems = new Map<string, { href: string; mediaType: string; properties: string }>();
+  const manifestItems = new Map<string, { href: string; mediaType: string }>();
   for (const item of toRecordArray(manifest['item'])) {
     const id = item['@_id'];
     const href = item['@_href'];
@@ -65,8 +65,7 @@ export async function extractEpubContentEvidence(absolutePath: string): Promise<
     if (typeof id === 'string' && typeof href === 'string' && typeof mediaType === 'string') {
       manifestItems.set(id, {
         href,
-        mediaType,
-        properties: typeof item['@_properties'] === 'string' ? item['@_properties'] : '',
+        mediaType
       });
     }
   }
