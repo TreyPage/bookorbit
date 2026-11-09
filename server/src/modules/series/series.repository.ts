@@ -133,9 +133,10 @@ export class SeriesRepository {
 
     const hasGapsExpr = this.buildHasGapsExpression(bookCountExpr);
     const completionHaving = this.buildCompletionHaving(params.completionStatus, bookCountExpr, readCountExpr, hasGapsExpr);
-    // The Series index is intended for multi-book collections, not standalone books
-    // that happen to carry a series metadata entry.
-    const multiBookSeriesHaving = sql`count(distinct ${books.id}) > 1`;
+    // Keep a series visible when its known catalog total is multi-book, even if the
+    // user's library currently contains only one volume. Fall back to owned members
+    // when no expected total is known.
+    const multiBookSeriesHaving = sql`coalesce(${bookSeries.expectedBookCount}, count(distinct ${books.id})) > 1`;
     const sortExpr = this.buildSortExpression(params.sort, params.order, nameExpr, bookCountExpr, lastAddedExpr, readProgressExpr, params.q);
 
     // Facets are counted before the completion filter, so the tab a user is standing on can
