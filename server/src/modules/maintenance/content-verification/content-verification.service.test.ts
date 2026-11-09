@@ -23,6 +23,7 @@ describe('ContentVerificationService', () => {
     findResultForFile: vi.fn(),
     listCandidates: vi.fn(),
     saveResult: vi.fn(),
+    updateReview: vi.fn(),
   };
   const libraryService = { findAccessibleLibraryIds: vi.fn().mockResolvedValue([2]) };
   const ai = { compare: vi.fn() };
@@ -54,6 +55,41 @@ describe('ContentVerificationService', () => {
       explanation: 'The title page matches.',
     });
     repository.saveResult.mockImplementation(async (value: Record<string, unknown>) => ({ id: 1, ...value }));
+  });
+
+  it('records a human mismatch decision and reviewer note without changing metadata', async () => {
+    repository.findResultForFile.mockResolvedValue({ fileHash: 'abc123', status: 'mismatch' });
+    repository.updateReview.mockResolvedValue({
+      fileHash: 'abc123',
+      reviewStatus: 'confirmed_mismatch',
+      reviewNote: 'This file contains a different novel.',
+      reviewedBy: 10,
+      stale: false,
+    });
+
+    await expect(service.reviewFile(
+      { id: 10 } as never,
+      7,
+      'confirmed_mismatch',
+      '  This file contains a different novel.  ',
+    )).resolves.toMatchObject({
+      reviewStatus: 'confirmed_mismatch',
+      reviewNote: 'This file contains a different novel.',
+      stale: false,
+    });
+
+    expect(repository.updateReview).toHaveBeenCalledWith(7, expect.objectContaining({
+      reviewStatus: 'confirmed_mismatch',
+      reviewNote: 'This file contains a different novel.',
+      reviewedBy: 10,
+      reviewedAt: expect.any(Date),
+    }));
+  });
+
+  it('does not allow review when the verification result does not exist', async () => {
+    repository.findResultForFile.mockResolvedValue(null);
+    await expect(service.reviewFile({ id: 10 } as never, 7, 'false_positive')).rejects.toBeInstanceOf(NotFoundException);
+    expect(repository.updateReview).not.toHaveBeenCalled();
   });
 
   it('verifies EPUB evidence and stores a result without changing book metadata', async () => {
