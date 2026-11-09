@@ -54,7 +54,7 @@ describe('ContentVerificationService', () => {
       evidence: 'Dune by Frank Herbert',
       explanation: 'The title page matches.',
     });
-    repository.saveResult.mockImplementation(async (value: Record<string, unknown>) => ({ id: 1, ...value }));
+    repository.saveResult.mockImplementation((value: Record<string, unknown>) => ({ id: 1, ...value }));
   });
 
   it('records a human mismatch decision and reviewer note without changing metadata', async () => {

@@ -12,10 +12,7 @@ describe('AudiobookOpeningTranscriptionService', () => {
       'audioTools.ffmpegPath': 'ffmpeg',
     } as Record<string, string | undefined>)[key],
   } as unknown as ConfigService;
-  let service: AudiobookOpeningTranscriptionService;
-
   beforeEach(() => {
-    service = new AudiobookOpeningTranscriptionService(config);
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ text: 'Dune, by Frank Herbert.' }), { status: 200 })));
   });
 
