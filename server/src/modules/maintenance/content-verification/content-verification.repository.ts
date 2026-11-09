@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, gt, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { DB } from '../../db';
@@ -28,9 +28,15 @@ export class ContentVerificationRepository {
       eq(bookFiles.role, 'content'),
       inArray(sql<string>`lower(${bookFiles.format})`, supportedFormats),
       filter === 'needs_review'
-        ? and(
-            inArray(bookContentVerifications.status, ['mismatch', 'inconclusive', 'error'] as const),
-            or(isNull(bookContentVerifications.reviewStatus), eq(bookContentVerifications.reviewStatus, 'needs_recheck')),
+        ? or(
+            and(
+              inArray(bookContentVerifications.status, ['mismatch', 'inconclusive', 'error'] as const),
+              or(isNull(bookContentVerifications.reviewStatus), eq(bookContentVerifications.reviewStatus, 'needs_recheck')),
+            ),
+            and(
+              isNotNull(bookContentVerifications.id),
+              sql`${bookContentVerifications.fileHash} is distinct from ${bookFiles.fileHash}`,
+            ),
           )
         : filter === 'reviewed'
           ? inArray(bookContentVerifications.reviewStatus, ['confirmed_mismatch', 'false_positive'] as const)
