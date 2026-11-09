@@ -22,6 +22,19 @@ export class ContentVerificationService {
     private readonly config: ConfigService,
   ) {}
 
+  isAiConfigured(): boolean {
+    return this.ai.isConfigured();
+  }
+
+  isTranscriptionConfigured(): boolean {
+    return this.transcription.isConfigured();
+  }
+
+  async verifyFileForSystem(fileId: number) {
+    const user = { id: 0, isSuperuser: true } as RequestUser;
+    return this.verifyFile(user, fileId);
+  }
+
   async list(user: RequestUser, page = 1, pageSize = 50) {
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
     const result = await this.repository.listCandidates(libraryIds, (page - 1) * pageSize, pageSize);
