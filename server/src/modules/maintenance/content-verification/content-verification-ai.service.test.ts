@@ -30,6 +30,7 @@ describe('ContentVerificationAiService', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('sends bounded evidence to an OpenAI-compatible endpoint and parses a match', async () => {
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout');
     fetchMock.mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -65,7 +66,8 @@ describe('ContentVerificationAiService', () => {
     expect(request.body).toEqual(expect.stringContaining('Dune by Frank Herbert'));
     expect(request.body).toEqual(expect.stringContaining('qwen3.5:4b'));
     expect(request.signal).toBeInstanceOf(AbortSignal);
-    expect(request.signal).toBeDefined();
+    expect(timeoutSpy).toHaveBeenCalledWith(180_000);
+    timeoutSpy.mockRestore();
   });
 
   it('rejects malformed or out-of-range model confidence', async () => {
