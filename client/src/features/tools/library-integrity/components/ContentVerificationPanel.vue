@@ -180,7 +180,7 @@ onUnmounted(() => {
       {{ t('tools.libraryIntegrity.contentVerification.loading') }}
     </p>
     <p v-else-if="items.length === 0" class="text-sm text-muted-foreground">
-      {{ t('tools.libraryIntegrity.contentVerification.empty') }}
+      {{ filter === 'needs_review' ? t('tools.libraryIntegrity.contentVerification.review.emptyNeedsReview') : t('tools.libraryIntegrity.contentVerification.empty') }}
     </p>
 
     <div v-else class="divide-y divide-border">
