@@ -53,9 +53,7 @@ describe('ContentVerificationSchedulerService', () => {
     const repository = { listPendingCandidates: vi.fn().mockResolvedValue(candidates) };
     const verification = {
       isAiConfigured: vi.fn().mockReturnValue(true),
-      verifyFileForSystem: vi.fn()
-        .mockResolvedValueOnce({ status: 'match' })
-        .mockResolvedValueOnce({ status: 'inconclusive' }),
+      verifyFileForSystem: vi.fn().mockResolvedValueOnce({ status: 'match' }).mockResolvedValueOnce({ status: 'inconclusive' }),
     };
     const transcription = { isConfigured: vi.fn().mockReturnValue(true) };
     const service = new ContentVerificationSchedulerService(repository as never, verification as never, transcription as never);
@@ -77,9 +75,7 @@ describe('ContentVerificationSchedulerService', () => {
     const repository = { listPendingCandidates: vi.fn().mockResolvedValue(candidates) };
     const verification = {
       isAiConfigured: vi.fn().mockReturnValue(true),
-      verifyFileForSystem: vi.fn()
-        .mockRejectedValueOnce(new Error('bad epub'))
-        .mockResolvedValueOnce({ status: 'match' }),
+      verifyFileForSystem: vi.fn().mockRejectedValueOnce(new Error('bad epub')).mockResolvedValueOnce({ status: 'match' }),
     };
     const transcription = { isConfigured: vi.fn().mockReturnValue(false) };
     const service = new ContentVerificationSchedulerService(repository as never, verification as never, transcription as never);
@@ -95,7 +91,13 @@ describe('ContentVerificationSchedulerService', () => {
 
   it('does not overlap concurrent batches', async () => {
     let finish!: (value: never) => void;
-    const repository = { listPendingCandidates: vi.fn().mockReturnValue(new Promise((resolve) => { finish = resolve; })) };
+    const repository = {
+      listPendingCandidates: vi.fn().mockReturnValue(
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      ),
+    };
     const verification = { isAiConfigured: vi.fn().mockReturnValue(true), verifyFileForSystem: vi.fn() };
     const transcription = { isConfigured: vi.fn().mockReturnValue(false) };
     const service = new ContentVerificationSchedulerService(repository as never, verification as never, transcription as never);
@@ -109,7 +111,13 @@ describe('ContentVerificationSchedulerService', () => {
   });
 
   it('resets the cursor after reaching the end of the pending queue', async () => {
-    const repository = { listPendingCandidates: vi.fn().mockResolvedValueOnce(candidates).mockResolvedValueOnce([]).mockResolvedValueOnce([{ fileId: 1, format: 'epub' }]) };
+    const repository = {
+      listPendingCandidates: vi
+        .fn()
+        .mockResolvedValueOnce(candidates)
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ fileId: 1, format: 'epub' }]),
+    };
     const verification = { isAiConfigured: vi.fn().mockReturnValue(true), verifyFileForSystem: vi.fn().mockResolvedValue({ status: 'match' }) };
     const transcription = { isConfigured: vi.fn().mockReturnValue(false) };
     const service = new ContentVerificationSchedulerService(repository as never, verification as never, transcription as never);

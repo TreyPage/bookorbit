@@ -65,11 +65,14 @@ describe('RequestWatchdogService.sweep', () => {
     await service.sweep();
 
     expect(fulfillment.failDownload).toHaveBeenCalledWith(row, 'The download made no progress for 12 hours');
-    expect(auditEvents.emit).toHaveBeenCalledWith('audit.log', expect.objectContaining({
-      action: 'book_request.stalled',
-      resourceId: 7,
-      meta: { requestId: 7, downloadId: 11, timeoutHours: 12 },
-    }));
+    expect(auditEvents.emit).toHaveBeenCalledWith(
+      'audit.log',
+      expect.objectContaining({
+        action: 'book_request.stalled',
+        resourceId: 7,
+        meta: { requestId: 7, downloadId: 11, timeoutHours: 12 },
+      }),
+    );
   });
 
   it('falls back to twelve hours when settings cannot be read and still runs the rest of the watchdog', async () => {
@@ -138,7 +141,15 @@ describe('RequestWatchdogService.sweep', () => {
   it('swallows a sweep failure rather than crashing the scheduler', async () => {
     const { service } = makeService();
     const downloads = { findByStatusOlderThan: vi.fn().mockRejectedValue(new Error('db down')) };
-    const broken = new RequestWatchdogService(downloads as never, { failDownload: vi.fn() } as never, {} as never, {} as never, {} as never, {} as never, { get: vi.fn().mockResolvedValue({ stalledDownloadTimeoutHours: 12 }) } as never);
+    const broken = new RequestWatchdogService(
+      downloads as never,
+      { failDownload: vi.fn() } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      { get: vi.fn().mockResolvedValue({ stalledDownloadTimeoutHours: 12 }) } as never,
+    );
 
     await expect(broken.sweep()).resolves.toBeUndefined();
     await expect(service.sweep()).resolves.toBeUndefined();

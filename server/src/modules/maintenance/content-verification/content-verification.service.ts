@@ -48,12 +48,7 @@ export class ContentVerificationService {
     return { ...result, stale: result.fileHash !== file.fileHash };
   }
 
-  async reviewFile(
-    user: RequestUser,
-    fileId: number,
-    reviewStatus: 'confirmed_mismatch' | 'false_positive' | 'needs_recheck',
-    reviewNote?: string,
-  ) {
+  async reviewFile(user: RequestUser, fileId: number, reviewStatus: 'confirmed_mismatch' | 'false_positive' | 'needs_recheck', reviewNote?: string) {
     const file = await this.getAccessibleFile(user, fileId);
     const existing = await this.repository.findResultForFile(fileId);
     if (!existing) throw new NotFoundException('Content verification result not found');

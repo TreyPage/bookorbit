@@ -68,7 +68,10 @@ describe('RequestSeedCleanupSchedulerService', () => {
     expect(adapter.status).toHaveBeenCalledWith([HASH_A], expect.anything());
     expect(removal.detachAttempt).toHaveBeenCalledWith(row, false);
     expect(downloads.updateIf).toHaveBeenCalledWith(1, ['imported'], { clientKey: null });
-    expect(auditEvents.emit).toHaveBeenCalledWith('audit.log', expect.objectContaining({ action: 'book_request.seed_cleanup', resourceId: row.requestId }));
+    expect(auditEvents.emit).toHaveBeenCalledWith(
+      'audit.log',
+      expect.objectContaining({ action: 'book_request.seed_cleanup', resourceId: row.requestId }),
+    );
   });
 
   it('leaves a torrent attached when request protection is enabled, even after its goal is reached', async () => {
@@ -84,9 +87,7 @@ describe('RequestSeedCleanupSchedulerService', () => {
 
   it('removes a torrent when its configured seeding-time goal is reached', async () => {
     const row = download(1, HASH_A);
-    const { service, removal } = makeService([row], [
-      status(HASH_A, { seedingTimeSeconds: 3 * 60 * 60, seedingTimeGoalMinutes: 180 }),
-    ]);
+    const { service, removal } = makeService([row], [status(HASH_A, { seedingTimeSeconds: 3 * 60 * 60, seedingTimeGoalMinutes: 180 })]);
 
     await service.tick();
 
@@ -95,9 +96,10 @@ describe('RequestSeedCleanupSchedulerService', () => {
 
   it('uses ratio OR time, not both, when either configured goal is met', async () => {
     const row = download(1, HASH_A);
-    const { service, removal } = makeService([row], [
-      status(HASH_A, { ratio: 1, ratioGoal: 2, seedingTimeSeconds: 60 * 60, seedingTimeGoalMinutes: 60 }),
-    ]);
+    const { service, removal } = makeService(
+      [row],
+      [status(HASH_A, { ratio: 1, ratioGoal: 2, seedingTimeSeconds: 60 * 60, seedingTimeGoalMinutes: 60 })],
+    );
 
     await service.tick();
 
@@ -105,9 +107,10 @@ describe('RequestSeedCleanupSchedulerService', () => {
   });
 
   it('does not remove a seed before its configured goals are reached', async () => {
-    const { service, removal } = makeService([download(1, HASH_A)], [
-      status(HASH_A, { ratio: 1.9, ratioGoal: 2, seedingTimeSeconds: 59 * 60, seedingTimeGoalMinutes: 60 }),
-    ]);
+    const { service, removal } = makeService(
+      [download(1, HASH_A)],
+      [status(HASH_A, { ratio: 1.9, ratioGoal: 2, seedingTimeSeconds: 59 * 60, seedingTimeGoalMinutes: 60 })],
+    );
 
     await service.tick();
 
@@ -173,7 +176,10 @@ describe('RequestSeedCleanupSchedulerService', () => {
     const { service, downloads } = makeService();
     let release!: () => void;
     downloads.findImportedTorrentSeeds.mockImplementationOnce(
-      () => new Promise((resolve) => { release = () => resolve([]); }),
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve([]);
+        }),
     );
 
     const first = service.tick();

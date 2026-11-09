@@ -18,13 +18,27 @@ export function extractOpeningAudioSample(absolutePath: string, ffmpegPath = 'ff
   if (!isAbsolute(absolutePath)) return Promise.reject(new Error('Audiobook path must be absolute'));
 
   return new Promise((resolve, reject) => {
-    const child = spawn(ffmpegPath, [
-      '-hide_banner', '-loglevel', 'error',
-      '-i', absolutePath,
-      '-t', String(OPENING_SAMPLE_SECONDS),
-      '-vn', '-ac', '1', '-ar', '16000',
-      '-f', 'mp3', 'pipe:1',
-    ], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(
+      ffmpegPath,
+      [
+        '-hide_banner',
+        '-loglevel',
+        'error',
+        '-i',
+        absolutePath,
+        '-t',
+        String(OPENING_SAMPLE_SECONDS),
+        '-vn',
+        '-ac',
+        '1',
+        '-ar',
+        '16000',
+        '-f',
+        'mp3',
+        'pipe:1',
+      ],
+      { stdio: ['ignore', 'pipe', 'pipe'] },
+    );
     const chunks: Buffer[] = [];
     let size = 0;
     let stderr = '';

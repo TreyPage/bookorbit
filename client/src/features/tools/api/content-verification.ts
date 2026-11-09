@@ -38,7 +38,11 @@ export interface ContentVerificationPage {
   totalPages: number
 }
 
-export async function getContentVerificationPage(params: { page: number; pageSize: number; filter: ContentVerificationFilter }): Promise<ContentVerificationPage> {
+export async function getContentVerificationPage(params: {
+  page: number
+  pageSize: number
+  filter: ContentVerificationFilter
+}): Promise<ContentVerificationPage> {
   const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize), filter: params.filter })
   const response = await api(`/api/v1/maintenance/content-verification?${query.toString()}`)
   if (!response.ok) throw new Error('content_verification_list_failed')

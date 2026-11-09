@@ -19,7 +19,10 @@ import { UpdateBookRequestAutomationDto } from './dto/update-book-request-automa
 @Controller('book-requests')
 @RequirePermission(Permission.BookRequestAccess)
 export class BookRequestController {
-  constructor(private readonly service: BookRequestService, private readonly audit: AuditService) {}
+  constructor(
+    private readonly service: BookRequestService,
+    private readonly audit: AuditService,
+  ) {}
 
   @Post()
   @Auditable({

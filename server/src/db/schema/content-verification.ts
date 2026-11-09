@@ -24,11 +24,17 @@ export const bookContentVerifications = pgTable(
     source: varchar('source', { length: 20 }).$type<ContentVerificationSource>().notNull(),
     status: varchar('status', { length: 20 }).$type<ContentVerificationStatus>().notNull(),
     expectedTitle: varchar('expected_title', { length: 500 }).notNull(),
-    expectedAuthors: jsonb('expected_authors').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    expectedAuthors: jsonb('expected_authors')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     detectedTitle: varchar('detected_title', { length: 500 }),
     detectedAuthor: varchar('detected_author', { length: 500 }),
     confidence: numeric('confidence', { precision: 4, scale: 3, mode: 'number' }),
-    evidence: jsonb('evidence').$type<ContentVerificationEvidence[]>().notNull().default(sql`'[]'::jsonb`),
+    evidence: jsonb('evidence')
+      .$type<ContentVerificationEvidence[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     explanation: text('explanation'),
     reviewStatus: varchar('review_status', { length: 30 }).$type<ContentVerificationReviewStatus>(),
     reviewNote: text('review_note'),
@@ -48,7 +54,10 @@ export const bookContentVerifications = pgTable(
     index('book_content_verifications_review_status_idx').on(t.reviewStatus),
     check('book_content_verifications_source_chk', sql`${t.source} in ('ebook', 'audiobook')`),
     check('book_content_verifications_status_chk', sql`${t.status} in ('match', 'mismatch', 'inconclusive', 'error')`),
-    check('book_content_verifications_review_status_chk', sql`${t.reviewStatus} is null or ${t.reviewStatus} in ('confirmed_mismatch', 'false_positive', 'needs_recheck')`),
+    check(
+      'book_content_verifications_review_status_chk',
+      sql`${t.reviewStatus} is null or ${t.reviewStatus} in ('confirmed_mismatch', 'false_positive', 'needs_recheck')`,
+    ),
     check('book_content_verifications_confidence_chk', sql`${t.confidence} is null or (${t.confidence} >= 0 and ${t.confidence} <= 1)`),
   ],
 );

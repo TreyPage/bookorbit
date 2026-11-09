@@ -15,7 +15,8 @@ describe('extractEpubContentEvidence', () => {
 
   it('extracts a bounded reading-order sample and flags likely title pages', async () => {
     const container = '<container><rootfiles><rootfile full-path="OPS/book.opf"/></rootfiles></container>';
-    const opf = '<package><manifest><item id="title" href="title.xhtml" media-type="application/xhtml+xml"/><item id="chapter" href="chapter.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="title"/><itemref idref="chapter"/></spine></package>';
+    const opf =
+      '<package><manifest><item id="title" href="title.xhtml" media-type="application/xhtml+xml"/><item id="chapter" href="chapter.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="title"/><itemref idref="chapter"/></spine></package>';
     openFile.mockResolvedValue({
       files: [
         zipFile('META-INF/container.xml', container),
@@ -41,7 +42,8 @@ describe('extractEpubContentEvidence', () => {
 
   it('skips oversized XHTML documents instead of loading them into the verifier', async () => {
     const container = '<container><rootfiles><rootfile full-path="book.opf"/></rootfiles></container>';
-    const opf = '<package><manifest><item id="large" href="large.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="large"/></spine></package>';
+    const opf =
+      '<package><manifest><item id="large" href="large.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="large"/></spine></package>';
     openFile.mockResolvedValue({
       files: [zipFile('META-INF/container.xml', container), zipFile('book.opf', opf), zipFile('large.xhtml', '<html/>', 65 * 1024)],
     });

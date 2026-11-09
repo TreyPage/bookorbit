@@ -27,7 +27,11 @@ async function load(requestId: number): Promise<void> {
   }
 }
 
-watch(() => props.requestId, (id) => void load(id), { immediate: true })
+watch(
+  () => props.requestId,
+  (id) => void load(id),
+  { immediate: true },
+)
 </script>
 
 <template>

@@ -106,8 +106,13 @@ function parseComparison(content: string): ContentVerificationComparison {
   const result = value as Record<string, unknown>;
   const status = result['status'];
   const confidence = result['confidence'];
-  if (!['match', 'mismatch', 'inconclusive'].includes(String(status)) ||
-      typeof confidence !== 'number' || !Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
+  if (
+    !['match', 'mismatch', 'inconclusive'].includes(String(status)) ||
+    typeof confidence !== 'number' ||
+    !Number.isFinite(confidence) ||
+    confidence < 0 ||
+    confidence > 1
+  ) {
     throw new ServiceUnavailableException('Content verification AI returned an invalid status or confidence');
   }
 

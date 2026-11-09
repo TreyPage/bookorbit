@@ -34,13 +34,7 @@ describe('ContentVerificationService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     libraryService.findAccessibleLibraryIds.mockResolvedValue([2]);
-    service = new ContentVerificationService(
-      repository as never,
-      libraryService as never,
-      ai as never,
-      transcription as never,
-      config as never,
-    );
+    service = new ContentVerificationService(repository as never, libraryService as never, ai as never, transcription as never, config as never);
     repository.findFileForVerification.mockResolvedValue(file);
     vi.mocked(extractEpubContentEvidence).mockResolvedValue({
       documents: [{ path: 'title.xhtml', text: 'Dune by Frank Herbert', likelyTitlePage: true }],
@@ -67,23 +61,23 @@ describe('ContentVerificationService', () => {
       stale: false,
     });
 
-    await expect(service.reviewFile(
-      { id: 10 } as never,
-      7,
-      'confirmed_mismatch',
-      '  This file contains a different novel.  ',
-    )).resolves.toMatchObject({
+    await expect(
+      service.reviewFile({ id: 10 } as never, 7, 'confirmed_mismatch', '  This file contains a different novel.  '),
+    ).resolves.toMatchObject({
       reviewStatus: 'confirmed_mismatch',
       reviewNote: 'This file contains a different novel.',
       stale: false,
     });
 
-    expect(repository.updateReview).toHaveBeenCalledWith(7, expect.objectContaining({
-      reviewStatus: 'confirmed_mismatch',
-      reviewNote: 'This file contains a different novel.',
-      reviewedBy: 10,
-      reviewedAt: expect.any(Date),
-    }));
+    expect(repository.updateReview).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({
+        reviewStatus: 'confirmed_mismatch',
+        reviewNote: 'This file contains a different novel.',
+        reviewedBy: 10,
+        reviewedAt: expect.any(Date),
+      }),
+    );
   });
 
   it('rejects mismatch confirmation when the AI result is not a mismatch', async () => {
@@ -102,16 +96,20 @@ describe('ContentVerificationService', () => {
     const result = await service.verifyFile({ id: 10 } as never, 7);
 
     expect(extractEpubContentEvidence).toHaveBeenCalledWith('/books/Dune.epub');
-    expect(ai.compare).toHaveBeenCalledWith(expect.objectContaining({
-      expectedTitle: 'Dune',
-      expectedAuthors: ['Frank Herbert'],
-      source: 'ebook',
-    }));
-    expect(repository.saveResult).toHaveBeenCalledWith(expect.objectContaining({
-      bookFileId: 7,
-      fileHash: 'abc123',
-      status: 'match',
-    }));
+    expect(ai.compare).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedTitle: 'Dune',
+        expectedAuthors: ['Frank Herbert'],
+        source: 'ebook',
+      }),
+    );
+    expect(repository.saveResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bookFileId: 7,
+        fileHash: 'abc123',
+        status: 'match',
+      }),
+    );
     expect(result).toMatchObject({ status: 'match', stale: false });
   });
 
@@ -145,10 +143,12 @@ describe('ContentVerificationService', () => {
     await service.verifyFile({ id: 10 } as never, 7);
 
     expect(transcription.transcribe).toHaveBeenCalledWith('/books/Dune.m4b');
-    expect(ai.compare).toHaveBeenCalledWith(expect.objectContaining({
-      source: 'audiobook',
-      evidence: [{ label: 'Opening audio transcript (30 seconds)', text: 'Dune, by Frank Herbert.' }],
-    }));
+    expect(ai.compare).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'audiobook',
+        evidence: [{ label: 'Opening audio transcript (30 seconds)', text: 'Dune, by Frank Herbert.' }],
+      }),
+    );
   });
 
   it('does not expose files outside the user accessible libraries', async () => {

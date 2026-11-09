@@ -54,10 +54,7 @@ export class ContentVerificationSchedulerService {
   async enqueueBooks(bookIds: number[]): Promise<void> {
     if (!this.verification.isAiConfigured() || bookIds.length === 0) return;
     try {
-      const fileIds = await this.repository.listVerificationFileIdsForBooks(
-        [...new Set(bookIds)],
-        this.transcription.isConfigured(),
-      );
+      const fileIds = await this.repository.listVerificationFileIdsForBooks([...new Set(bookIds)], this.transcription.isConfigured());
       for (const fileId of fileIds) {
         if (this.queuedFileIds.has(fileId)) continue;
         this.queuedFileIds.add(fileId);
@@ -91,13 +88,10 @@ export class ContentVerificationSchedulerService {
     this.status = { ...this.status, status: 'running', lastRunAt: new Date().toISOString(), lastError: null };
     try {
       const queuedCandidates = this.pendingFileIds.splice(0, BATCH_SIZE).map((fileId) => ({ fileId, format: null }));
-      const candidates = queuedCandidates.length > 0
-        ? queuedCandidates
-        : await this.repository.listPendingCandidates(
-            this.afterFileId,
-            BATCH_SIZE,
-            this.transcription.isConfigured(),
-          );
+      const candidates =
+        queuedCandidates.length > 0
+          ? queuedCandidates
+          : await this.repository.listPendingCandidates(this.afterFileId, BATCH_SIZE, this.transcription.isConfigured());
 
       if (candidates.length === 0) {
         this.afterFileId = 0;

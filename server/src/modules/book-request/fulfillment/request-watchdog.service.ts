@@ -191,9 +191,7 @@ export class RequestWatchdogService implements OnApplicationBootstrap {
     } catch (error) {
       // A settings-store outage must not prevent the rest of the watchdog from running.
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.warn(
-        `[book_request.watchdog] [fail] event=stalled_settings error="${sanitizeLogValue(message)}" - using the 12-hour default`,
-      );
+      this.logger.warn(`[book_request.watchdog] [fail] event=stalled_settings error="${sanitizeLogValue(message)}" - using the 12-hour default`);
     }
 
     const timeoutMs = timeoutHours * 60 * 60 * 1000;

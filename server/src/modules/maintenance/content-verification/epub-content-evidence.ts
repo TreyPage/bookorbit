@@ -65,7 +65,7 @@ export async function extractEpubContentEvidence(absolutePath: string): Promise<
     if (typeof id === 'string' && typeof href === 'string' && typeof mediaType === 'string') {
       manifestItems.set(id, {
         href,
-        mediaType
+        mediaType,
       });
     }
   }
@@ -97,14 +97,18 @@ export async function extractEpubContentEvidence(absolutePath: string): Promise<
     const $ = load(html);
     $('script, style, noscript, svg, nav, audio, video').remove();
     const rawText = $('body').text() || $.root().text();
-    const text = rawText.replace(/\s+/g, ' ').trim().slice(0, Math.min(MAX_DOCUMENT_TEXT_CHARS, MAX_TOTAL_TEXT_CHARS - totalChars));
+    const text = rawText
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, Math.min(MAX_DOCUMENT_TEXT_CHARS, MAX_TOTAL_TEXT_CHARS - totalChars));
     if (!text) continue;
 
     totalChars += text.length;
     documents.push({
       path: file.path,
       text,
-      likelyTitlePage: /title|cover|frontmatter|copyright|half.?title/i.test(file.path) ||
+      likelyTitlePage:
+        /title|cover|frontmatter|copyright|half.?title/i.test(file.path) ||
         /\b(all rights reserved|published by|copyright|by [A-Z])/i.test(text.slice(0, 1500)),
     });
     if (rawText.length > text.length) truncated = true;

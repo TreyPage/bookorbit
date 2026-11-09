@@ -408,10 +408,18 @@ export class RequestAutomationService implements OnModuleInit {
           action: AuditAction.BookRequestAutoRelease,
           resource: AuditResource.BookRequest,
           resourceId: requestId,
-          description: trigger === 'retry'
-            ? `Replaced the failed release by automatically selecting "${release.title}" from ${release.indexerName}`
-            : `Automatically selected release "${release.title}" from ${release.indexerName}`,
-          meta: { requestId, trigger, indexerId: release.indexerId, indexerName: release.indexerName, releaseTitle: release.title, score: release.score },
+          description:
+            trigger === 'retry'
+              ? `Replaced the failed release by automatically selecting "${release.title}" from ${release.indexerName}`
+              : `Automatically selected release "${release.title}" from ${release.indexerName}`,
+          meta: {
+            requestId,
+            trigger,
+            indexerId: release.indexerId,
+            indexerName: release.indexerName,
+            releaseTitle: release.title,
+            score: release.score,
+          },
         });
         this.logger.log(
           `[book_request.auto_grab] [end] requestId=${requestId} trigger=${trigger} attempt=${spent}/${limit} indexerId=${release.indexerId} indexer="${sanitizeLogValue(release.indexerName)}" score=${release.score} skipped=${skipped} refused=${failures.length} floor=${settings.autoGrabMinScore} - grabbed unattended`,

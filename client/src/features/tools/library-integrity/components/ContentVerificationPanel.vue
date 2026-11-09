@@ -99,9 +99,7 @@ async function review(item: ContentVerificationEntry, decision: ContentVerificat
 }
 
 function reviewStatusLabel(item: ContentVerificationEntry): string | null {
-  return item.reviewStatus
-    ? t(`tools.libraryIntegrity.contentVerification.review.status.${item.reviewStatus}`)
-    : null
+  return item.reviewStatus ? t(`tools.libraryIntegrity.contentVerification.review.status.${item.reviewStatus}`) : null
 }
 
 function statusLabel(item: ContentVerificationEntry): string {
@@ -135,7 +133,10 @@ onUnmounted(() => {
         <select
           v-model="filter"
           class="h-9 rounded-md border border-input bg-background px-2 text-xs"
-          @change="page = 1; load()"
+          @change="
+            page = 1
+            load()
+          "
         >
           <option value="needs_review">{{ t('tools.libraryIntegrity.contentVerification.review.filters.needsReview') }}</option>
           <option value="mismatch">{{ t('tools.libraryIntegrity.contentVerification.review.filters.mismatches') }}</option>
@@ -148,7 +149,11 @@ onUnmounted(() => {
           :disabled="startingBatch || jobStatus?.status === 'running' || jobStatus?.status === 'waiting_for_provider'"
           @click="startBatch"
         >
-          {{ jobStatus?.status === 'running' ? t('tools.libraryIntegrity.contentVerification.background.running') : t('tools.libraryIntegrity.contentVerification.background.run') }}
+          {{
+            jobStatus?.status === 'running'
+              ? t('tools.libraryIntegrity.contentVerification.background.running')
+              : t('tools.libraryIntegrity.contentVerification.background.run')
+          }}
         </Button>
         <Button size="sm" variant="outline" :disabled="loading" @click="load">
           {{ t('tools.libraryIntegrity.contentVerification.refresh') }}
@@ -162,13 +167,15 @@ onUnmounted(() => {
         {{ t('tools.libraryIntegrity.contentVerification.background.states.' + jobStatus.status) }}
       </p>
       <p>
-        {{ t('tools.libraryIntegrity.contentVerification.background.counts', {
-          processed: jobStatus.processed,
-          matches: jobStatus.matches,
-          mismatches: jobStatus.mismatches,
-          inconclusive: jobStatus.inconclusive,
-          errors: jobStatus.errors,
-        }) }}
+        {{
+          t('tools.libraryIntegrity.contentVerification.background.counts', {
+            processed: jobStatus.processed,
+            matches: jobStatus.matches,
+            mismatches: jobStatus.mismatches,
+            inconclusive: jobStatus.inconclusive,
+            errors: jobStatus.errors,
+          })
+        }}
       </p>
       <p v-if="jobStatus.lastError" class="text-destructive">{{ jobStatus.lastError }}</p>
     </div>
@@ -180,7 +187,11 @@ onUnmounted(() => {
       {{ t('tools.libraryIntegrity.contentVerification.loading') }}
     </p>
     <p v-else-if="items.length === 0" class="text-sm text-muted-foreground">
-      {{ filter === 'needs_review' ? t('tools.libraryIntegrity.contentVerification.review.emptyNeedsReview') : t('tools.libraryIntegrity.contentVerification.empty') }}
+      {{
+        filter === 'needs_review'
+          ? t('tools.libraryIntegrity.contentVerification.review.emptyNeedsReview')
+          : t('tools.libraryIntegrity.contentVerification.empty')
+      }}
     </p>
 
     <div v-else class="divide-y divide-border">
@@ -191,18 +202,13 @@ onUnmounted(() => {
           </p>
           <p class="text-xs text-muted-foreground">
             {{ (item.format || '').toUpperCase() }} · {{ statusLabel(item) }}
-            <span v-if="item.confidence !== null && !item.stale">
-              · {{ Math.round(item.confidence * 100) }}%
-            </span>
+            <span v-if="item.confidence !== null && !item.stale"> · {{ Math.round(item.confidence * 100) }}% </span>
           </p>
           <p v-if="item.detectedTitle" class="truncate text-xs text-muted-foreground">
             {{ t('tools.libraryIntegrity.contentVerification.detected') }}: {{ item.detectedTitle }}
             <span v-if="item.detectedAuthor"> — {{ item.detectedAuthor }}</span>
           </p>
-          <p
-            v-if="item.explanation && (item.status === 'mismatch' || item.status === 'inconclusive')"
-            class="text-xs text-muted-foreground"
-          >
+          <p v-if="item.explanation && (item.status === 'mismatch' || item.status === 'inconclusive')" class="text-xs text-muted-foreground">
             {{ item.explanation }}
           </p>
           <p v-if="reviewStatusLabel(item)" class="text-xs font-medium text-muted-foreground">
@@ -231,49 +237,52 @@ onUnmounted(() => {
             />
             <div class="flex flex-wrap gap-2">
               <template v-if="item.status === 'mismatch'">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  :disabled="item.stale || reviewingFileId !== null"
-                  @click="review(item, 'confirmed_mismatch')"
-                >
+                <Button size="sm" variant="outline" :disabled="item.stale || reviewingFileId !== null" @click="review(item, 'confirmed_mismatch')">
                   {{ t('tools.libraryIntegrity.contentVerification.review.confirmMismatch') }}
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  :disabled="item.stale || reviewingFileId !== null"
-                  @click="review(item, 'false_positive')"
-                >
+                <Button size="sm" variant="outline" :disabled="item.stale || reviewingFileId !== null" @click="review(item, 'false_positive')">
                   {{ t('tools.libraryIntegrity.contentVerification.review.falsePositive') }}
                 </Button>
               </template>
-              <Button
-                size="sm"
-                variant="outline"
-                :disabled="item.stale || reviewingFileId !== null"
-                @click="review(item, 'needs_recheck')"
-              >
+              <Button size="sm" variant="outline" :disabled="item.stale || reviewingFileId !== null" @click="review(item, 'needs_recheck')">
                 {{ t('tools.libraryIntegrity.contentVerification.review.needsRecheck') }}
               </Button>
             </div>
           </div>
         </div>
         <Button size="sm" variant="outline" :disabled="verifyingFileId !== null" @click="verify(item)">
-          {{ verifyingFileId === item.fileId ? t('tools.libraryIntegrity.contentVerification.verifying') : t('tools.libraryIntegrity.contentVerification.verify') }}
+          {{
+            verifyingFileId === item.fileId
+              ? t('tools.libraryIntegrity.contentVerification.verifying')
+              : t('tools.libraryIntegrity.contentVerification.verify')
+          }}
         </Button>
       </div>
     </div>
 
     <div v-if="total > pageSize" class="flex items-center justify-between text-sm">
-      <span class="text-muted-foreground">
-        {{ total }} {{ t('tools.libraryIntegrity.contentVerification.files') }}
-      </span>
+      <span class="text-muted-foreground"> {{ total }} {{ t('tools.libraryIntegrity.contentVerification.files') }} </span>
       <div class="flex gap-2">
-        <Button size="sm" variant="outline" :disabled="page <= 1 || loading" @click="page--; load()">
+        <Button
+          size="sm"
+          variant="outline"
+          :disabled="page <= 1 || loading"
+          @click="
+            page--
+            load()
+          "
+        >
           {{ t('tools.libraryIntegrity.contentVerification.previous') }}
         </Button>
-        <Button size="sm" variant="outline" :disabled="page * pageSize >= total || loading" @click="page++; load()">
+        <Button
+          size="sm"
+          variant="outline"
+          :disabled="page * pageSize >= total || loading"
+          @click="
+            page++
+            load()
+          "
+        >
           {{ t('tools.libraryIntegrity.contentVerification.next') }}
         </Button>
       </div>

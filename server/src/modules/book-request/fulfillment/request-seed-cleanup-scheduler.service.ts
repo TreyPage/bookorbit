@@ -71,7 +71,9 @@ export class RequestSeedCleanupSchedulerService {
     }
   }
 
-  private async cleanupBatch(candidates: Awaited<ReturnType<BookRequestDownloadRepository['findImportedTorrentSeeds']>>): Promise<{ checked: number; removed: number }> {
+  private async cleanupBatch(
+    candidates: Awaited<ReturnType<BookRequestDownloadRepository['findImportedTorrentSeeds']>>,
+  ): Promise<{ checked: number; removed: number }> {
     const byClient = new Map<number, typeof candidates>();
     for (const download of candidates) {
       if (download.downloadClientId === null || download.clientKey === null) continue;
@@ -135,8 +137,7 @@ export class RequestSeedCleanupSchedulerService {
     const seed = status.seed;
     if (!seed) return false;
 
-    const ratioReached =
-      seed.ratioGoal !== null && seed.ratioGoal > 0 && seed.ratio !== null && seed.ratio >= seed.ratioGoal;
+    const ratioReached = seed.ratioGoal !== null && seed.ratioGoal > 0 && seed.ratio !== null && seed.ratio >= seed.ratioGoal;
     const timeReached =
       seed.seedingTimeGoalMinutes !== null &&
       seed.seedingTimeGoalMinutes > 0 &&

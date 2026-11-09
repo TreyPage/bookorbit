@@ -4,14 +4,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
-import {
-  authors,
-  bookAuthors,
-  bookContentVerifications,
-  bookFiles,
-  bookMetadata,
-  books,
-} from '../../db/schema';
+import { authors, bookAuthors, bookContentVerifications, bookFiles, bookMetadata, books } from '../../db/schema';
 
 type Db = NodePgDatabase<typeof schema>;
 
@@ -33,10 +26,7 @@ export class ContentVerificationRepository {
               inArray(bookContentVerifications.status, ['mismatch', 'inconclusive', 'error'] as const),
               or(isNull(bookContentVerifications.reviewStatus), eq(bookContentVerifications.reviewStatus, 'needs_recheck')),
             ),
-            and(
-              isNotNull(bookContentVerifications.id),
-              sql`${bookContentVerifications.fileHash} is distinct from ${bookFiles.fileHash}`,
-            ),
+            and(isNotNull(bookContentVerifications.id), sql`${bookContentVerifications.fileHash} is distinct from ${bookFiles.fileHash}`),
           )
         : filter === 'reviewed'
           ? inArray(bookContentVerifications.reviewStatus, ['confirmed_mismatch', 'false_positive'] as const)
@@ -85,9 +75,7 @@ export class ContentVerificationRepository {
   }
 
   async listPendingCandidates(afterFileId: number, limit: number, includeAudiobooks: boolean) {
-    const supportedFormats = includeAudiobooks
-      ? ['epub', 'm4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav']
-      : ['epub'];
+    const supportedFormats = includeAudiobooks ? ['epub', 'm4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav'] : ['epub'];
     return this.db
       .select({ fileId: bookFiles.id, format: bookFiles.format })
       .from(bookFiles)
@@ -120,9 +108,7 @@ export class ContentVerificationRepository {
 
   async listVerificationFileIdsForBooks(bookIds: number[], includeAudiobooks: boolean): Promise<number[]> {
     if (bookIds.length === 0) return [];
-    const supportedFormats = includeAudiobooks
-      ? ['epub', 'm4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav']
-      : ['epub'];
+    const supportedFormats = includeAudiobooks ? ['epub', 'm4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav'] : ['epub'];
     const rows = await this.db
       .select({ fileId: bookFiles.id })
       .from(bookFiles)
@@ -142,10 +128,7 @@ export class ContentVerificationRepository {
             isNull(bookFiles.sortOrder),
             eq(bookFiles.sortOrder, 0),
           ),
-          or(
-            isNull(bookContentVerifications.id),
-            sql`${bookContentVerifications.fileHash} is distinct from ${bookFiles.fileHash}`,
-          ),
+          or(isNull(bookContentVerifications.id), sql`${bookContentVerifications.fileHash} is distinct from ${bookFiles.fileHash}`),
         ),
       )
       .orderBy(asc(bookFiles.id));
@@ -167,14 +150,7 @@ export class ContentVerificationRepository {
       .from(bookFiles)
       .innerJoin(books, eq(books.id, bookFiles.bookId))
       .leftJoin(bookMetadata, eq(bookMetadata.bookId, books.id))
-      .where(
-        and(
-          eq(bookFiles.id, fileId),
-          eq(bookFiles.role, 'content'),
-          eq(books.status, 'present'),
-          inArray(books.libraryId, libraryIds),
-        ),
-      )
+      .where(and(eq(bookFiles.id, fileId), eq(bookFiles.role, 'content'), eq(books.status, 'present'), inArray(books.libraryId, libraryIds)))
       .limit(1);
     if (!file) return null;
 
@@ -189,11 +165,7 @@ export class ContentVerificationRepository {
   }
 
   async findResultForFile(fileId: number) {
-    const [result] = await this.db
-      .select()
-      .from(bookContentVerifications)
-      .where(eq(bookContentVerifications.bookFileId, fileId))
-      .limit(1);
+    const [result] = await this.db.select().from(bookContentVerifications).where(eq(bookContentVerifications.bookFileId, fileId)).limit(1);
     return result ?? null;
   }
 

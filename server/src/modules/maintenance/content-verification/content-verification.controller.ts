@@ -39,11 +39,7 @@ export class ContentVerificationController {
 
   @Patch(':fileId/review')
   @RequirePermission(Permission.LibraryDownload)
-  reviewFile(
-    @Param('fileId', ParseIntPipe) fileId: number,
-    @Body() dto: ReviewContentVerificationDto,
-    @CurrentUser() user: RequestUser,
-  ) {
+  reviewFile(@Param('fileId', ParseIntPipe) fileId: number, @Body() dto: ReviewContentVerificationDto, @CurrentUser() user: RequestUser) {
     return this.service.reviewFile(user, fileId, dto.reviewStatus, dto.reviewNote);
   }
 
