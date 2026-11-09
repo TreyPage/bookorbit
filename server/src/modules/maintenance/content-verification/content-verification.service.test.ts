@@ -86,6 +86,12 @@ describe('ContentVerificationService', () => {
     }));
   });
 
+  it('rejects mismatch confirmation when the AI result is not a mismatch', async () => {
+    repository.findResultForFile.mockResolvedValue({ fileHash: 'abc123', status: 'match' });
+    await expect(service.reviewFile({ id: 10 } as never, 7, 'false_positive')).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.updateReview).not.toHaveBeenCalled();
+  });
+
   it('does not allow review when the verification result does not exist', async () => {
     repository.findResultForFile.mockResolvedValue(null);
     await expect(service.reviewFile({ id: 10 } as never, 7, 'false_positive')).rejects.toBeInstanceOf(NotFoundException);
