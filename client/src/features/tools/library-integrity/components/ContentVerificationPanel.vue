@@ -10,6 +10,7 @@ import {
   verifyBookFileContent,
   reviewBookFileContent,
   type ContentVerificationEntry,
+  type ContentVerificationFilter,
   type ContentVerificationReviewStatus,
   type ContentVerificationJobStatus,
 } from '@/features/tools/api/content-verification'
@@ -19,6 +20,7 @@ const items = ref<ContentVerificationEntry[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = 25
+const filter = ref<ContentVerificationFilter>('needs_review')
 const loading = ref(false)
 const error = ref(false)
 const verifyingFileId = ref<number | null>(null)
@@ -40,7 +42,7 @@ async function load(): Promise<void> {
   loading.value = true
   error.value = false
   try {
-    const result = await getContentVerificationPage({ page: page.value, pageSize })
+    const result = await getContentVerificationPage({ page: page.value, pageSize, filter: filter.value })
     items.value = result.items
     total.value = result.total
   } catch {
@@ -130,6 +132,16 @@ onUnmounted(() => {
         </p>
       </div>
       <div class="flex flex-wrap gap-2">
+        <select
+          v-model="filter"
+          class="h-9 rounded-md border border-input bg-background px-2 text-xs"
+          @change="page = 1; load()"
+        >
+          <option value="needs_review">{{ t('tools.libraryIntegrity.contentVerification.review.filters.needsReview') }}</option>
+          <option value="mismatch">{{ t('tools.libraryIntegrity.contentVerification.review.filters.mismatches') }}</option>
+          <option value="reviewed">{{ t('tools.libraryIntegrity.contentVerification.review.filters.reviewed') }}</option>
+          <option value="all">{{ t('tools.libraryIntegrity.contentVerification.review.filters.all') }}</option>
+        </select>
         <Button
           size="sm"
           variant="outline"
