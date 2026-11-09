@@ -14327,6 +14327,29 @@
       "futureTitle": "Additional integrity checks",
       "futureDescription": "Unwanted sidecar files, orphaned book files, and invalid file paths will be added here. Detection will be separated from repair so ambiguous files are never deleted automatically.",
       "newCheck": "New check",
+      "contentVerification": {
+        "title": "Content Verification",
+        "description": "Compare ebook title pages and audiobook opening narration against BookOrbit metadata. Verification is read-only.",
+        "refresh": "Refresh",
+        "loading": "Loading supported book files…",
+        "empty": "No EPUB ebooks or supported audiobook files were found in accessible libraries.",
+        "failed": "Content verification could not be completed. Check the AI and transcription provider settings.",
+        "untitled": "Untitled book",
+        "notChecked": "Not checked",
+        "stale": "File changed · recheck needed",
+        "detected": "Detected",
+        "files": "files",
+        "verify": "Verify",
+        "verifying": "Verifying…",
+        "previous": "Previous",
+        "next": "Next",
+        "status": {
+          "match": "Verified match",
+          "mismatch": "Mismatch",
+          "inconclusive": "Inconclusive",
+          "error": "Verification error"
+        }
+      },
       "duplicateFormats": {
         "title": "Duplicate Formats",
         "description": "Find books that have more than one content file recorded with the same format. This check is read-only; review each group before removing or moving files.",

@@ -48,6 +48,12 @@ function trustProxyEnv() {
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  CONTENT_VERIFICATION_AI_BASE_URL: z.string().trim().refine((value) => value === '' || /^https?:\/\//i.test(value), 'CONTENT_VERIFICATION_AI_BASE_URL must use http or https').optional(),
+  CONTENT_VERIFICATION_AI_MODEL: z.string().trim().min(1).max(200).optional(),
+  CONTENT_VERIFICATION_AI_API_KEY: z.string().optional(),
+  CONTENT_VERIFICATION_STT_BASE_URL: z.string().trim().refine((value) => value === '' || /^https?:\/\//i.test(value), 'CONTENT_VERIFICATION_STT_BASE_URL must use http or https').optional(),
+  CONTENT_VERIFICATION_STT_MODEL: z.string().trim().min(1).max(200).optional(),
+  CONTENT_VERIFICATION_STT_API_KEY: z.string().optional(),
   HOST: z
     .string()
     .trim()

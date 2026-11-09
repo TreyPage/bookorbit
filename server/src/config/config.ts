@@ -85,6 +85,15 @@ export const audioToolsConfig = registerAs('audioTools', () => ({
   ffprobePath: process.env.FFPROBE_PATH?.trim() || 'ffprobe',
 }));
 
+export const contentVerificationConfig = registerAs('contentVerification', () => ({
+  aiBaseUrl: process.env.CONTENT_VERIFICATION_AI_BASE_URL?.trim().replace(/\/$/, '') || undefined,
+  aiModel: process.env.CONTENT_VERIFICATION_AI_MODEL?.trim() || 'qwen3.5:4b',
+  aiApiKey: process.env.CONTENT_VERIFICATION_AI_API_KEY?.trim() || undefined,
+  sttBaseUrl: process.env.CONTENT_VERIFICATION_STT_BASE_URL?.trim().replace(/\/$/, '') || undefined,
+  sttModel: process.env.CONTENT_VERIFICATION_STT_MODEL?.trim() || 'Systran/faster-whisper-small',
+  sttApiKey: process.env.CONTENT_VERIFICATION_STT_API_KEY?.trim() || undefined,
+}));
+
 export const emailConfig = registerAs('email', () => ({
   encryptionKey: process.env.EMAIL_ENCRYPTION_KEY ?? '',
 }));

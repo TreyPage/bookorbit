@@ -16,6 +16,7 @@ import {
   startLibraryIntegrityScan,
 } from '@/features/tools/api/library-integrity'
 import MissingResourcesView from '@/features/tools/missing-resources/views/MissingResourcesView.vue'
+import ContentVerificationPanel from '../components/ContentVerificationPanel.vue'
 
 import { Button } from '@/components/ui/button'
 
@@ -304,6 +305,8 @@ function openBookMerge(): void {
       <h1 class="text-2xl font-semibold tracking-tight text-foreground">{{ t('titles.libraryIntegrity') }}</h1>
       <p class="max-w-3xl text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.description') }}</p>
     </header>
+
+    <ContentVerificationPanel />
 
     <section class="rounded-xl border border-border bg-card p-5" aria-live="polite">
       <div class="flex flex-wrap items-start justify-between gap-3">
