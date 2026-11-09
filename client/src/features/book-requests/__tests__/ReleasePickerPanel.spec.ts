@@ -51,6 +51,8 @@ function request(overrides: Partial<BookRequestItem> = {}): BookRequestItem {
     matchedBookId: null,
     bookDockFileId: null,
     selfServe: false,
+    automaticRetryPaused: false,
+    seedCleanupProtected: false,
     fulfillerUserId: null,
     statusReason: null,
     failureCode: null,
