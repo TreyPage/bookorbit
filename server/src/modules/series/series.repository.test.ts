@@ -186,6 +186,12 @@ describe('SeriesRepository', () => {
 
       expect(facetChain.having).toHaveBeenCalledTimes(1);
       expect(dataChain.having).toHaveBeenCalledTimes(1);
+
+      const facetHaving = (facetChain.having as ReturnType<typeof vi.fn>).mock.calls[0]![0] as SQL;
+      const dataHaving = (dataChain.having as ReturnType<typeof vi.fn>).mock.calls[0]![0] as SQL;
+      expect(new PgDialect().sqlToQuery(facetHaving).sql).toContain('coalesce');
+      expect(new PgDialect().sqlToQuery(dataHaving).sql).toContain('coalesce');
+      expect(new PgDialect().sqlToQuery(facetHaving).sql).toContain('expected_book_count');
     });
 
     it('passes correct pagination values to limit and offset', async () => {
