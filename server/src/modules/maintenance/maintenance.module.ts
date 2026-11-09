@@ -22,6 +22,7 @@ import { ContentVerificationSchedulerService } from './content-verification/cont
 @Module({
   imports: [BookModule, BookCoverStoreModule, LibraryModule, ReadingAttemptEventsModule],
   controllers: [MissingResourcesController, LibraryIntegrityController, ContentVerificationController],
+  exports: [ContentVerificationSchedulerService],
   providers: [
     MissingResourcesService,
     ContentVerificationAiService,
