@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, gt, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { DB } from '../../db';
@@ -19,7 +19,7 @@ type Db = NodePgDatabase<typeof schema>;
 export class ContentVerificationRepository {
   constructor(@Inject(DB) private readonly db: Db) {}
 
-  async listCandidates(libraryIds: number[], offset: number, limit: number) {
+  async listCandidates(libraryIds: number[], offset: number, limit: number, filter: 'all' | 'needs_review' | 'reviewed' | 'mismatch' = 'all') {
     if (libraryIds.length === 0) return { items: [], total: 0 };
     const supportedFormats = ['epub', 'm4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav'];
     const where = and(
@@ -27,6 +27,13 @@ export class ContentVerificationRepository {
       eq(books.status, 'present'),
       eq(bookFiles.role, 'content'),
       inArray(sql<string>`lower(${bookFiles.format})`, supportedFormats),
+      filter === 'needs_review'
+        ? and(inArray(bookContentVerifications.status, ['mismatch', 'inconclusive', 'error']), isNull(bookContentVerifications.reviewStatus))
+        : filter === 'reviewed'
+          ? isNotNull(bookContentVerifications.reviewStatus)
+          : filter === 'mismatch'
+            ? eq(bookContentVerifications.status, 'mismatch')
+            : undefined,
     )!;
 
     const [countRow] = await this.db
