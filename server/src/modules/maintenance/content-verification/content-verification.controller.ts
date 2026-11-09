@@ -1,9 +1,9 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { Permission } from '@bookorbit/types';
 
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { RequirePermission } from '../../common/decorators/require-permission.decorator';
-import type { RequestUser } from '../../common/types/request-user';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
+import type { RequestUser } from '../../../common/types/request-user';
 import { ContentVerificationService } from './content-verification.service';
 import { ContentVerificationSchedulerService } from './content-verification-scheduler.service';
 import { ListContentVerificationDto } from './dto/list-content-verification.dto';

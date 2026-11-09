@@ -2,9 +2,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, count, eq, gt, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { DB } from '../../db';
-import * as schema from '../../db/schema';
-import { authors, bookAuthors, bookContentVerifications, bookFiles, bookMetadata, books } from '../../db/schema';
+import { DB } from '../../../db';
+import * as schema from '../../../db/schema';
+import { authors, bookAuthors, bookContentVerifications, bookFiles, bookMetadata, books } from '../../../db/schema';
 
 type Db = NodePgDatabase<typeof schema>;
 
