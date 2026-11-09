@@ -14348,6 +14348,17 @@
           "mismatch": "Mismatch",
           "inconclusive": "Inconclusive",
           "error": "Verification error"
+        },
+        "background": {
+          "run": "Verify next batch",
+          "running": "Verifying…",
+          "status": "Background verification",
+          "counts": "Processed {processed} · Matches {matches} · Mismatches {mismatches} · Inconclusive {inconclusive} · Errors {errors}",
+          "states": {
+            "idle": "Idle",
+            "running": "Running",
+            "waiting_for_provider": "Waiting for AI provider"
+          }
         }
       },
       "duplicateFormats": {

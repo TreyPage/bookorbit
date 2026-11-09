@@ -17,6 +17,7 @@ import { AudiobookOpeningTranscriptionService } from './content-verification/aud
 import { ContentVerificationController } from './content-verification/content-verification.controller';
 import { ContentVerificationRepository } from './content-verification/content-verification.repository';
 import { ContentVerificationService } from './content-verification/content-verification.service';
+import { ContentVerificationSchedulerService } from './content-verification/content-verification-scheduler.service';
 
 @Module({
   imports: [BookModule, BookCoverStoreModule, LibraryModule, ReadingAttemptEventsModule],
@@ -27,6 +28,7 @@ import { ContentVerificationService } from './content-verification/content-verif
     AudiobookOpeningTranscriptionService,
     ContentVerificationRepository,
     ContentVerificationService,
+    ContentVerificationSchedulerService,
     MissingResourcesRepository,
     CoverSweepStore,
     LibraryIntegrityRepository,
