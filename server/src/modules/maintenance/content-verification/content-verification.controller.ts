@@ -38,7 +38,7 @@ export class ContentVerificationController {
   }
 
   @Patch(':fileId/review')
-  @RequirePermission(Permission.LibraryEditMetadata)
+  @RequirePermission(Permission.LibraryDownload)
   reviewFile(
     @Param('fileId', ParseIntPipe) fileId: number,
     @Body() dto: ReviewContentVerificationDto,
