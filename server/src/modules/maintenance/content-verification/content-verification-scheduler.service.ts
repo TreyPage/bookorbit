@@ -28,6 +28,8 @@ export class ContentVerificationSchedulerService {
   private readonly logger = new Logger(ContentVerificationSchedulerService.name);
   private running = false;
   private afterFileId = 0;
+  private readonly pendingFileIds: number[] = [];
+  private readonly queuedFileIds = new Set<number>();
   private status: ContentVerificationJobStatus = {
     status: 'idle',
     processed: 0,
@@ -47,6 +49,25 @@ export class ContentVerificationSchedulerService {
 
   getStatus(): ContentVerificationJobStatus {
     return { ...this.status };
+  }
+
+  async enqueueBooks(bookIds: number[]): Promise<void> {
+    if (!this.verification.isAiConfigured() || bookIds.length === 0) return;
+    try {
+      const fileIds = await this.repository.listVerificationFileIdsForBooks(
+        [...new Set(bookIds)],
+        this.transcription.isConfigured(),
+      );
+      for (const fileId of fileIds) {
+        if (this.queuedFileIds.has(fileId)) continue;
+        this.queuedFileIds.add(fileId);
+        this.pendingFileIds.push(fileId);
+      }
+      if (this.pendingFileIds.length > 0 && !this.running) void this.runBatch();
+    } catch (error) {
+      const message = sanitizeLogValue(error instanceof Error ? error.message : String(error));
+      this.logger.warn(`[content-verification.import] error="${message}" - imported files remain eligible for scheduled verification`);
+    }
   }
 
   startBatch(): ContentVerificationJobStatus {
@@ -69,11 +90,14 @@ export class ContentVerificationSchedulerService {
     this.running = true;
     this.status = { ...this.status, status: 'running', lastRunAt: new Date().toISOString(), lastError: null };
     try {
-      const candidates = await this.repository.listPendingCandidates(
-        this.afterFileId,
-        BATCH_SIZE,
-        this.transcription.isConfigured(),
-      );
+      const queuedCandidates = this.pendingFileIds.splice(0, BATCH_SIZE).map((fileId) => ({ fileId, format: null }));
+      const candidates = queuedCandidates.length > 0
+        ? queuedCandidates
+        : await this.repository.listPendingCandidates(
+            this.afterFileId,
+            BATCH_SIZE,
+            this.transcription.isConfigured(),
+          );
 
       if (candidates.length === 0) {
         this.afterFileId = 0;
@@ -82,7 +106,8 @@ export class ContentVerificationSchedulerService {
       }
 
       for (const candidate of candidates) {
-        this.afterFileId = candidate.fileId;
+        this.afterFileId = Math.max(this.afterFileId, candidate.fileId);
+        this.queuedFileIds.delete(candidate.fileId);
         try {
           const result = await this.verification.verifyFileForSystem(candidate.fileId);
           this.status = {
@@ -108,6 +133,7 @@ export class ContentVerificationSchedulerService {
       return this.getStatus();
     } finally {
       this.running = false;
+      if (this.pendingFileIds.length > 0) void this.runBatch();
     }
   }
 }

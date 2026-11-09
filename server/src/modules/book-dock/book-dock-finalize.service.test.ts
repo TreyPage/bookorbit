@@ -102,6 +102,9 @@ function makeService() {
   const fileWriteService = {
     scheduleWrite: vi.fn(),
   };
+  const contentVerificationScheduler = {
+    enqueueBooks: vi.fn().mockResolvedValue(undefined),
+  };
 
   const service = new BookDockFinalizeService(
     db as never,
@@ -121,6 +124,8 @@ function makeService() {
     fileWriteService as never,
     undefined as never,
     seriesMemberships as never,
+    undefined as never,
+    contentVerificationScheduler as never,
   );
 
   return {
@@ -141,6 +146,7 @@ function makeService() {
     seriesMemberships,
     notificationService,
     fileWriteService,
+    contentVerificationScheduler,
   };
 }
 
@@ -706,6 +712,7 @@ describe('BookDockFinalizeService', () => {
           sortOrder: 0,
         },
       ]);
+      expect(contentVerificationScheduler.enqueueBooks).toHaveBeenCalledWith([555]);
     });
 
     describe('as another format of an existing book', () => {

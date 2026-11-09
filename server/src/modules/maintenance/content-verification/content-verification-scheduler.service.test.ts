@@ -18,6 +18,37 @@ describe('ContentVerificationSchedulerService', () => {
     expect(repository.listPendingCandidates).not.toHaveBeenCalled();
   });
 
+  it('queues newly imported books and starts verification immediately', async () => {
+    const repository = {
+      listVerificationFileIdsForBooks: vi.fn().mockResolvedValue([12, 13]),
+      listPendingCandidates: vi.fn().mockResolvedValue([]),
+    };
+    const verification = {
+      isAiConfigured: vi.fn().mockReturnValue(true),
+      verifyFileForSystem: vi.fn().mockResolvedValue({ status: 'match' }),
+    };
+    const transcription = { isConfigured: vi.fn().mockReturnValue(false) };
+    const service = new ContentVerificationSchedulerService(repository as never, verification as never, transcription as never);
+
+    await service.enqueueBooks([4, 4, 9]);
+    await vi.waitFor(() => expect(verification.verifyFileForSystem).toHaveBeenCalledTimes(2));
+
+    expect(repository.listVerificationFileIdsForBooks).toHaveBeenCalledWith([4, 9], false);
+    expect(verification.verifyFileForSystem).toHaveBeenNthCalledWith(1, 12);
+    expect(verification.verifyFileForSystem).toHaveBeenNthCalledWith(2, 13);
+  });
+
+  it('does not enqueue imported books when the AI provider is unavailable', async () => {
+    const repository = { listVerificationFileIdsForBooks: vi.fn() };
+    const verification = { isAiConfigured: vi.fn().mockReturnValue(false) };
+    const transcription = { isConfigured: vi.fn().mockReturnValue(false) };
+    const service = new ContentVerificationSchedulerService(repository as never, verification as never, transcription as never);
+
+    await service.enqueueBooks([4]);
+
+    expect(repository.listVerificationFileIdsForBooks).not.toHaveBeenCalled();
+  });
+
   it('processes a bounded batch and records result counts', async () => {
     const repository = { listPendingCandidates: vi.fn().mockResolvedValue(candidates) };
     const verification = {
