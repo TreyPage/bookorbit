@@ -37,6 +37,7 @@ export class ContentVerificationAiService {
     const baseUrl = this.config.get<string>('contentVerification.aiBaseUrl')?.replace(/\/$/, '');
     const model = this.config.get<string>('contentVerification.aiModel') || 'qwen3.5:4b';
     const apiKey = this.config.get<string>('contentVerification.aiApiKey');
+    const timeoutMs = this.config.get<number>('contentVerification.aiTimeoutMs') ?? 180_000;
     if (!baseUrl) throw new ServiceUnavailableException('Content verification AI provider is not configured');
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -73,7 +74,7 @@ export class ContentVerificationAiService {
           },
         ],
       }),
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     if (!response.ok) {
