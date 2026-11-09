@@ -63,7 +63,7 @@ describe('ContentVerificationSchedulerService', () => {
   });
 
   it('does not overlap concurrent batches', async () => {
-    let finish!: (value: { status: string }) => void;
+    let finish!: (value: never) => void;
     const repository = { listPendingCandidates: vi.fn().mockReturnValue(new Promise((resolve) => { finish = resolve; })) };
     const verification = { isAiConfigured: vi.fn().mockReturnValue(true), verifyFileForSystem: vi.fn() };
     const transcription = { isConfigured: vi.fn().mockReturnValue(false) };
@@ -73,7 +73,7 @@ describe('ContentVerificationSchedulerService', () => {
     await vi.waitFor(() => expect(repository.listPendingCandidates).toHaveBeenCalledOnce());
     await expect(service.runBatch()).resolves.toMatchObject({ status: 'running' });
     expect(repository.listPendingCandidates).toHaveBeenCalledOnce();
-    finish([]);
+    finish([] as never);
     await first;
   });
 
