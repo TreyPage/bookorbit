@@ -4,6 +4,7 @@ import * as unzipper from 'unzipper';
 
 import { findInZip, resolvePath, toRecordArray } from '../../metadata/lib/epub-zip-utils';
 
+const MAX_PACKAGE_DOCUMENT_BYTES = 1024 * 1024;
 const MAX_DOCUMENTS = 8;
 const MAX_DOCUMENT_BYTES = 64 * 1024;
 const MAX_TOTAL_TEXT_CHARS = 30_000;
@@ -38,6 +39,7 @@ export async function extractEpubContentEvidence(absolutePath: string): Promise<
   const containerFile = zip.files.find((file) => file.path.replace(/^\//, '') === 'META-INF/container.xml');
   if (!containerFile) throw new Error('EPUB container.xml is missing');
 
+  if (containerFile.uncompressedSize > MAX_PACKAGE_DOCUMENT_BYTES) throw new Error('EPUB container.xml is oversized');
   const containerXml = (await containerFile.buffer()).toString('utf-8');
   const container = xmlParser.parse(containerXml) as Record<string, unknown>;
   const containerNode = container['container'] as Record<string, unknown> | undefined;
@@ -48,6 +50,7 @@ export async function extractEpubContentEvidence(absolutePath: string): Promise<
 
   const opfFile = zip.files.find((file) => file.path.replace(/^\//, '') === opfPath.replace(/^\//, ''));
   if (!opfFile) throw new Error('EPUB package document is missing');
+  if (opfFile.uncompressedSize > MAX_PACKAGE_DOCUMENT_BYTES) throw new Error('EPUB package document is oversized');
   const opf = xmlParser.parse((await opfFile.buffer()).toString('utf-8')) as Record<string, unknown>;
   const packageNode = (opf['package'] ?? opf['opf:package']) as Record<string, unknown> | undefined;
   const manifest = packageNode?.['manifest'] as Record<string, unknown> | undefined;
