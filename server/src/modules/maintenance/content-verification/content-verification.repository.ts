@@ -110,6 +110,7 @@ export class ContentVerificationRepository {
           or(
             isNull(bookContentVerifications.id),
             sql`${bookContentVerifications.fileHash} is distinct from ${bookFiles.fileHash}`,
+            eq(bookContentVerifications.reviewStatus, 'needs_recheck'),
           ),
         ),
       )
