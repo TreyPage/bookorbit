@@ -12,6 +12,7 @@ describe('ContentVerificationAiService', () => {
             'contentVerification.aiBaseUrl': 'http://ollama:11434/v1',
             'contentVerification.aiModel': 'qwen3.5:4b',
             'contentVerification.aiApiKey': undefined,
+            'contentVerification.aiTimeoutMs': 180_000,
           }) as Record<string, string | undefined>
         )[key],
     ),
@@ -63,6 +64,8 @@ describe('ContentVerificationAiService', () => {
     const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(request.body).toEqual(expect.stringContaining('Dune by Frank Herbert'));
     expect(request.body).toEqual(expect.stringContaining('qwen3.5:4b'));
+    expect(request.signal).toBeInstanceOf(AbortSignal);
+    expect(request.signal).toBeDefined();
   });
 
   it('rejects malformed or out-of-range model confidence', async () => {
