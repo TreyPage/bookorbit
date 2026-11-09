@@ -2,8 +2,8 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { ConfigService } from '@nestjs/config';
 import { extname } from 'node:path';
 
-import type { RequestUser } from '../../common/types/request-user';
-import { LibraryService } from '../library/library.service';
+import type { RequestUser } from '../../../common/types/request-user';
+import { LibraryService } from '../../library/library.service';
 import { AudiobookOpeningTranscriptionService } from './audiobook-opening-transcription.service';
 import { ContentVerificationAiService } from './content-verification-ai.service';
 import { extractEpubContentEvidence } from './epub-content-evidence';
