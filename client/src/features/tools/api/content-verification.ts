@@ -21,7 +21,7 @@ export interface ContentVerificationEntry {
   detectedAuthor: string | null
   confidence: number | null
   explanation: string | null
-  evidence: ContentVerificationEvidence[]
+  evidence: ContentVerificationEvidence[] | null
   reviewStatus: ContentVerificationReviewStatus | null
   reviewNote: string | null
   reviewedAt: string | null
