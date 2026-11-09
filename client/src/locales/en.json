@@ -14378,7 +14378,8 @@
             "mismatches": "All mismatches",
             "reviewed": "Reviewed",
             "all": "All files"
-          }
+          },
+          "emptyNeedsReview": "No mismatches or uncertain results are waiting for review."
         }
       },
       "duplicateFormats": {
