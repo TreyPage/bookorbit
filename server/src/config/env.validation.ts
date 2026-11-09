@@ -55,6 +55,7 @@ const envSchema = z.object({
     .optional(),
   CONTENT_VERIFICATION_AI_MODEL: z.string().trim().min(1).max(200).optional(),
   CONTENT_VERIFICATION_AI_API_KEY: z.string().optional(),
+  CONTENT_VERIFICATION_AI_TIMEOUT_MS: z.coerce.number().int().positive().max(600_000).optional(),
   CONTENT_VERIFICATION_STT_BASE_URL: z
     .string()
     .trim()
