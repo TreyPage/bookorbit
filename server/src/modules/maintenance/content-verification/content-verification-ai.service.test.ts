@@ -9,7 +9,7 @@ describe('ContentVerificationAiService', () => {
       'contentVerification.aiBaseUrl': 'http://ollama:11434/v1',
       'contentVerification.aiModel': 'qwen3.5:4b',
       'contentVerification.aiApiKey': undefined,
-    })[key]),
+    } as Record<string, string | undefined>)[key]),
   } as unknown as ConfigService;
   let service: ContentVerificationAiService;
   let fetchMock: ReturnType<typeof vi.fn>;
@@ -43,7 +43,7 @@ describe('ContentVerificationAiService', () => {
     })).resolves.toMatchObject({ status: 'match', confidence: 0.98 });
 
     const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(request.body).toContain('Dune by Frank Herbert');
+    expect(String(request.body)).toContain('Dune by Frank Herbert');
     expect(request.body).toContain('qwen3.5:4b');
   });
 
