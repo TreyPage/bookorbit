@@ -96,6 +96,12 @@ export async function extractEpubContentEvidence(absolutePath: string): Promise<
     const html = (await file.buffer()).toString('utf-8');
     const $ = load(html);
     $('script, style, noscript, svg, nav, audio, video').remove();
+    // Cheerio's .text() concatenates adjacent block elements without a separator.
+    // Add whitespace at block boundaries before extracting text so title and author
+    // lines remain distinct in the evidence sent to the verifier.
+    $('body')
+      .find('address, article, blockquote, dd, div, dl, dt, fieldset, figcaption, figure, footer, form, h1, h2, h3, h4, h5, h6, header, li, main, ol, p, pre, section, table, tr, ul')
+      .append(' ');
     const rawText = $('body').text() || $.root().text();
     const text = rawText
       .replace(/\s+/g, ' ')

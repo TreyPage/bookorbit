@@ -177,17 +177,17 @@ describe('SeriesRepository', () => {
     });
 
     it('excludes single-book series from the index and its facet counts', async () => {
-      const { select, facetChain, dataChain } = makeFindPageDb([{ ...NO_FACETS }], []);
+      const { select, baseChain, dataChain } = makeFindPageDb([{ ...NO_FACETS }], []);
       db.select = select;
 
       stubPageHelpers(repo);
 
       await repo.findPage({ ...BASE_PARAMS, completionStatus: undefined });
 
-      expect(facetChain.having).toHaveBeenCalledTimes(1);
+      expect(baseChain.having).toHaveBeenCalledTimes(1);
       expect(dataChain.having).toHaveBeenCalledTimes(1);
 
-      const facetHaving = (facetChain.having as ReturnType<typeof vi.fn>).mock.calls[0]![0] as SQL;
+      const facetHaving = (baseChain.having as ReturnType<typeof vi.fn>).mock.calls[0]![0] as SQL;
       const dataHaving = (dataChain.having as ReturnType<typeof vi.fn>).mock.calls[0]![0] as SQL;
       expect(new PgDialect().sqlToQuery(facetHaving).sql).toContain('coalesce');
       expect(new PgDialect().sqlToQuery(dataHaving).sql).toContain('coalesce');

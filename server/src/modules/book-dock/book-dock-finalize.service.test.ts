@@ -682,7 +682,7 @@ describe('BookDockFinalizeService', () => {
     });
 
     it('returns success with relative newName when finalize flow completes', async () => {
-      const { service, processor } = makeService();
+      const { service, processor, contentVerificationScheduler } = makeService();
       vi.spyOn(service as never, 'findLibraryOrFail').mockResolvedValue({ id: 5, allowedFormats: ['epub'], fileNamingPattern: null } as never);
       vi.spyOn(service as never, 'findFolderOrFail').mockResolvedValue({ id: 9, libraryId: 5, path: '/library' } as never);
       vi.spyOn(service as never, 'resolveDestination').mockResolvedValue('/library/new/book.epub' as never);
