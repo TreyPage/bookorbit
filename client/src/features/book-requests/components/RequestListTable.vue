@@ -561,7 +561,7 @@ function rowDismissed(row: BookRequestItem): boolean {
                 :icon-size="isCompact ? 11 : 14"
               />
 
-              <div class="min-w-0">
+              <div class="min-w-0 flex-1">
                 <div class="flex min-w-0 items-center gap-2">
                   <button
                     type="button"
@@ -878,7 +878,7 @@ function rowDismissed(row: BookRequestItem): boolean {
           />
 
           <div class="min-w-0 flex-1 space-y-1.5">
-            <div class="flex min-w-0 items-center gap-2">
+            <div class="flex min-w-0 flex-1 items-center gap-2">
               <button
                 type="button"
                 class="min-w-0 truncate text-start font-medium text-foreground hover:underline focus-visible:underline focus-visible:outline-none"
