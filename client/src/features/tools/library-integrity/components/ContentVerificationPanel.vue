@@ -134,7 +134,7 @@ onUnmounted(() => {
           v-model="filter"
           class="h-9 rounded-md border border-input bg-background px-2 text-xs"
           @change="
-            page = 1
+            page = 1;
             load()
           "
         >
@@ -268,7 +268,7 @@ onUnmounted(() => {
           variant="outline"
           :disabled="page <= 1 || loading"
           @click="
-            page--
+            page--;
             load()
           "
         >
@@ -279,7 +279,7 @@ onUnmounted(() => {
           variant="outline"
           :disabled="page * pageSize >= total || loading"
           @click="
-            page++
+            page++;
             load()
           "
         >
