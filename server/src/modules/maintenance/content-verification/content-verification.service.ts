@@ -20,6 +20,12 @@ export class ContentVerificationService {
     private readonly config: ConfigService,
   ) {}
 
+  async list(user: RequestUser, page = 1, pageSize = 50) {
+    const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
+    const result = await this.repository.listCandidates(libraryIds, (page - 1) * pageSize, pageSize);
+    return { ...result, page, pageSize, totalPages: Math.max(1, Math.ceil(result.total / pageSize)) };
+  }
+
   async getResult(user: RequestUser, fileId: number) {
     const file = await this.getAccessibleFile(user, fileId);
     const result = await this.repository.findResultForFile(fileId);
