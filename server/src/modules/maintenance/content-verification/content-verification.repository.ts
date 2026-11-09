@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, gt, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { DB } from '../../db';
@@ -19,7 +19,7 @@ type Db = NodePgDatabase<typeof schema>;
 export class ContentVerificationRepository {
   constructor(@Inject(DB) private readonly db: Db) {}
 
-  async listCandidates(libraryIds: number[], offset: number, limit: number) {
+  async listCandidates(libraryIds: number[], offset: number, limit: number, filter: 'all' | 'needs_review' | 'reviewed' | 'mismatch' = 'all') {
     if (libraryIds.length === 0) return { items: [], total: 0 };
     const supportedFormats = ['epub', 'm4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav'];
     const where = and(
@@ -27,12 +27,29 @@ export class ContentVerificationRepository {
       eq(books.status, 'present'),
       eq(bookFiles.role, 'content'),
       inArray(sql<string>`lower(${bookFiles.format})`, supportedFormats),
+      filter === 'needs_review'
+        ? or(
+            and(
+              inArray(bookContentVerifications.status, ['mismatch', 'inconclusive', 'error'] as const),
+              or(isNull(bookContentVerifications.reviewStatus), eq(bookContentVerifications.reviewStatus, 'needs_recheck')),
+            ),
+            and(
+              isNotNull(bookContentVerifications.id),
+              sql`${bookContentVerifications.fileHash} is distinct from ${bookFiles.fileHash}`,
+            ),
+          )
+        : filter === 'reviewed'
+          ? inArray(bookContentVerifications.reviewStatus, ['confirmed_mismatch', 'false_positive'] as const)
+          : filter === 'mismatch'
+            ? eq(bookContentVerifications.status, 'mismatch')
+            : undefined,
     )!;
 
     const [countRow] = await this.db
       .select({ total: count() })
       .from(bookFiles)
       .innerJoin(books, eq(books.id, bookFiles.bookId))
+      .leftJoin(bookContentVerifications, eq(bookContentVerifications.bookFileId, bookFiles.id))
       .where(where);
     const items = await this.db
       .select({
@@ -47,6 +64,11 @@ export class ContentVerificationRepository {
         detectedAuthor: bookContentVerifications.detectedAuthor,
         confidence: bookContentVerifications.confidence,
         explanation: bookContentVerifications.explanation,
+        evidence: bookContentVerifications.evidence,
+        reviewStatus: bookContentVerifications.reviewStatus,
+        reviewNote: bookContentVerifications.reviewNote,
+        reviewedAt: bookContentVerifications.reviewedAt,
+        reviewedBy: bookContentVerifications.reviewedBy,
         verifiedAt: bookContentVerifications.verifiedAt,
         stale: sql<boolean>`case when ${bookContentVerifications.id} is null then false else ${bookContentVerifications.fileHash} is distinct from ${bookFiles.fileHash} end`,
       })
@@ -88,6 +110,7 @@ export class ContentVerificationRepository {
           or(
             isNull(bookContentVerifications.id),
             sql`${bookContentVerifications.fileHash} is distinct from ${bookFiles.fileHash}`,
+            eq(bookContentVerifications.reviewStatus, 'needs_recheck'),
           ),
         ),
       )
@@ -174,6 +197,23 @@ export class ContentVerificationRepository {
     return result ?? null;
   }
 
+  async updateReview(
+    fileId: number,
+    review: {
+      reviewStatus: 'confirmed_mismatch' | 'false_positive' | 'needs_recheck' | null;
+      reviewNote: string | null;
+      reviewedBy: number | null;
+      reviewedAt: Date | null;
+    },
+  ) {
+    const [result] = await this.db
+      .update(bookContentVerifications)
+      .set({ ...review, updatedAt: new Date() })
+      .where(eq(bookContentVerifications.bookFileId, fileId))
+      .returning();
+    return result ?? null;
+  }
+
   async saveResult(input: typeof bookContentVerifications.$inferInsert) {
     const [result] = await this.db
       .insert(bookContentVerifications)
@@ -182,6 +222,10 @@ export class ContentVerificationRepository {
         target: bookContentVerifications.bookFileId,
         set: {
           ...input,
+          reviewStatus: null,
+          reviewNote: null,
+          reviewedBy: null,
+          reviewedAt: null,
           verifiedAt: new Date(),
           updatedAt: new Date(),
         },

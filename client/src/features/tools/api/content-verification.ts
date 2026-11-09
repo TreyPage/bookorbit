@@ -1,6 +1,13 @@
 import { api } from '@/lib/api'
 
 export type ContentVerificationStatus = 'match' | 'mismatch' | 'inconclusive' | 'error'
+export type ContentVerificationReviewStatus = 'confirmed_mismatch' | 'false_positive' | 'needs_recheck'
+export type ContentVerificationFilter = 'all' | 'needs_review' | 'reviewed' | 'mismatch'
+
+export interface ContentVerificationEvidence {
+  label: string
+  text: string
+}
 
 export interface ContentVerificationEntry {
   fileId: number
@@ -14,6 +21,11 @@ export interface ContentVerificationEntry {
   detectedAuthor: string | null
   confidence: number | null
   explanation: string | null
+  evidence: ContentVerificationEvidence[] | null
+  reviewStatus: ContentVerificationReviewStatus | null
+  reviewNote: string | null
+  reviewedAt: string | null
+  reviewedBy: number | null
   verifiedAt: string | null
   stale: boolean
 }
@@ -26,8 +38,8 @@ export interface ContentVerificationPage {
   totalPages: number
 }
 
-export async function getContentVerificationPage(params: { page: number; pageSize: number }): Promise<ContentVerificationPage> {
-  const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize) })
+export async function getContentVerificationPage(params: { page: number; pageSize: number; filter: ContentVerificationFilter }): Promise<ContentVerificationPage> {
+  const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize), filter: params.filter })
   const response = await api(`/api/v1/maintenance/content-verification?${query.toString()}`)
   if (!response.ok) throw new Error('content_verification_list_failed')
   return response.json() as Promise<ContentVerificationPage>
@@ -36,6 +48,20 @@ export async function getContentVerificationPage(params: { page: number; pageSiz
 export async function verifyBookFileContent(fileId: number): Promise<void> {
   const response = await api(`/api/v1/maintenance/content-verification/${fileId}/verify`, { method: 'POST' })
   if (!response.ok) throw new Error('content_verification_failed')
+}
+
+export async function reviewBookFileContent(
+  fileId: number,
+  reviewStatus: ContentVerificationReviewStatus,
+  reviewNote?: string,
+): Promise<ContentVerificationEntry> {
+  const response = await api(`/api/v1/maintenance/content-verification/${fileId}/review`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reviewStatus, reviewNote }),
+  })
+  if (!response.ok) throw new Error('content_verification_review_failed')
+  return response.json() as Promise<ContentVerificationEntry>
 }
 
 export interface ContentVerificationJobStatus {

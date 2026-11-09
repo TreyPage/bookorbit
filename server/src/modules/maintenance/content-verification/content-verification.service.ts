@@ -35,9 +35,9 @@ export class ContentVerificationService {
     return this.verifyFile(user, fileId);
   }
 
-  async list(user: RequestUser, page = 1, pageSize = 50) {
+  async list(user: RequestUser, page = 1, pageSize = 50, filter: 'all' | 'needs_review' | 'reviewed' | 'mismatch' = 'all') {
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
-    const result = await this.repository.listCandidates(libraryIds, (page - 1) * pageSize, pageSize);
+    const result = await this.repository.listCandidates(libraryIds, (page - 1) * pageSize, pageSize, filter);
     return { ...result, page, pageSize, totalPages: Math.max(1, Math.ceil(result.total / pageSize)) };
   }
 
@@ -45,6 +45,28 @@ export class ContentVerificationService {
     const file = await this.getAccessibleFile(user, fileId);
     const result = await this.repository.findResultForFile(fileId);
     if (!result) return null;
+    return { ...result, stale: result.fileHash !== file.fileHash };
+  }
+
+  async reviewFile(
+    user: RequestUser,
+    fileId: number,
+    reviewStatus: 'confirmed_mismatch' | 'false_positive' | 'needs_recheck',
+    reviewNote?: string,
+  ) {
+    const file = await this.getAccessibleFile(user, fileId);
+    const existing = await this.repository.findResultForFile(fileId);
+    if (!existing) throw new NotFoundException('Content verification result not found');
+    if (reviewStatus !== 'needs_recheck' && existing.status !== 'mismatch') {
+      throw new BadRequestException('Only AI mismatch results can be confirmed or marked as false positives');
+    }
+    const result = await this.repository.updateReview(fileId, {
+      reviewStatus,
+      reviewNote: reviewNote?.trim() || null,
+      reviewedBy: user.id,
+      reviewedAt: new Date(),
+    });
+    if (!result) throw new NotFoundException('Content verification result not found');
     return { ...result, stale: result.fileHash !== file.fileHash };
   }
 

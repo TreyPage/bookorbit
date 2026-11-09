@@ -14359,6 +14359,27 @@
             "running": "Running",
             "waiting_for_provider": "Waiting for AI provider"
           }
+        },
+        "review": {
+          "label": "Review decision",
+          "note": "Reviewer note",
+          "notePlaceholder": "Optional note explaining this decision",
+          "showEvidence": "Inspect source evidence",
+          "confirmMismatch": "Confirm mismatch",
+          "falsePositive": "False positive",
+          "needsRecheck": "Needs another check",
+          "status": {
+            "confirmed_mismatch": "Confirmed mismatch",
+            "false_positive": "False positive",
+            "needs_recheck": "Needs recheck"
+          },
+          "filters": {
+            "needsReview": "Needs review",
+            "mismatches": "All mismatches",
+            "reviewed": "Reviewed",
+            "all": "All files"
+          },
+          "emptyNeedsReview": "No mismatches or uncertain results are waiting for review."
         }
       },
       "duplicateFormats": {
