@@ -44,6 +44,7 @@ import {
 import type { BookRequestImportFormats, CoverMedium } from '@bookorbit/types';
 import type { FileRole } from '../scanner/lib/classify';
 import { ProviderIdStore } from '../metadata-fetch/provider-ids/provider-id.store';
+import { ContentVerificationSchedulerService } from '../maintenance/content-verification/content-verification-scheduler.service';
 import { BookReadService } from '../book/book-read.service';
 import { NotificationService } from '../notification/notification.service';
 import { SeriesIdentityService } from '../../common/services/series-identity.service';
@@ -259,6 +260,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
     @Optional() private readonly seriesIdentity?: SeriesIdentityService,
     @Optional() private readonly seriesMemberships?: SeriesMembershipService,
     @Optional() private readonly providerIdStore?: ProviderIdStore,
+    @Optional() private readonly contentVerificationScheduler?: ContentVerificationSchedulerService,
   ) {
     this.autoFinalizeQueue = new BookDockWorkQueue(
       AUTO_FINALIZE_QUEUE_CONCURRENCY,
@@ -450,6 +452,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
 
       // After the metadata, whose duration it supersedes, and before any write-back touches the files.
       await this.measureAudioDurations(written.bookIds, row.id);
+      void this.contentVerificationScheduler?.enqueueBooks(written.bookIds);
       this.processor.reconcileCoversAsync(written.bookIds);
       await this.cleanupBookDockRecord(row);
       if (library.fileWriteEnabled) {
