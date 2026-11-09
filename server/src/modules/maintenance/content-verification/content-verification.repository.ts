@@ -47,6 +47,10 @@ export class ContentVerificationRepository {
         detectedAuthor: bookContentVerifications.detectedAuthor,
         confidence: bookContentVerifications.confidence,
         explanation: bookContentVerifications.explanation,
+        reviewStatus: bookContentVerifications.reviewStatus,
+        reviewNote: bookContentVerifications.reviewNote,
+        reviewedAt: bookContentVerifications.reviewedAt,
+        reviewedBy: bookContentVerifications.reviewedBy,
         verifiedAt: bookContentVerifications.verifiedAt,
         stale: sql<boolean>`case when ${bookContentVerifications.id} is null then false else ${bookContentVerifications.fileHash} is distinct from ${bookFiles.fileHash} end`,
       })
@@ -174,6 +178,23 @@ export class ContentVerificationRepository {
     return result ?? null;
   }
 
+  async updateReview(
+    fileId: number,
+    review: {
+      reviewStatus: 'confirmed_mismatch' | 'false_positive' | 'needs_recheck' | null;
+      reviewNote: string | null;
+      reviewedBy: number | null;
+      reviewedAt: Date | null;
+    },
+  ) {
+    const [result] = await this.db
+      .update(bookContentVerifications)
+      .set({ ...review, updatedAt: new Date() })
+      .where(eq(bookContentVerifications.bookFileId, fileId))
+      .returning();
+    return result ?? null;
+  }
+
   async saveResult(input: typeof bookContentVerifications.$inferInsert) {
     const [result] = await this.db
       .insert(bookContentVerifications)
@@ -182,6 +203,10 @@ export class ContentVerificationRepository {
         target: bookContentVerifications.bookFileId,
         set: {
           ...input,
+          reviewStatus: null,
+          reviewNote: null,
+          reviewedBy: null,
+          reviewedAt: null,
           verifiedAt: new Date(),
           updatedAt: new Date(),
         },
