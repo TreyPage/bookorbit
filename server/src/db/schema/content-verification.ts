@@ -45,6 +45,7 @@ export const bookContentVerifications = pgTable(
   (t) => [
     uniqueIndex('book_content_verifications_book_file_uidx').on(t.bookFileId),
     index('book_content_verifications_status_idx').on(t.status),
+    index('book_content_verifications_review_status_idx').on(t.reviewStatus),
     check('book_content_verifications_source_chk', sql`${t.source} in ('ebook', 'audiobook')`),
     check('book_content_verifications_status_chk', sql`${t.status} in ('match', 'mismatch', 'inconclusive', 'error')`),
     check('book_content_verifications_review_status_chk', sql`${t.reviewStatus} is null or ${t.reviewStatus} in ('confirmed_mismatch', 'false_positive', 'needs_recheck')`),
