@@ -176,15 +176,16 @@ describe('SeriesRepository', () => {
       expect(dataChain.having).toHaveBeenCalled();
     });
 
-    it('does not call having() when completionStatus is undefined', async () => {
-      const { select, dataChain } = makeFindPageDb([{ ...NO_FACETS }], []);
+    it('excludes single-book series from the index and its facet counts', async () => {
+      const { select, facetChain, dataChain } = makeFindPageDb([{ ...NO_FACETS }], []);
       db.select = select;
 
       stubPageHelpers(repo);
 
       await repo.findPage({ ...BASE_PARAMS, completionStatus: undefined });
 
-      expect(dataChain.having).not.toHaveBeenCalled();
+      expect(facetChain.having).toHaveBeenCalledTimes(1);
+      expect(dataChain.having).toHaveBeenCalledTimes(1);
     });
 
     it('passes correct pagination values to limit and offset', async () => {
