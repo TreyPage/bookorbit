@@ -35,9 +35,9 @@ export class ContentVerificationService {
     return this.verifyFile(user, fileId);
   }
 
-  async list(user: RequestUser, page = 1, pageSize = 50) {
+  async list(user: RequestUser, page = 1, pageSize = 50, filter: 'all' | 'needs_review' | 'reviewed' | 'mismatch' = 'all') {
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
-    const result = await this.repository.listCandidates(libraryIds, (page - 1) * pageSize, pageSize);
+    const result = await this.repository.listCandidates(libraryIds, (page - 1) * pageSize, pageSize, filter);
     return { ...result, page, pageSize, totalPages: Math.max(1, Math.ceil(result.total / pageSize)) };
   }
 
