@@ -133,6 +133,10 @@ export class SeriesRepository {
 
     const hasGapsExpr = this.buildHasGapsExpression(bookCountExpr);
     const completionHaving = this.buildCompletionHaving(params.completionStatus, bookCountExpr, readCountExpr, hasGapsExpr);
+    // Keep a series visible when its known catalog total is multi-book, even if the
+    // user's library currently contains only one volume. Fall back to owned members
+    // when no expected total is known.
+    const multiBookSeriesHaving = sql`coalesce(${bookSeries.expectedBookCount}, count(distinct ${books.id})) > 1`;
     const sortExpr = this.buildSortExpression(params.sort, params.order, nameExpr, bookCountExpr, lastAddedExpr, readProgressExpr, params.q);
 
     // Facets are counted before the completion filter, so the tab a user is standing on can
@@ -152,6 +156,7 @@ export class SeriesRepository {
       .leftJoin(userBookStatus, and(eq(userBookStatus.bookId, books.id), eq(userBookStatus.userId, params.userId)))
       .where(baseWhere)
       .groupBy(bookSeries.id, bookSeries.name, bookSeries.expectedBookCount)
+      .having(multiBookSeriesHaving)
       .as('series_groups');
 
     const facetQuery = this.db
@@ -183,9 +188,7 @@ export class SeriesRepository {
       .groupBy(bookSeries.id, bookSeries.name, bookSeries.expectedBookCount)
       .$dynamic();
 
-    if (completionHaving) {
-      dataQuery.having(completionHaving);
-    }
+    dataQuery.having(completionHaving ? and(multiBookSeriesHaving, completionHaving)! : multiBookSeriesHaving);
 
     dataQuery.orderBy(...sortExpr);
     dataQuery.limit(params.size);
