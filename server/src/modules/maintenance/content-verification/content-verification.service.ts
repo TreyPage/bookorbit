@@ -57,6 +57,9 @@ export class ContentVerificationService {
     const file = await this.getAccessibleFile(user, fileId);
     const existing = await this.repository.findResultForFile(fileId);
     if (!existing) throw new NotFoundException('Content verification result not found');
+    if (reviewStatus !== 'needs_recheck' && existing.status !== 'mismatch') {
+      throw new BadRequestException('Only AI mismatch results can be confirmed or marked as false positives');
+    }
     const result = await this.repository.updateReview(fileId, {
       reviewStatus,
       reviewNote: reviewNote?.trim() || null,
