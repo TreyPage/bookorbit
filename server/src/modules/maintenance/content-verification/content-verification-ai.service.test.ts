@@ -15,7 +15,7 @@ describe('ContentVerificationAiService', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    vi.resetAllMocks();
+    vi.clearAllMocks();
     service = new ContentVerificationAiService(config);
     fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
