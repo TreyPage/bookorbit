@@ -108,6 +108,21 @@ function statusLabel(item: ContentVerificationEntry): string {
   return t(`tools.libraryIntegrity.contentVerification.status.${item.status}`)
 }
 
+function onFilterChange(): void {
+  page.value = 1
+  void load()
+}
+
+function previousPage(): void {
+  page.value--
+  void load()
+}
+
+function nextPage(): void {
+  page.value++
+  void load()
+}
+
 onMounted(() => {
   void load()
   void loadJobStatus()
@@ -133,10 +148,7 @@ onUnmounted(() => {
         <select
           v-model="filter"
           class="h-9 rounded-md border border-input bg-background px-2 text-xs"
-          @change="
-            page = 1
-            load()
-          "
+          @change="onFilterChange"
         >
           <option value="needs_review">{{ t('tools.libraryIntegrity.contentVerification.review.filters.needsReview') }}</option>
           <option value="mismatch">{{ t('tools.libraryIntegrity.contentVerification.review.filters.mismatches') }}</option>
@@ -267,10 +279,7 @@ onUnmounted(() => {
           size="sm"
           variant="outline"
           :disabled="page <= 1 || loading"
-          @click="
-            page--
-            load()
-          "
+          @click="previousPage"
         >
           {{ t('tools.libraryIntegrity.contentVerification.previous') }}
         </Button>
@@ -278,10 +287,7 @@ onUnmounted(() => {
           size="sm"
           variant="outline"
           :disabled="page * pageSize >= total || loading"
-          @click="
-            page++
-            load()
-          "
+          @click="nextPage"
         >
           {{ t('tools.libraryIntegrity.contentVerification.next') }}
         </Button>
