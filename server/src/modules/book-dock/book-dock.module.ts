@@ -13,6 +13,7 @@ import { MetadataModule } from '../metadata/metadata.module';
 import { MetadataScoreModule } from '../metadata-score/metadata-score.module';
 import { NotificationModule } from '../notification/notification.module';
 import { UploadModule } from '../upload/upload.module';
+import { MaintenanceModule } from '../maintenance/maintenance.module';
 import { BookDockController } from './book-dock.controller';
 import { BookDockEventsService } from './book-dock-events.service';
 import { BookDockFinalizeService } from './book-dock-finalize.service';
@@ -27,6 +28,7 @@ import { BookDockRepository } from './book-dock.repository';
 @Module({
   imports: [
     UploadModule,
+    MaintenanceModule,
     AuthModule,
     BookModule,
     FileWriteModule,
