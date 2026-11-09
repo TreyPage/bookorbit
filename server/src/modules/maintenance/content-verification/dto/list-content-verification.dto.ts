@@ -1,7 +1,10 @@
 import { Transform } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
 
 export class ListContentVerificationDto {
+  @IsOptional()
+  @IsIn(['all', 'needs_review', 'reviewed', 'mismatch'])
+  filter: 'all' | 'needs_review' | 'reviewed' | 'mismatch' = 'all';
   @IsOptional()
   @Transform(({ value }) => Number(value))
   @IsInt()
