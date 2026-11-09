@@ -89,6 +89,34 @@ export class ContentVerificationRepository {
       .limit(limit);
   }
 
+  async listVerificationFileIdsForBooks(bookIds: number[], includeAudiobooks: boolean): Promise<number[]> {
+    if (bookIds.length === 0) return [];
+    const supportedFormats = includeAudiobooks
+      ? ['epub', 'm4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav']
+      : ['epub'];
+    const rows = await this.db
+      .select({ fileId: bookFiles.id })
+      .from(bookFiles)
+      .innerJoin(books, eq(books.id, bookFiles.bookId))
+      .innerJoin(bookMetadata, eq(bookMetadata.bookId, books.id))
+      .leftJoin(bookContentVerifications, eq(bookContentVerifications.bookFileId, bookFiles.id))
+      .where(
+        and(
+          inArray(books.id, bookIds),
+          eq(books.status, 'present'),
+          eq(bookFiles.role, 'content'),
+          sql`btrim(${bookMetadata.title}) <> ''`,
+          inArray(sql<string>`lower(${bookFiles.format})`, supportedFormats),
+          or(
+            isNull(bookContentVerifications.id),
+            sql`${bookContentVerifications.fileHash} is distinct from ${bookFiles.fileHash}`,
+          ),
+        ),
+      )
+      .orderBy(asc(bookFiles.id));
+    return rows.map((row) => row.fileId);
+  }
+
   async findFileForVerification(fileId: number, libraryIds: number[]) {
     if (libraryIds.length === 0) return null;
     const [file] = await this.db
