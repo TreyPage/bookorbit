@@ -995,6 +995,13 @@
       "when": 1794140000000,
       "tag": "0141_book_request_automation_controls",
       "breakpoints": true
+    },
+    {
+      "idx": 142,
+      "version": "7",
+      "when": 1794200000000,
+      "tag": "0142_book_content_verifications",
+      "breakpoints": true
     }
   ]
 }
