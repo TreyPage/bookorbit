@@ -43,8 +43,8 @@ describe('ContentVerificationAiService', () => {
     })).resolves.toMatchObject({ status: 'match', confidence: 0.98 });
 
     const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(String(request.body)).toContain('Dune by Frank Herbert');
-    expect(String(request.body)).toContain('qwen3.5:4b');
+    expect(request.body).toEqual(expect.stringContaining('Dune by Frank Herbert'));
+    expect(request.body).toEqual(expect.stringContaining('qwen3.5:4b'));
   });
 
   it('rejects malformed or out-of-range model confidence', async () => {
