@@ -145,11 +145,7 @@ onUnmounted(() => {
         </p>
       </div>
       <div class="flex flex-wrap gap-2">
-        <select
-          v-model="filter"
-          class="h-9 rounded-md border border-input bg-background px-2 text-xs"
-          @change="onFilterChange"
-        >
+        <select v-model="filter" class="h-9 rounded-md border border-input bg-background px-2 text-xs" @change="onFilterChange">
           <option value="needs_review">{{ t('tools.libraryIntegrity.contentVerification.review.filters.needsReview') }}</option>
           <option value="mismatch">{{ t('tools.libraryIntegrity.contentVerification.review.filters.mismatches') }}</option>
           <option value="reviewed">{{ t('tools.libraryIntegrity.contentVerification.review.filters.reviewed') }}</option>
@@ -275,20 +271,10 @@ onUnmounted(() => {
     <div v-if="total > pageSize" class="flex items-center justify-between text-sm">
       <span class="text-muted-foreground"> {{ total }} {{ t('tools.libraryIntegrity.contentVerification.files') }} </span>
       <div class="flex gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          :disabled="page <= 1 || loading"
-          @click="previousPage"
-        >
+        <Button size="sm" variant="outline" :disabled="page <= 1 || loading" @click="previousPage">
           {{ t('tools.libraryIntegrity.contentVerification.previous') }}
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          :disabled="page * pageSize >= total || loading"
-          @click="nextPage"
-        >
+        <Button size="sm" variant="outline" :disabled="page * pageSize >= total || loading" @click="nextPage">
           {{ t('tools.libraryIntegrity.contentVerification.next') }}
         </Button>
       </div>
