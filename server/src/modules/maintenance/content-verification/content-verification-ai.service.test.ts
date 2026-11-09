@@ -44,7 +44,7 @@ describe('ContentVerificationAiService', () => {
 
     const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(String(request.body)).toContain('Dune by Frank Herbert');
-    expect(request.body).toContain('qwen3.5:4b');
+    expect(String(request.body)).toContain('qwen3.5:4b');
   });
 
   it('rejects malformed or out-of-range model confidence', async () => {
