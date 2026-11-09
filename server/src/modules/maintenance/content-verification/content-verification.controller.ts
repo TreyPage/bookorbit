@@ -29,7 +29,7 @@ export class ContentVerificationController {
 
   @Get()
   list(@Query() dto: ListContentVerificationDto, @CurrentUser() user: RequestUser) {
-    return this.service.list(user, dto.page, dto.pageSize);
+    return this.service.list(user, dto.page, dto.pageSize, dto.filter);
   }
 
   @Get(':fileId')
