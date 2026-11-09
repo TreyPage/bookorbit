@@ -28,9 +28,12 @@ export class ContentVerificationRepository {
       eq(bookFiles.role, 'content'),
       inArray(sql<string>`lower(${bookFiles.format})`, supportedFormats),
       filter === 'needs_review'
-        ? and(inArray(bookContentVerifications.status, ['mismatch', 'inconclusive', 'error']), isNull(bookContentVerifications.reviewStatus))
+        ? and(
+            inArray(bookContentVerifications.status, ['mismatch', 'inconclusive', 'error'] as const),
+            or(isNull(bookContentVerifications.reviewStatus), eq(bookContentVerifications.reviewStatus, 'needs_recheck')),
+          )
         : filter === 'reviewed'
-          ? isNotNull(bookContentVerifications.reviewStatus)
+          ? inArray(bookContentVerifications.reviewStatus, ['confirmed_mismatch', 'false_positive'] as const)
           : filter === 'mismatch'
             ? eq(bookContentVerifications.status, 'mismatch')
             : undefined,
