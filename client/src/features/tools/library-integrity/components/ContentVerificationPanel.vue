@@ -32,26 +32,6 @@ async function loadJobStatus(): Promise<void> {
   }
 }
 
-async function startBatch(): Promise<void> {
-  startingBatch.value = true
-  try {
-    jobStatus.value = await startContentVerificationBatch()
-    if (statusRefresh) clearInterval(statusRefresh)
-    statusRefresh = setInterval(() => {
-      void loadJobStatus()
-      if (jobStatus.value?.status !== 'running' && statusRefresh) {
-        clearInterval(statusRefresh)
-        statusRefresh = undefined
-        void load()
-      }
-    }, 3000)
-  } catch {
-    error.value = true
-  } finally {
-    startingBatch.value = false
-  }
-}
-
 async function load(): Promise<void> {
   loading.value = true
   error.value = false
@@ -63,6 +43,26 @@ async function load(): Promise<void> {
     error.value = true
   } finally {
     loading.value = false
+  }
+}
+
+async function startBatch(): Promise<void> {
+  startingBatch.value = true
+  try {
+    jobStatus.value = await startContentVerificationBatch()
+    if (statusRefresh) clearInterval(statusRefresh)
+    statusRefresh = setInterval(async () => {
+      await loadJobStatus()
+      if (jobStatus.value?.status !== 'running' && statusRefresh) {
+        clearInterval(statusRefresh)
+        statusRefresh = undefined
+        await load()
+      }
+    }, 3000)
+  } catch {
+    error.value = true
+  } finally {
+    startingBatch.value = false
   }
 }
 
@@ -107,7 +107,12 @@ onUnmounted(() => {
         </p>
       </div>
       <div class="flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" :disabled="startingBatch || jobStatus?.status === 'running'" @click="startBatch">
+        <Button
+          size="sm"
+          variant="outline"
+          :disabled="startingBatch || jobStatus?.status === 'running' || jobStatus?.status === 'waiting_for_provider'"
+          @click="startBatch"
+        >
           {{ jobStatus?.status === 'running' ? t('tools.libraryIntegrity.contentVerification.background.running') : t('tools.libraryIntegrity.contentVerification.background.run') }}
         </Button>
         <Button size="sm" variant="outline" :disabled="loading" @click="load">
@@ -117,18 +122,20 @@ onUnmounted(() => {
     </div>
 
     <div v-if="jobStatus" class="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-      <p>{{ t('tools.libraryIntegrity.contentVerification.background.status') }}: {{ t('tools.libraryIntegrity.contentVerification.background.states.' + jobStatus.status) }}</p>
-      <p>{{ t('tools.libraryIntegrity.contentVerification.background.counts', { processed: jobStatus.processed, matches: jobStatus.matches, mismatches: jobStatus.mismatches, inconclusive: jobStatus.inconclusive, errors: jobStatus.errors }) }}</p>
+      <p>
+        {{ t('tools.libraryIntegrity.contentVerification.background.status') }}:
+        {{ t('tools.libraryIntegrity.contentVerification.background.states.' + jobStatus.status) }}
+      </p>
+      <p>
+        {{ t('tools.libraryIntegrity.contentVerification.background.counts', {
+          processed: jobStatus.processed,
+          matches: jobStatus.matches,
+          mismatches: jobStatus.mismatches,
+          inconclusive: jobStatus.inconclusive,
+          errors: jobStatus.errors,
+        }) }}
+      </p>
       <p v-if="jobStatus.lastError" class="text-destructive">{{ jobStatus.lastError }}</p>
-    </div>
-
-    <template v-if="false"></template>
-
-    <div class="hidden">
-      <Button size="sm" variant="outline" :disabled="loading" @click="load">
-        {{ t('tools.libraryIntegrity.contentVerification.refresh') }}
-      </Button>
-    </div>
     </div>
 
     <p v-if="error" class="text-sm text-destructive">
@@ -157,7 +164,10 @@ onUnmounted(() => {
             {{ t('tools.libraryIntegrity.contentVerification.detected') }}: {{ item.detectedTitle }}
             <span v-if="item.detectedAuthor"> — {{ item.detectedAuthor }}</span>
           </p>
-          <p v-if="item.explanation && (item.status === 'mismatch' || item.status === 'inconclusive')" class="text-xs text-muted-foreground">
+          <p
+            v-if="item.explanation && (item.status === 'mismatch' || item.status === 'inconclusive')"
+            class="text-xs text-muted-foreground"
+          >
             {{ item.explanation }}
           </p>
         </div>
@@ -168,7 +178,9 @@ onUnmounted(() => {
     </div>
 
     <div v-if="total > pageSize" class="flex items-center justify-between text-sm">
-      <span class="text-muted-foreground">{{ total }} {{ t('tools.libraryIntegrity.contentVerification.files') }}</span>
+      <span class="text-muted-foreground">
+        {{ total }} {{ t('tools.libraryIntegrity.contentVerification.files') }}
+      </span>
       <div class="flex gap-2">
         <Button size="sm" variant="outline" :disabled="page <= 1 || loading" @click="page--; load()">
           {{ t('tools.libraryIntegrity.contentVerification.previous') }}
