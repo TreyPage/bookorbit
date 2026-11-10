@@ -1882,6 +1882,7 @@
         },
         "run": {
           "all": "Exécuter pour chaque bibliothèque",
+          "automation": "Automation"
           "library": "Exécuter pour {library}",
           "saveFirst": "Les exécutions utilisent la règle sauvegardée. Enregistrez d'abord.",
           "failed": "Le run n'a pas pu être démarré. Veuillez réessayer."
