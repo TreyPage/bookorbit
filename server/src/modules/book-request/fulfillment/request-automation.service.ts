@@ -144,8 +144,10 @@ export class RequestAutomationService implements OnModuleInit {
     if (this.sweeping) return;
     const startedAt = Date.now();
     this.sweeping = true;
-    let status: 'completed' | 'failed' = 'completed';
+    let status: 'completed' | 'failed' | 'skipped' = 'completed';
     try {
+      const settings = await this.settings.get();
+      if (!settings.autoSearchEnabled || !settings.autoGrabEnabled) status = 'skipped';
       await this.researchDueRequests();
     } catch (error: unknown) {
       status = 'failed';
