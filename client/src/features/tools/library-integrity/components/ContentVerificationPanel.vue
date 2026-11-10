@@ -24,6 +24,7 @@ const pageSize = 25
 const filter = ref<ContentVerificationFilter>('needs_review')
 const loading = ref(false)
 const error = ref(false)
+const errorMessage = ref('')
 const reviewSuccess = ref('')
 const verifyingFileId = ref<number | null>(null)
 const jobStatus = ref<ContentVerificationJobStatus | null>(null)
@@ -90,13 +91,15 @@ async function verify(item: ContentVerificationEntry): Promise<void> {
 async function review(item: ContentVerificationEntry, decision: ContentVerificationReviewStatus): Promise<void> {
   reviewingFileId.value = item.fileId
   error.value = false
+  errorMessage.value = ''
   reviewSuccess.value = ''
   try {
     await reviewBookFileContent(item.fileId, decision, reviewNotes.value[item.fileId])
     reviewSuccess.value = t(`tools.libraryIntegrity.contentVerification.review.success.${decision}`)
     await load()
-  } catch {
+  } catch (cause) {
     error.value = true
+    errorMessage.value = cause instanceof Error ? cause.message : t('tools.libraryIntegrity.contentVerification.failed')
   } finally {
     reviewingFileId.value = null
   }
@@ -196,7 +199,7 @@ onUnmounted(() => {
       {{ reviewSuccess }}
     </p>
     <p v-if="error" role="alert" class="text-sm text-destructive">
-      {{ t('tools.libraryIntegrity.contentVerification.failed') }}
+      {{ errorMessage || t('tools.libraryIntegrity.contentVerification.failed') }}
     </p>
     <p v-else-if="loading && items.length === 0" class="text-sm text-muted-foreground">
       {{ t('tools.libraryIntegrity.contentVerification.loading') }}
