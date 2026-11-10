@@ -33,8 +33,8 @@ export class RequestSeedCleanupSchedulerService {
   ) {}
 
   @SystemCron(CronExpression.EVERY_MINUTE)
-  async tick(): Promise<void> {
-    if (this.running) return;
+  async tick(): Promise<boolean> {
+    if (this.running) return false;
     this.running = true;
     const startedAt = Date.now();
     let status: 'completed' | 'failed' = 'completed';
@@ -51,6 +51,7 @@ export class RequestSeedCleanupSchedulerService {
       });
       this.running = false;
     }
+    return true;
   }
 
   private async cleanupDueSeeds(): Promise<void> {
