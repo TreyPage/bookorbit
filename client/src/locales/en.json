@@ -1882,6 +1882,7 @@
         },
         "run": {
           "all": "Run for every library",
+          "automation": "Automation"
           "library": "Run for {library}",
           "saveFirst": "Runs use the saved rule. Save first.",
           "failed": "The run could not be started. Try again."
