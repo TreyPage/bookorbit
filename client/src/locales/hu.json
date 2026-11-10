@@ -1879,6 +1879,7 @@
         },
         "run": {
           "all": "Futtatás minden könyvtárra",
+          "automation": "Automation"
           "library": "Futtatás erre: {library}",
           "saveFirst": "A futtatások a mentett szabályt használják. Előbb ments.",
           "failed": "A futtatást nem sikerült elindítani. Próbáld újra."
