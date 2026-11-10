@@ -40,6 +40,8 @@ import RequestListTable from './components/RequestListTable.vue'
 
 import RequestSearchPanel from './components/RequestSearchPanel.vue'
 
+import RequestAutomationPanel from './components/RequestAutomationPanel.vue'
+
 import { useBookRequestActions, useBookRequests, type ActionOutcome } from './composables/useBookRequests'
 
 import { useBookRequestProgress } from './composables/useBookRequestProgress'
@@ -60,7 +62,7 @@ import { REQUEST_DRAWER } from './requestDrawerContext'
 
 import { localizedRequestActionFailure } from './requestActionFailure'
 
-const TABS = ['search', 'mine', 'all'] as const
+const TABS = ['search', 'mine', 'all', 'automation'] as const
 
 type RequestsTab = (typeof TABS)[number]
 
@@ -142,6 +144,7 @@ const tabCounts = computed<Record<RequestsTab, number | null>>(() => ({
   mine: requestSummary.value?.mineTotal ?? null,
 
   all: canManage.value ? (requestSummary.value?.allTotal ?? null) : null,
+  automation: null,
 }))
 
 /**
@@ -921,8 +924,12 @@ function goToNextPage() {
       <RequestSearchPanel @submitted="handleSubmitted" />
     </section>
 
+    <section v-else-if="activeTab === 'automation'" id="requests-panel-automation" role="tabpanel" aria-labelledby="requests-tab-automation">
+      <RequestAutomationPanel />
+    </section>
+
     <section
-      v-if="activeTab !== 'search'"
+      v-if="activeTab === 'mine' || activeTab === 'all'"
       :id="`requests-panel-${activeTab}`"
       role="tabpanel"
       :aria-labelledby="`requests-tab-${activeTab}`"
