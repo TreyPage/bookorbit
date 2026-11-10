@@ -113,14 +113,23 @@ export class RequestWatchdogService implements OnApplicationBootstrap {
    */
   @SystemCron(CronExpression.EVERY_10_MINUTES)
   async sweep(): Promise<void> {
+    const startedAt = Date.now();
+    let status: 'completed' | 'failed' = 'completed';
     try {
       await this.failStalled();
       await this.failStuckImports();
       await this.cancelAbandonedSelfServe();
       await this.releaseStrandedSearches(new Date(Date.now() - SEARCH_TIMEOUT_MS), 'timeout');
     } catch (error) {
+      status = 'failed';
       const message = error instanceof Error ? error.message : String(error);
       this.logger.warn(`[book_request.watchdog] [fail] error="${sanitizeLogValue(message)}" - watchdog sweep failed`);
+    } finally {
+      this.auditEvents.emit(AUDIT_EVENT, {
+        userId: null, actorUsername: 'system', action: AuditAction.BookRequestAutomationRun,
+        description: `Stalled download watchdog ${status}`,
+        meta: { job: 'watchdog', status, durationMs: Date.now() - startedAt },
+      });
     }
   }
 
