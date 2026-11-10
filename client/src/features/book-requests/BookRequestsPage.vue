@@ -895,7 +895,7 @@ function goToNextPage() {
         :class="activeTab === tab ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
         @click="selectTab(tab)"
       >
-        {{ t(`bookRequests.tabs.${tab}`) }}
+        {{ tab === 'automation' ? 'Automation' : t(`bookRequests.tabs.${tab}`) }}
 
         <template v-if="tabCounts[tab] !== null">
           <span
