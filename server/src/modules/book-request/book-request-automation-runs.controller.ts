@@ -19,13 +19,14 @@ export class BookRequestAutomationRunsController {
 
   @Post(':job/run')
   async runNow(@Param('job') job: string) {
-    const started = job === 'periodic_search'
-      ? await this.automation.sweepUnfulfilled()
-      : job === 'seed_cleanup'
-        ? await this.seedCleanup.tick()
-        : job === 'watchdog'
-          ? await this.watchdog.sweep()
-          : null;
+    const started =
+      job === 'periodic_search'
+        ? await this.automation.sweepUnfulfilled()
+        : job === 'seed_cleanup'
+          ? await this.seedCleanup.tick()
+          : job === 'watchdog'
+            ? await this.watchdog.sweep()
+            : null;
     if (started === null) throw new BadRequestException('Unknown request automation job');
     return { started };
   }
@@ -43,7 +44,10 @@ export class BookRequestAutomationRunsController {
     ];
     const pages = await Promise.all(actions.map((action) => this.audit.getAuditLogs({ action, page: 1, pageSize: 50 })));
     return {
-      data: pages.flatMap((page) => page.data).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 50),
+      data: pages
+        .flatMap((page) => page.data)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 50),
     };
   }
 }

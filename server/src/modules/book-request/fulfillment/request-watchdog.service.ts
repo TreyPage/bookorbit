@@ -129,7 +129,9 @@ export class RequestWatchdogService implements OnApplicationBootstrap {
       this.logger.warn(`[book_request.watchdog] [fail] error="${sanitizeLogValue(message)}" - watchdog sweep failed`);
     } finally {
       this.auditEvents.emit(AUDIT_EVENT, {
-        userId: null, actorUsername: 'system', action: AuditAction.BookRequestAutomationRun,
+        userId: null,
+        actorUsername: 'system',
+        action: AuditAction.BookRequestAutomationRun,
         description: `Stalled download watchdog ${status}`,
         meta: { job: 'watchdog', status, durationMs: Date.now() - startedAt },
       });

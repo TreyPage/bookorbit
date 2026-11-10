@@ -89,7 +89,12 @@ onMounted(() => void refresh())
         <h2 id="request-automation-heading" class="text-lg font-semibold text-foreground">Request automation</h2>
         <p class="text-sm text-muted-foreground">Background scheduler health and recent automated actions.</p>
       </div>
-      <button type="button" class="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50" :disabled="loading" @click="refresh">
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
+        :disabled="loading"
+        @click="refresh"
+      >
         <RefreshCw :size="15" :class="loading && 'animate-spin'" aria-hidden="true" />
         Refresh
       </button>
@@ -105,11 +110,17 @@ onMounted(() => void refresh())
           <p class="mt-3 text-sm text-muted-foreground">Last run</p>
           <p class="text-sm font-medium text-foreground">{{ formatDateTime(new Date(latestByJob.get(job.id)!.createdAt)) }}</p>
           <p class="mt-1 text-xs" :class="eventStatus(latestByJob.get(job.id)!) === 'failed' ? 'text-destructive' : 'text-muted-foreground'">
-            {{ eventStatus(latestByJob.get(job.id)!) }} <span v-if="eventDetail(latestByJob.get(job.id)!)">· {{ eventDetail(latestByJob.get(job.id)!) }}</span>
+            {{ eventStatus(latestByJob.get(job.id)!) }}
+            <span v-if="eventDetail(latestByJob.get(job.id)!)">· {{ eventDetail(latestByJob.get(job.id)!) }}</span>
           </p>
         </template>
         <p v-else class="mt-3 text-sm text-muted-foreground">No scheduler run recorded yet.</p>
-        <button type="button" class="mt-3 rounded-md border border-border px-2.5 py-1.5 text-xs hover:bg-muted disabled:opacity-50" :disabled="runningJob !== null" @click="runNow(job.id)">
+        <button
+          type="button"
+          class="mt-3 rounded-md border border-border px-2.5 py-1.5 text-xs hover:bg-muted disabled:opacity-50"
+          :disabled="runningJob !== null"
+          @click="runNow(job.id)"
+        >
           {{ runningJob === job.id ? 'Running…' : 'Run now' }}
         </button>
       </article>
@@ -125,7 +136,9 @@ onMounted(() => void refresh())
         <p class="text-xs text-muted-foreground">Scheduler runs and automated request decisions.</p>
       </div>
       <p v-if="loading && events.length === 0" class="p-4 text-sm text-muted-foreground">Loading automation history…</p>
-      <p v-else-if="activityEvents.length === 0" class="p-4 text-sm text-muted-foreground">No automation activity has been recorded yet. This does not prove the schedulers are healthy; their next runs will appear here.</p>
+      <p v-else-if="activityEvents.length === 0" class="p-4 text-sm text-muted-foreground">
+        No automation activity has been recorded yet. This does not prove the schedulers are healthy; their next runs will appear here.
+      </p>
       <ol v-else class="divide-y divide-border">
         <li v-for="event in activityEvents" :key="event.id" class="flex flex-wrap items-start justify-between gap-2 px-4 py-3">
           <div class="min-w-0">

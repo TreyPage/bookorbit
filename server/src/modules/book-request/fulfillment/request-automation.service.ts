@@ -158,7 +158,9 @@ export class RequestAutomationService implements OnModuleInit {
       );
     } finally {
       this.auditEvents.emit(AUDIT_EVENT, {
-        userId: null, actorUsername: 'system', action: AuditAction.BookRequestAutomationRun,
+        userId: null,
+        actorUsername: 'system',
+        action: AuditAction.BookRequestAutomationRun,
         description: `Periodic re-search scheduler ${status}`,
         meta: { job: 'periodic_search', status, durationMs: Date.now() - startedAt },
       });

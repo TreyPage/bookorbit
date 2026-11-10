@@ -45,7 +45,9 @@ export class RequestSeedCleanupSchedulerService {
       this.logFailure('sweep', error);
     } finally {
       this.auditEvents.emit(AUDIT_EVENT, {
-        userId: null, actorUsername: 'system', action: AuditAction.BookRequestAutomationRun,
+        userId: null,
+        actorUsername: 'system',
+        action: AuditAction.BookRequestAutomationRun,
         description: `Seed cleanup scheduler ${status}`,
         meta: { job: 'seed_cleanup', status, durationMs: Date.now() - startedAt },
       });
