@@ -146,7 +146,7 @@ describe('RequestSeedCleanupSchedulerService', () => {
     );
     removal.detachAttempt.mockResolvedValueOnce('client unavailable').mockResolvedValueOnce(null);
 
-    await expect(service.tick()).resolves.toBeUndefined();
+    await expect(service.tick()).resolves.toBe(true);
 
     expect(removal.detachAttempt).toHaveBeenCalledTimes(2);
   });
