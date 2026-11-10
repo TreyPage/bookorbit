@@ -537,7 +537,7 @@ function rowDismissed(row: BookRequestItem): boolean {
 
           <td
             v-if="visibleColumns.some((column) => column.name === 'title')"
-            class="max-w-0 px-3"
+            class="min-w-0 overflow-hidden px-3"
             :style="columnCellStyle('title')"
             :class="isCompact ? 'py-1.5' : 'py-2.5'"
           >
