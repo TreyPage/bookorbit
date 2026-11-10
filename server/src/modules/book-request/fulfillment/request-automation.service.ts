@@ -140,8 +140,8 @@ export class RequestAutomationService implements OnModuleInit {
    * alone by the pass that reaches it.
    */
   @SystemCron(CronExpression.EVERY_HOUR)
-  async sweepUnfulfilled(): Promise<void> {
-    if (this.sweeping) return;
+  async sweepUnfulfilled(): Promise<boolean> {
+    if (this.sweeping) return false;
     const startedAt = Date.now();
     this.sweeping = true;
     let status: 'completed' | 'failed' | 'skipped' = 'completed';
@@ -164,6 +164,7 @@ export class RequestAutomationService implements OnModuleInit {
       });
       this.sweeping = false;
     }
+    return true;
   }
 
   private async researchDueRequests(): Promise<void> {
