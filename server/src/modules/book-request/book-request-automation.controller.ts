@@ -4,7 +4,6 @@ import { AuditAction, AuditResource, Permission } from '@bookorbit/types';
 import { Auditable } from '../../common/decorators/auditable.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { UpdateAutomationSettingsDto } from './dto/automation-settings.dto';
-import { AuditService } from '../audit/audit.service';
 import { RequestAutomationSettingsService } from './fulfillment/request-automation-settings.service';
 
 /**
@@ -18,24 +17,7 @@ import { RequestAutomationSettingsService } from './fulfillment/request-automati
 @Controller('admin/book-request-automation')
 @RequirePermission(Permission.ManageAppSettings)
 export class BookRequestAutomationController {
-  constructor(private readonly settings: RequestAutomationSettingsService, private readonly audit: AuditService) {}
-
-  @Get('runs')
-  async getRuns() {
-    const actions = [
-      AuditAction.BookRequestAutomationRun,
-      AuditAction.BookRequestAutoRetry,
-      AuditAction.BookRequestAutoRelease,
-      AuditAction.BookRequestAutomationExhausted,
-      AuditAction.BookRequestStalled,
-      AuditAction.BookRequestImportStalled,
-      AuditAction.BookRequestSeedCleanup,
-    ];
-    const pages = await Promise.all(actions.map((action) => this.audit.getAuditLogs({ action, page: 1, pageSize: 50 })));
-    return {
-      data: pages.flatMap((page) => page.data).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 50),
-    };
-  }
+  constructor(private readonly settings: RequestAutomationSettingsService) {}
 
   @Get()
   get() {
