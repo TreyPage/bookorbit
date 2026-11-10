@@ -54,6 +54,7 @@ const SEARCHING_ONLY: readonly BookRequestStatus[] = ['searching'];
 @Injectable()
 export class RequestWatchdogService implements OnApplicationBootstrap {
   private readonly logger = new Logger(RequestWatchdogService.name);
+  private running = false;
 
   constructor(
     private readonly downloads: BookRequestDownloadRepository,
@@ -112,7 +113,9 @@ export class RequestWatchdogService implements OnApplicationBootstrap {
    * the meantime, and `cancelAbandoned` refuses a row somebody picked a release for.
    */
   @SystemCron(CronExpression.EVERY_10_MINUTES)
-  async sweep(): Promise<void> {
+  async sweep(): Promise<boolean> {
+    if (this.running) return false;
+    this.running = true;
     const startedAt = Date.now();
     let status: 'completed' | 'failed' = 'completed';
     try {
@@ -130,7 +133,9 @@ export class RequestWatchdogService implements OnApplicationBootstrap {
         description: `Stalled download watchdog ${status}`,
         meta: { job: 'watchdog', status, durationMs: Date.now() - startedAt },
       });
+      this.running = false;
     }
+    return true;
   }
 
   /**
