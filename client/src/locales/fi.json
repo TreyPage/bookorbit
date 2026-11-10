@@ -1881,6 +1881,7 @@
         },
         "run": {
           "all": "Suorita jokaiselle kirjastolle",
+          "automation": "Automation"
           "library": "Suorita käyttäjälle {library}",
           "saveFirst": "Suorittaa tallennetun säännön. Tallenna ensin.",
           "failed": "Suoritusta ei voitu aloittaa. Yritä uudelleen."
