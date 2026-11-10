@@ -1883,6 +1883,7 @@
         "run": {
           "all": "Für jede Bibliothek ausführen",
           "automation": "Automation"
+          "automation": "Automation"
           "library": "Für {library} ausführen",
           "saveFirst": "Läuft verwendet die gespeicherte Regel. Speichern Sie zuerst.",
           "failed": "Der Run konnte nicht gestartet werden. Versuchen Sie es erneut."
