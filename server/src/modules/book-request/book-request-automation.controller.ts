@@ -21,8 +21,20 @@ export class BookRequestAutomationController {
   constructor(private readonly settings: RequestAutomationSettingsService, private readonly audit: AuditService) {}
 
   @Get('runs')
-  getRuns() {
-    return this.audit.getAuditLogs({ action: AuditAction.BookRequestAutomationRun, page: 1, pageSize: 50 });
+  async getRuns() {
+    const actions = [
+      AuditAction.BookRequestAutomationRun,
+      AuditAction.BookRequestAutoRetry,
+      AuditAction.BookRequestAutoRelease,
+      AuditAction.BookRequestAutomationExhausted,
+      AuditAction.BookRequestStalled,
+      AuditAction.BookRequestImportStalled,
+      AuditAction.BookRequestSeedCleanup,
+    ];
+    const pages = await Promise.all(actions.map((action) => this.audit.getAuditLogs({ action, page: 1, pageSize: 50 })));
+    return {
+      data: pages.flatMap((page) => page.data).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 50),
+    };
   }
 
   @Get()
