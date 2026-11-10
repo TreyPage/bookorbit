@@ -17,6 +17,8 @@ type AutomationEvent = {
 const events = ref<AutomationEvent[]>([])
 const loading = ref(false)
 const failed = ref(false)
+const runningJob = ref<string | null>(null)
+const runMessage = ref('')
 
 const jobs = [
   { id: 'periodic_search', title: 'Periodic re-search', cadence: 'Hourly' },
@@ -35,6 +37,22 @@ const latestByJob = computed(() => {
 })
 
 const activityEvents = computed(() => events.value.slice(0, 30))
+
+async function runNow(job: string): Promise<void> {
+  runningJob.value = job
+  runMessage.value = ''
+  try {
+    const response = await api(`/api/v1/admin/book-request-automation/runs/${job}/run`, { method: 'POST' })
+    if (!response.ok) throw new Error('Could not start automation job')
+    const result = (await response.json()) as { started: boolean }
+    runMessage.value = result.started ? 'Run completed. Refreshing activity…' : 'This job is already running.'
+    await refresh()
+  } catch {
+    runMessage.value = 'Could not run this job. Check permissions and server logs.'
+  } finally {
+    runningJob.value = null
+  }
+}
 
 async function refresh(): Promise<void> {
   loading.value = true
@@ -91,9 +109,13 @@ onMounted(() => void refresh())
           </p>
         </template>
         <p v-else class="mt-3 text-sm text-muted-foreground">No scheduler run recorded yet.</p>
+        <button type="button" class="mt-3 rounded-md border border-border px-2.5 py-1.5 text-xs hover:bg-muted disabled:opacity-50" :disabled="runningJob !== null" @click="runNow(job.id)">
+          {{ runningJob === job.id ? 'Running…' : 'Run now' }}
+        </button>
       </article>
     </div>
 
+    <p v-if="runMessage" role="status" class="text-sm text-muted-foreground">{{ runMessage }}</p>
     <div v-if="failed" role="alert" class="rounded-lg border border-destructive/40 p-3 text-sm text-destructive">
       Could not load automation history. Check your permissions and try again.
     </div>
