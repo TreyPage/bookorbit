@@ -33,16 +33,25 @@ export class RequestSeedCleanupSchedulerService {
   ) {}
 
   @SystemCron(CronExpression.EVERY_MINUTE)
-  async tick(): Promise<void> {
-    if (this.running) return;
+  async tick(): Promise<boolean> {
+    if (this.running) return false;
     this.running = true;
+    const startedAt = Date.now();
+    let status: 'completed' | 'failed' = 'completed';
     try {
       await this.cleanupDueSeeds();
     } catch (error) {
+      status = 'failed';
       this.logFailure('sweep', error);
     } finally {
+      this.auditEvents.emit(AUDIT_EVENT, {
+        userId: null, actorUsername: 'system', action: AuditAction.BookRequestAutomationRun,
+        description: `Seed cleanup scheduler ${status}`,
+        meta: { job: 'seed_cleanup', status, durationMs: Date.now() - startedAt },
+      });
       this.running = false;
     }
+    return true;
   }
 
   private async cleanupDueSeeds(): Promise<void> {

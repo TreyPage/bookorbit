@@ -54,6 +54,7 @@ const SEARCHING_ONLY: readonly BookRequestStatus[] = ['searching'];
 @Injectable()
 export class RequestWatchdogService implements OnApplicationBootstrap {
   private readonly logger = new Logger(RequestWatchdogService.name);
+  private running = false;
 
   constructor(
     private readonly downloads: BookRequestDownloadRepository,
@@ -112,16 +113,29 @@ export class RequestWatchdogService implements OnApplicationBootstrap {
    * the meantime, and `cancelAbandoned` refuses a row somebody picked a release for.
    */
   @SystemCron(CronExpression.EVERY_10_MINUTES)
-  async sweep(): Promise<void> {
+  async sweep(): Promise<boolean> {
+    if (this.running) return false;
+    this.running = true;
+    const startedAt = Date.now();
+    let status: 'completed' | 'failed' = 'completed';
     try {
       await this.failStalled();
       await this.failStuckImports();
       await this.cancelAbandonedSelfServe();
       await this.releaseStrandedSearches(new Date(Date.now() - SEARCH_TIMEOUT_MS), 'timeout');
     } catch (error) {
+      status = 'failed';
       const message = error instanceof Error ? error.message : String(error);
       this.logger.warn(`[book_request.watchdog] [fail] error="${sanitizeLogValue(message)}" - watchdog sweep failed`);
+    } finally {
+      this.auditEvents.emit(AUDIT_EVENT, {
+        userId: null, actorUsername: 'system', action: AuditAction.BookRequestAutomationRun,
+        description: `Stalled download watchdog ${status}`,
+        meta: { job: 'watchdog', status, durationMs: Date.now() - startedAt },
+      });
+      this.running = false;
     }
+    return true;
   }
 
   /**

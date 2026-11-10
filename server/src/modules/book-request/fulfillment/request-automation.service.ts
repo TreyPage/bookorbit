@@ -140,21 +140,31 @@ export class RequestAutomationService implements OnModuleInit {
    * alone by the pass that reaches it.
    */
   @SystemCron(CronExpression.EVERY_HOUR)
-  async sweepUnfulfilled(): Promise<void> {
-    if (this.sweeping) return;
+  async sweepUnfulfilled(): Promise<boolean> {
+    if (this.sweeping) return false;
     const startedAt = Date.now();
     this.sweeping = true;
+    let status: 'completed' | 'failed' | 'skipped' = 'completed';
     try {
+      const settings = await this.settings.get();
+      if (!settings.autoSearchEnabled || !settings.autoGrabEnabled) status = 'skipped';
       await this.researchDueRequests();
     } catch (error: unknown) {
+      status = 'failed';
       const message = sanitizeLogValue(error instanceof Error ? error.message : String(error));
       const errorClass = error instanceof Error ? error.constructor.name : 'UnknownError';
       this.logger.warn(
         `[book_request.auto_search] [fail] durationMs=${Date.now() - startedAt} errorClass=${errorClass} error="${message}" - the periodic re-search sweep failed`,
       );
     } finally {
+      this.auditEvents.emit(AUDIT_EVENT, {
+        userId: null, actorUsername: 'system', action: AuditAction.BookRequestAutomationRun,
+        description: `Periodic re-search scheduler ${status}`,
+        meta: { job: 'periodic_search', status, durationMs: Date.now() - startedAt },
+      });
       this.sweeping = false;
     }
+    return true;
   }
 
   private async researchDueRequests(): Promise<void> {
