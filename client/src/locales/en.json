@@ -5559,6 +5559,7 @@
       "BookRequestImportStalled": "Fail stalled book import",
       "BookRequestSeedCleanup": "Remove torrent after seed goal",
       "BookRequestAutomationControlsUpdate": "Update request automation controls"
+      "BookRequestAutomationRun": "Run request automation"
     },
     "views": {
       "label": "Show",
