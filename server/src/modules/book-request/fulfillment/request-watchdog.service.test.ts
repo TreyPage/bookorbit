@@ -146,13 +146,13 @@ describe('RequestWatchdogService.sweep', () => {
       { failDownload: vi.fn() } as never,
       {} as never,
       {} as never,
-      {} as never,
+      { emit: vi.fn() } as never,
       {} as never,
       { get: vi.fn().mockResolvedValue({ stalledDownloadTimeoutHours: 12 }) } as never,
     );
 
-    await expect(broken.sweep()).resolves.toBeUndefined();
-    await expect(service.sweep()).resolves.toBeUndefined();
+    await expect(broken.sweep()).resolves.toBe(true);
+    await expect(service.sweep()).resolves.toBe(true);
   });
 });
 
@@ -287,7 +287,7 @@ describe('RequestWatchdogService abandoned self-serve sweep', () => {
     await service.sweep();
 
     expect(requests.dismiss).not.toHaveBeenCalled();
-    expect(auditEvents.emit).not.toHaveBeenCalled();
+    expect(auditEvents.emit).not.toHaveBeenCalledWith('audit.log', expect.objectContaining({ action: 'book_request.cancel' }));
     expect(gateway.emitChanged).not.toHaveBeenCalled();
   });
 

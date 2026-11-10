@@ -929,7 +929,7 @@ describe('RequestAutomationService.sweepUnfulfilled', () => {
     const { service, requests, releases } = makeService({ settings: searchable, due: [{ id: 7 }, { id: 7 }] });
     requests.findById.mockRejectedValueOnce(new Error('the database went away'));
 
-    await expect(service.sweepUnfulfilled()).resolves.toBeUndefined();
+    await expect(service.sweepUnfulfilled()).resolves.toBe(true);
     expect(releases.search).toHaveBeenCalledTimes(1);
   });
 
@@ -940,9 +940,10 @@ describe('RequestAutomationService.sweepUnfulfilled', () => {
     requests.findDueForResearch.mockImplementationOnce(() => new Promise((resolve) => (release = () => resolve([]))));
 
     const first = service.sweepUnfulfilled();
-    await service.sweepUnfulfilled();
+    await expect(service.sweepUnfulfilled()).resolves.toBe(false);
+    await vi.waitFor(() => expect(requests.findDueForResearch).toHaveBeenCalled());
     release();
-    await first;
+    await expect(first).resolves.toBe(true);
 
     expect(requests.findDueForResearch).toHaveBeenCalledTimes(1);
   });
