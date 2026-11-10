@@ -104,7 +104,9 @@ describe('RequestListTable', () => {
     expect(titleBlock?.classList.contains('min-w-0')).toBe(true)
     expect(titleLayout?.classList.contains('min-w-0')).toBe(true)
     expect(titleCell?.tagName).toBe('TD')
-    expect(titleCell?.classList.contains('max-w-0')).toBe(true)
+    expect(titleCell?.classList.contains('min-w-0')).toBe(true)
+    expect(titleCell?.classList.contains('overflow-hidden')).toBe(true)
+    expect(titleCell?.classList.contains('max-w-0')).toBe(false)
   })
 
   it('keeps the complete title available to the title button', () => {
