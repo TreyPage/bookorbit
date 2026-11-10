@@ -13,6 +13,7 @@ import { UploadModule } from '../upload/upload.module';
 import { UserModule } from '../user/user.module';
 import { BookRequestAdminController } from './book-request-admin.controller';
 import { BookRequestAutomationController } from './book-request-automation.controller';
+import { BookRequestAutomationRunsController } from './book-request-automation-runs.controller';
 import { BookRequestAttributionService } from './book-request-attribution.service';
 import { BookRequestController } from './book-request.controller';
 import { BookRequestSelfFulfilController } from './book-request-self-fulfil.controller';
@@ -96,6 +97,7 @@ import { RequestWatchdogService } from './fulfillment/request-watchdog.service';
     BookRequestSelfFulfilController,
     BookRequestAdminController,
     BookRequestAutomationController,
+    BookRequestAutomationRunsController,
     DownloadClientController,
     IndexerController,
     IndexerManagerController,
