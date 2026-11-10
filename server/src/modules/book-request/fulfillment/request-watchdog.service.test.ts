@@ -146,7 +146,6 @@ describe('RequestWatchdogService.sweep', () => {
       { failDownload: vi.fn() } as never,
       {} as never,
       {} as never,
-      {} as never,
       { emit: vi.fn() } as never,
       {} as never,
       { get: vi.fn().mockResolvedValue({ stalledDownloadTimeoutHours: 12 }) } as never,
