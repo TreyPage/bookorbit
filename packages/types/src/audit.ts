@@ -92,6 +92,7 @@ export enum AuditAction {
   BookRequestImportStalled = "book_request.import_stalled",
   BookRequestSeedCleanup = "book_request.seed_cleanup",
   BookRequestAutomationControlsUpdate = "book_request.automation.controls.update",
+  BookRequestAutomationRun = "book_request.automation.run",
 
   DownloadClientCreate = "download_client.create",
   DownloadClientUpdate = "download_client.update",
