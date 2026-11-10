@@ -1635,9 +1635,7 @@
     },
     "reader": {
       "resetToDefaults": "Obnovit výchozí hodnoty",
-      "all": {,
-      "automation": "Automation"
-      "automation": "Automation"
+      "all": {
         "title": "Čtenář",
         "subtitle": "Konfigurace výchozích hodnot pro všechny režimy čtení na jednom místě."
       },
