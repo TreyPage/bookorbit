@@ -144,15 +144,22 @@ export class RequestAutomationService implements OnModuleInit {
     if (this.sweeping) return;
     const startedAt = Date.now();
     this.sweeping = true;
+    let status: 'completed' | 'failed' = 'completed';
     try {
       await this.researchDueRequests();
     } catch (error: unknown) {
+      status = 'failed';
       const message = sanitizeLogValue(error instanceof Error ? error.message : String(error));
       const errorClass = error instanceof Error ? error.constructor.name : 'UnknownError';
       this.logger.warn(
         `[book_request.auto_search] [fail] durationMs=${Date.now() - startedAt} errorClass=${errorClass} error="${message}" - the periodic re-search sweep failed`,
       );
     } finally {
+      this.auditEvents.emit(AUDIT_EVENT, {
+        userId: null, actorUsername: 'system', action: AuditAction.BookRequestAutomationRun,
+        description: `Periodic re-search scheduler ${status}`,
+        meta: { job: 'periodic_search', status, durationMs: Date.now() - startedAt },
+      });
       this.sweeping = false;
     }
   }
