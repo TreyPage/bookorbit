@@ -4,6 +4,7 @@ import { AuditAction, AuditResource, Permission } from '@bookorbit/types';
 import { Auditable } from '../../common/decorators/auditable.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { UpdateAutomationSettingsDto } from './dto/automation-settings.dto';
+import { AuditService } from '../audit/audit.service';
 import { RequestAutomationSettingsService } from './fulfillment/request-automation-settings.service';
 
 /**
@@ -17,7 +18,12 @@ import { RequestAutomationSettingsService } from './fulfillment/request-automati
 @Controller('admin/book-request-automation')
 @RequirePermission(Permission.ManageAppSettings)
 export class BookRequestAutomationController {
-  constructor(private readonly settings: RequestAutomationSettingsService) {}
+  constructor(private readonly settings: RequestAutomationSettingsService, private readonly audit: AuditService) {}
+
+  @Get('runs')
+  getRuns() {
+    return this.audit.getAuditLogs({ action: AuditAction.BookRequestAutomationRun, page: 1, pageSize: 50 });
+  }
 
   @Get()
   get() {
