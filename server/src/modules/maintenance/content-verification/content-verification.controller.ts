@@ -3,6 +3,7 @@ import { Permission } from '@bookorbit/types';
 
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
+import { RequireAnyPermission } from '../../../common/decorators/require-any-permission.decorator';
 import type { RequestUser } from '../../../common/types/request-user';
 import { ContentVerificationService } from './content-verification.service';
 import { ContentVerificationSchedulerService, type ContentVerificationSchedule } from './content-verification-scheduler.service';
@@ -23,11 +24,13 @@ export class ContentVerificationController {
   }
 
   @Get('background/settings')
+  @RequireAnyPermission(Permission.ManageLibraries, Permission.ManageAppSettings, Permission.LibraryDownload)
   getBackgroundSettings() {
     return this.scheduler.getSchedule();
   }
 
   @Put('background/settings')
+  @RequireAnyPermission(Permission.ManageLibraries, Permission.ManageAppSettings, Permission.LibraryDownload)
   updateBackgroundSettings(@Body() body: Partial<ContentVerificationSchedule>) {
     return this.scheduler.updateSchedule(body);
   }
