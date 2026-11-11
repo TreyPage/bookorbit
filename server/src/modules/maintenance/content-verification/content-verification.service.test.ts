@@ -24,8 +24,9 @@ describe('ContentVerificationService', () => {
     listCandidates: vi.fn(),
     saveResult: vi.fn(),
     updateReview: vi.fn(),
+    findCorrectionContext: vi.fn(),
   };
-  const libraryService = { findAccessibleLibraryIds: vi.fn().mockResolvedValue([2]) };
+  const libraryService = { findAccessibleLibraryIds: vi.fn().mockResolvedValue([2]), findEditableLibraryIds: vi.fn().mockResolvedValue([2]) };
   const ai = { compare: vi.fn() };
   const transcription = { transcribe: vi.fn() };
   const config = { get: vi.fn().mockReturnValue('qwen3.5:4b') };
@@ -106,6 +107,89 @@ describe('ContentVerificationService', () => {
     repository.findResultForFile.mockResolvedValue(null);
     await expect(service.reviewFile({ id: 10 } as never, 7, 'false_positive')).rejects.toBeInstanceOf(NotFoundException);
     expect(repository.updateReview).not.toHaveBeenCalled();
+  });
+
+
+  it('previews splitting a mismatched format into a new book without mutating the file', async () => {
+    repository.findCorrectionContext.mockResolvedValue({
+      source: {
+        fileId: 7,
+        bookId: 4,
+        libraryId: 2,
+        libraryFolderId: 3,
+        libraryFolderPath: '/tmp/bookorbit-correction-test',
+        organizationMode: 'book_per_folder',
+        bookFolderPath: '/tmp/bookorbit-correction-test/Original Book',
+        absolutePath: '/tmp/bookorbit-correction-test/Original Book/Original.epub',
+        relPath: 'Original Book/Original.epub',
+        format: 'epub',
+        role: 'content',
+        sortOrder: 0,
+        fileHash: 'abc123',
+        title: 'Original Book',
+        verificationStatus: 'mismatch',
+        reviewStatus: 'confirmed_mismatch',
+      },
+      contentFileCount: 2,
+      audioContentCount: 0,
+      target: null,
+      targetFormatCount: 0,
+    });
+
+    const result = await service.previewCorrection(
+      { id: 10 } as never,
+      7,
+      { targetType: 'new_book', title: 'Corrected Novel', author: 'Jane Writer' },
+    );
+
+    expect(result).toMatchObject({
+      fileId: 7,
+      sourceBookId: 4,
+      destinationType: 'new_book',
+      destinationTitle: 'Corrected Novel',
+      destinationFolderPath: '/tmp/bookorbit-correction-test/Corrected Novel - Jane Writer',
+      destinationPath: '/tmp/bookorbit-correction-test/Corrected Novel - Jane Writer/Corrected Novel.epub',
+      requiresApproval: true,
+      executionAvailable: false,
+    });
+    expect(repository.findCorrectionContext).toHaveBeenCalledWith(7, [2], undefined);
+  });
+
+  it('requires a confirmed mismatch before offering a file correction', async () => {
+    repository.findCorrectionContext.mockResolvedValue({
+      source: { role: 'content', reviewStatus: null },
+      contentFileCount: 2,
+      audioContentCount: 0,
+      target: null,
+      targetFormatCount: 0,
+    });
+
+    await expect(
+      service.previewCorrection({ id: 10 } as never, 7, { targetType: 'new_book', title: 'New Title', author: 'New Author' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects splitting one part out of a multipart audiobook', async () => {
+    repository.findCorrectionContext.mockResolvedValue({
+      source: {
+        role: 'content',
+        reviewStatus: 'confirmed_mismatch',
+        fileHash: 'abc123',
+        absolutePath: '/tmp/bookorbit-correction-test/Original/Part 1.m4b',
+        format: 'm4b',
+        organizationMode: 'book_per_folder',
+        bookFolderPath: '/tmp/bookorbit-correction-test/Original',
+        libraryFolderPath: '/tmp/bookorbit-correction-test',
+      },
+      contentFileCount: 2,
+      audioContentCount: 2,
+      target: null,
+      targetFormatCount: 0,
+    });
+
+    await expect(
+      service.previewCorrection({ id: 10 } as never, 7, { targetType: 'new_book', title: 'New Title', author: 'New Author' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('verifies EPUB evidence and stores a result without changing book metadata', async () => {
