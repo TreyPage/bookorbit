@@ -14384,6 +14384,35 @@
             "all": "All files"
           },
           "emptyNeedsReview": "No mismatches or uncertain results are waiting for review."
+        },
+        "correction": {
+          "open": "Correct file",
+          "close": "Close correction",
+          "title": "Correct this file",
+          "description": "Move only this mismatched format. The other formats stay with the current book, and the verification evidence stays attached to this file.",
+          "destination": "Correction destination",
+          "newBook": "Create a separate book",
+          "existingBook": "Move into an existing book",
+          "bookTitle": "Correct book title",
+          "author": "Author",
+          "findBook": "Find an existing book in this library folder",
+          "searchPlaceholder": "Search book titles…",
+          "searching": "Searching books…",
+          "noTargets": "No eligible books found in this library folder.",
+          "selectedBook": "Selected destination: {title}",
+          "preview": "Preview file move",
+          "previewing": "Preparing preview…",
+          "previewReady": "Ready to move this file to {title}",
+          "from": "Current file path",
+          "to": "Proposed file path",
+          "preserveEvidence": "Applying this correction moves the existing file record. Its verification evidence is preserved. The change is not made until you confirm below.",
+          "apply": "Apply correction",
+          "applying": "Applying correction…",
+          "success": "File correction completed. The other format and its book record were left in place. The saved evidence is preserved, and this file is queued for verification against its new metadata.",
+          "cleanupPending": "The correction was applied, but the original file path could not be cleaned up. The book now points to the new path; inspect the old path before deleting anything.",
+          "failed": "The file correction could not be completed.",
+          "previewFailed": "Could not prepare the correction preview.",
+          "searchFailed": "Could not search for destination books."
         }
       },
       "duplicateFormats": {

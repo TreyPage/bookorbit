@@ -1,8 +1,25 @@
+vi.mock('node:fs/promises', () => ({
+  access: vi.fn(),
+  copyFile: vi.fn(),
+  link: vi.fn(),
+  mkdir: vi.fn(),
+  realpath: vi.fn(),
+  rmdir: vi.fn(),
+  stat: vi.fn(),
+  unlink: vi.fn(),
+}));
+
+vi.mock('../../../common/utils/file-hash.utils', () => ({
+  computeFileHash: vi.fn(),
+}));
+
 vi.mock('./epub-content-evidence', () => ({
   extractEpubContentEvidence: vi.fn(),
 }));
 
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { access, copyFile, link, mkdir, realpath, stat, unlink } from 'node:fs/promises';
+import { computeFileHash } from '../../../common/utils/file-hash.utils';
 
 import { extractEpubContentEvidence } from './epub-content-evidence';
 import { ContentVerificationService } from './content-verification.service';
@@ -25,17 +42,39 @@ describe('ContentVerificationService', () => {
     saveResult: vi.fn(),
     updateReview: vi.fn(),
     findCorrectionContext: vi.fn(),
+    applyFileCorrection: vi.fn(),
+    isBookFolderPathTaken: vi.fn(),
+    findCorrectionFileLocation: vi.fn(),
   };
   const libraryService = { findAccessibleLibraryIds: vi.fn().mockResolvedValue([2]), findEditableLibraryIds: vi.fn().mockResolvedValue([2]) };
   const ai = { compare: vi.fn() };
   const transcription = { transcribe: vi.fn() };
   const config = { get: vi.fn().mockReturnValue('qwen3.5:4b') };
+  const fileLock = { withLock: vi.fn((_key: string, operation: () => Promise<unknown>) => operation()) };
+  const selfWriteRegistry = { track: vi.fn((_paths: string[], operation: () => Promise<unknown>) => operation()) };
   let service: ContentVerificationService;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(access).mockRejectedValue(Object.assign(new Error('not found'), { code: 'ENOENT' }));
+    vi.mocked(link).mockResolvedValue(undefined);
+    vi.mocked(copyFile).mockResolvedValue(undefined);
+    vi.mocked(mkdir).mockResolvedValue(undefined);
+    vi.mocked(realpath).mockImplementation(async (path) => String(path));
+    vi.mocked(unlink).mockResolvedValue(undefined);
+    vi.mocked(stat).mockResolvedValue({ ino: 123n, size: 100n, mtime: new Date('2026-11-11T00:00:00Z') } as never);
+    vi.mocked(computeFileHash).mockResolvedValue('abc123');
     libraryService.findAccessibleLibraryIds.mockResolvedValue([2]);
-    service = new ContentVerificationService(repository as never, libraryService as never, ai as never, transcription as never, config as never);
+    repository.isBookFolderPathTaken.mockResolvedValue(false);
+    service = new ContentVerificationService(
+      repository as never,
+      libraryService as never,
+      ai as never,
+      transcription as never,
+      config as never,
+      fileLock as never,
+      selfWriteRegistry as never,
+    );
     repository.findFileForVerification.mockResolvedValue(file);
     vi.mocked(extractEpubContentEvidence).mockResolvedValue({
       documents: [{ path: 'title.xhtml', text: 'Dune by Frank Herbert', likelyTitlePage: true }],
@@ -136,11 +175,11 @@ describe('ContentVerificationService', () => {
       targetFormatCount: 0,
     });
 
-    const result = await service.previewCorrection({ id: 10 } as never, 7, {
-      targetType: 'new_book',
-      title: 'Corrected Novel',
-      author: 'Jane Writer',
-    });
+    const result = await service.previewCorrection(
+      { id: 10 } as never,
+      7,
+      { targetType: 'new_book', title: 'Corrected Novel', author: 'Jane Writer' },
+    );
 
     expect(result).toMatchObject({
       fileId: 7,
@@ -150,11 +189,324 @@ describe('ContentVerificationService', () => {
       destinationFolderPath: '/tmp/bookorbit-correction-test/Corrected Novel - Jane Writer',
       destinationPath: '/tmp/bookorbit-correction-test/Corrected Novel - Jane Writer/Corrected Novel.epub',
       requiresApproval: true,
-      executionAvailable: false,
+      executionAvailable: true,
     });
     expect(repository.findCorrectionContext).toHaveBeenCalledWith(7, [2], undefined);
   });
 
+
+  it('requires the source path to remain unchanged between preview and locked execution', async () => {
+    const context = (sourcePath: string) => ({
+      source: {
+        fileId: 7, bookId: 4, libraryId: 2, libraryFolderId: 3,
+        libraryFolderPath: '/tmp/bookorbit-correction-test',
+        organizationMode: 'book_per_folder',
+        bookFolderPath: '/tmp/bookorbit-correction-test/Original Book',
+        absolutePath: sourcePath, relPath: sourcePath.split('/').slice(-2).join('/'),
+        format: 'epub', role: 'content', fileHash: 'abc123', title: 'Original Book',
+        verificationStatus: 'mismatch', verificationFileHash: 'abc123', reviewStatus: 'confirmed_mismatch',
+      },
+      contentFileCount: 2, audioContentCount: 0, target: null, targetFormatCount: 0,
+    });
+    repository.findCorrectionContext
+      .mockResolvedValueOnce(context('/tmp/bookorbit-correction-test/Original Book/Original.epub'))
+      .mockResolvedValueOnce(context('/tmp/bookorbit-correction-test/Original Book/Renamed.epub'));
+
+    await expect(
+      service.executeCorrection(
+        { id: 10 } as never,
+        7,
+        { targetType: 'new_book', title: 'Corrected Novel', author: 'Jane Writer' },
+      ),
+    ).rejects.toThrow('source book changed while preparing this correction');
+
+    expect(link).not.toHaveBeenCalled();
+    expect(repository.applyFileCorrection).not.toHaveBeenCalled();
+  });
+  it('moves one confirmed mismatched format and preserves its file identity', async () => {
+    repository.findCorrectionContext.mockResolvedValue({
+      source: {
+        fileId: 7,
+        bookId: 4,
+        libraryId: 2,
+        libraryFolderId: 3,
+        libraryFolderPath: '/tmp/bookorbit-correction-test',
+        organizationMode: 'book_per_folder',
+        bookFolderPath: '/tmp/bookorbit-correction-test/Original Book',
+        absolutePath: '/tmp/bookorbit-correction-test/Original Book/Original.epub',
+        relPath: 'Original Book/Original.epub',
+        format: 'epub',
+        role: 'content',
+        sortOrder: 0,
+        fileHash: 'abc123',
+        title: 'Original Book',
+        verificationStatus: 'mismatch',
+        verificationFileHash: 'abc123',
+        reviewStatus: 'confirmed_mismatch',
+      },
+      contentFileCount: 2,
+      audioContentCount: 0,
+      target: null,
+      targetFormatCount: 0,
+    });
+    repository.applyFileCorrection.mockResolvedValue({
+      fileId: 7,
+      sourceBookId: 4,
+      destinationBookId: 91,
+      targetType: 'new_book',
+    });
+
+    const result = await service.executeCorrection(
+      { id: 10 } as never,
+      7,
+      { targetType: 'new_book', title: 'Corrected Novel', author: 'Jane Writer' },
+    );
+
+    const stagingPath = expect.stringMatching(/\.bookorbit-correction-7-.*\.tmp$/);
+    expect(link).toHaveBeenNthCalledWith(1, '/tmp/bookorbit-correction-test/Original Book/Original.epub', stagingPath);
+    expect(link).toHaveBeenNthCalledWith(
+      2,
+      stagingPath,
+      '/tmp/bookorbit-correction-test/Corrected Novel - Jane Writer/Corrected Novel.epub',
+    );
+    expect(unlink).toHaveBeenCalledWith(stagingPath);
+    expect(unlink).toHaveBeenCalledWith('/tmp/bookorbit-correction-test/Original Book/Original.epub');
+    expect(repository.applyFileCorrection).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fileId: 7,
+        sourceBookId: 4,
+        targetType: 'new_book',
+        destinationPath: '/tmp/bookorbit-correction-test/Corrected Novel - Jane Writer/Corrected Novel.epub',
+        destinationRelPath: 'Corrected Novel - Jane Writer/Corrected Novel.epub',
+        sourcePath: '/tmp/bookorbit-correction-test/Original Book/Original.epub',
+        sourceHash: 'abc123',
+        format: 'epub',
+        reviewedBy: 10,
+        title: 'Corrected Novel',
+        author: 'Jane Writer',
+      }),
+    );
+    expect(result).toMatchObject({
+      fileId: 7,
+      destinationBookId: 91,
+      verificationEvidencePreserved: true,
+      verificationRequiresRecheck: true,
+      sourceCleanupPending: false,
+      requiresRescan: false,
+    });
+    expect(selfWriteRegistry.track).toHaveBeenCalled();
+  });
+
+
+
+  it('reassigns a file without moving it when its path already matches the destination title', async () => {
+    repository.findCorrectionContext.mockResolvedValue({
+      source: {
+        fileId: 7, bookId: 4, libraryId: 2, libraryFolderId: 3,
+        libraryFolderPath: '/tmp/bookorbit-root', organizationMode: 'book_per_folder',
+        bookFolderPath: '/tmp/bookorbit-root/Correct Book.epub',
+        absolutePath: '/tmp/bookorbit-root/Correct Book.epub', relPath: 'Correct Book.epub',
+        format: 'epub', role: 'content', fileHash: 'abc123', title: 'Wrong Metadata Title',
+        verificationStatus: 'mismatch', verificationFileHash: 'abc123', reviewStatus: 'confirmed_mismatch',
+      },
+      contentFileCount: 2, audioContentCount: 0,
+      target: {
+        bookId: 9, libraryId: 2, libraryFolderId: 3,
+        folderPath: '/tmp/bookorbit-root/Correct Book.m4b',
+        destinationFolderPath: '/tmp/bookorbit-root', title: 'Correct Book',
+      },
+      targetFormatCount: 0,
+    });
+    repository.applyFileCorrection.mockResolvedValue({ fileId: 7, sourceBookId: 4, destinationBookId: 9, targetType: 'existing_book' });
+    vi.mocked(access).mockImplementation(async (path) => {
+      if (String(path) === '/tmp/bookorbit-root') return undefined;
+      throw Object.assign(new Error('not found'), { code: 'ENOENT' });
+    });
+
+    const result = await service.executeCorrection({ id: 10 } as never, 7, { targetType: 'existing_book', targetBookId: 9 });
+
+    expect(link).not.toHaveBeenCalled();
+    expect(unlink).not.toHaveBeenCalled();
+    expect(repository.applyFileCorrection).toHaveBeenCalledWith(expect.objectContaining({
+      sourcePath: '/tmp/bookorbit-root/Correct Book.epub',
+      destinationPath: '/tmp/bookorbit-root/Correct Book.epub',
+    }));
+    expect(result).toMatchObject({ destinationBookId: 9, sourceCleanupPending: false });
+  });
+  it('moves a confirmed mismatched file into an existing book in the same library folder', async () => {
+    repository.findCorrectionContext.mockResolvedValue({
+      source: {
+        fileId: 7,
+        bookId: 4,
+        libraryId: 2,
+        libraryFolderId: 3,
+        libraryFolderPath: '/tmp/bookorbit-correction-test',
+        organizationMode: 'book_per_folder',
+        bookFolderPath: '/tmp/bookorbit-correction-test/Original Book',
+        absolutePath: '/tmp/bookorbit-correction-test/Original Book/Original.epub',
+        relPath: 'Original Book/Original.epub',
+        format: 'epub',
+        role: 'content',
+        fileHash: 'abc123',
+        title: 'Wrong Metadata Title',
+        verificationStatus: 'mismatch',
+        verificationFileHash: 'abc123',
+        reviewStatus: 'confirmed_mismatch',
+      },
+      contentFileCount: 2,
+      audioContentCount: 0,
+      target: {
+        bookId: 9,
+        libraryId: 2,
+        libraryFolderId: 3,
+        folderPath: '/tmp/bookorbit-correction-test/Correct Book',
+        destinationFolderPath: '/tmp/bookorbit-correction-test/Correct Book',
+        title: 'Correct Book',
+      },
+      targetFormatCount: 0,
+    });
+    repository.applyFileCorrection.mockResolvedValue({
+      fileId: 7,
+      sourceBookId: 4,
+      destinationBookId: 9,
+      targetType: 'existing_book',
+    });
+    vi.mocked(access).mockImplementation(async (path) => {
+      if (String(path) === '/tmp/bookorbit-correction-test/Correct Book') return undefined;
+      throw Object.assign(new Error('not found'), { code: 'ENOENT' });
+    });
+
+    const result = await service.executeCorrection(
+      { id: 10 } as never,
+      7,
+      { targetType: 'existing_book', targetBookId: 9 },
+    );
+
+    const stagingPath = expect.stringMatching(/\.bookorbit-correction-7-.*\.tmp$/);
+    expect(link).toHaveBeenNthCalledWith(1, '/tmp/bookorbit-correction-test/Original Book/Original.epub', stagingPath);
+    expect(link).toHaveBeenNthCalledWith(
+      2,
+      stagingPath,
+      '/tmp/bookorbit-correction-test/Correct Book/Correct Book.epub',
+    );
+    expect(unlink).toHaveBeenCalledWith(stagingPath);
+    expect(repository.applyFileCorrection).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fileId: 7,
+        sourceBookId: 4,
+        targetBookId: 9,
+        targetType: 'existing_book',
+        destinationFolderPath: '/tmp/bookorbit-correction-test/Correct Book',
+        targetBookFolderPath: '/tmp/bookorbit-correction-test/Correct Book',
+      }),
+    );
+    expect(result).toMatchObject({ destinationBookId: 9, verificationEvidencePreserved: true });
+  });
+
+  it('uses an exclusive copy when the filesystem cannot create a hard link', async () => {
+    repository.findCorrectionContext.mockResolvedValue({
+      source: {
+        fileId: 7, bookId: 4, libraryId: 2, libraryFolderId: 3,
+        libraryFolderPath: '/tmp/bookorbit-correction-test', organizationMode: 'book_per_folder',
+        bookFolderPath: '/tmp/bookorbit-correction-test/Original Book',
+        absolutePath: '/tmp/bookorbit-correction-test/Original Book/Original.epub',
+        relPath: 'Original Book/Original.epub', format: 'epub', role: 'content',
+        fileHash: 'abc123', title: 'Original Book', verificationStatus: 'mismatch',
+        verificationFileHash: 'abc123', reviewStatus: 'confirmed_mismatch',
+      },
+      contentFileCount: 2, audioContentCount: 0, target: null, targetFormatCount: 0,
+    });
+    repository.applyFileCorrection.mockResolvedValue({ fileId: 7, sourceBookId: 4, destinationBookId: 91, targetType: 'new_book' });
+    vi.mocked(link).mockRejectedValueOnce(Object.assign(new Error('cross-device link'), { code: 'EXDEV' }));
+
+    const result = await service.executeCorrection(
+      { id: 10 } as never, 7, { targetType: 'new_book', title: 'Corrected Novel', author: 'Jane Writer' },
+    );
+
+    const stagingPath = expect.stringMatching(/\.bookorbit-correction-7-.*\.tmp$/);
+    expect(copyFile).toHaveBeenCalledWith(
+      '/tmp/bookorbit-correction-test/Original Book/Original.epub',
+      stagingPath,
+      expect.any(Number),
+    );
+    expect(link).toHaveBeenNthCalledWith(
+      2,
+      stagingPath,
+      '/tmp/bookorbit-correction-test/Corrected Novel - Jane Writer/Corrected Novel.epub',
+    );
+    expect(unlink).toHaveBeenCalledWith(stagingPath);
+    expect(unlink).toHaveBeenCalledWith('/tmp/bookorbit-correction-test/Original Book/Original.epub');
+    expect(result).toMatchObject({ destinationBookId: 91, sourceCleanupPending: false });
+  });
+  it('keeps the original path when the database reassignment fails', async () => {
+    repository.findCorrectionContext.mockResolvedValue({
+      source: {
+        fileId: 7,
+        bookId: 4,
+        libraryId: 2,
+        libraryFolderId: 3,
+        libraryFolderPath: '/tmp/bookorbit-correction-test',
+        organizationMode: 'book_per_folder',
+        bookFolderPath: '/tmp/bookorbit-correction-test/Original Book',
+        absolutePath: '/tmp/bookorbit-correction-test/Original Book/Original.epub',
+        relPath: 'Original Book/Original.epub',
+        format: 'epub',
+        role: 'content',
+        fileHash: 'abc123',
+        title: 'Original Book',
+        verificationStatus: 'mismatch',
+        verificationFileHash: 'abc123',
+        reviewStatus: 'confirmed_mismatch',
+      },
+      contentFileCount: 2,
+      audioContentCount: 0,
+      target: null,
+      targetFormatCount: 0,
+    });
+    repository.applyFileCorrection.mockRejectedValueOnce(new Error('Database update failed'));
+    repository.findCorrectionFileLocation.mockResolvedValue({
+      fileId: 7,
+      bookId: 4,
+      absolutePath: '/tmp/bookorbit-correction-test/Original Book/Original.epub',
+    });
+
+    await expect(
+      service.executeCorrection(
+        { id: 10 } as never,
+        7,
+        { targetType: 'new_book', title: 'Corrected Novel', author: 'Jane Writer' },
+      ),
+    ).rejects.toThrow('Database update failed');
+
+    expect(link).toHaveBeenCalledTimes(2);
+    expect(unlink).toHaveBeenCalledWith('/tmp/bookorbit-correction-test/Corrected Novel - Jane Writer/Corrected Novel.epub');
+    expect(unlink).not.toHaveBeenCalledWith('/tmp/bookorbit-correction-test/Original Book/Original.epub');
+  });
+
+  it('retains both paths when the database commit outcome cannot be checked', async () => {
+    repository.findCorrectionContext.mockResolvedValue({
+      source: {
+        fileId: 7, bookId: 4, libraryId: 2, libraryFolderId: 3,
+        libraryFolderPath: '/tmp/bookorbit-correction-test',
+        organizationMode: 'book_per_folder',
+        bookFolderPath: '/tmp/bookorbit-correction-test/Original Book',
+        absolutePath: '/tmp/bookorbit-correction-test/Original Book/Original.epub',
+        relPath: 'Original Book/Original.epub', format: 'epub', role: 'content',
+        fileHash: 'abc123', title: 'Original Book', verificationStatus: 'mismatch',
+        verificationFileHash: 'abc123', reviewStatus: 'confirmed_mismatch',
+      },
+      contentFileCount: 2, audioContentCount: 0, target: null, targetFormatCount: 0,
+    });
+    repository.applyFileCorrection.mockRejectedValueOnce(new Error('Connection interrupted'));
+    repository.findCorrectionFileLocation.mockRejectedValueOnce(new Error('Database unavailable'));
+
+    await expect(
+      service.executeCorrection({ id: 10 } as never, 7, { targetType: 'new_book', title: 'Corrected Novel', author: 'Jane Writer' }),
+    ).rejects.toThrow('Correction did not complete cleanly');
+
+    expect(unlink).not.toHaveBeenCalledWith('/tmp/bookorbit-correction-test/Original Book/Original.epub');
+    expect(unlink).not.toHaveBeenCalledWith('/tmp/bookorbit-correction-test/Corrected Novel - Jane Writer/Corrected Novel.epub');
+  });
   it('requires a confirmed mismatch before offering a file correction', async () => {
     repository.findCorrectionContext.mockResolvedValue({
       source: { role: 'content', reviewStatus: null },

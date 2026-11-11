@@ -30,6 +30,110 @@ export interface ContentVerificationEntry {
   stale: boolean
 }
 
+
+export interface ContentVerificationCorrectionTarget {
+  bookId: number
+  title: string | null
+  authors: string[]
+}
+
+export interface ContentVerificationCorrectionInput {
+  targetType: 'existing_book' | 'new_book'
+  targetBookId?: number
+  title?: string
+  author?: string
+}
+
+export interface ContentVerificationCorrectionPreview {
+  fileId: number
+  sourceBookId: number
+  sourceBookTitle: string | null
+  sourcePath: string
+  destinationType: 'existing_book' | 'new_book'
+  destinationBookId: number | null
+  destinationTitle: string
+  destinationFolderPath: string
+  destinationPath: string
+  fileFormat: string
+  verificationStatus: ContentVerificationStatus
+  reviewStatus: ContentVerificationReviewStatus
+  requiresApproval: boolean
+  executionAvailable: boolean
+}
+
+export async function searchContentVerificationCorrectionTargets(
+  fileId: number,
+  query: string,
+): Promise<ContentVerificationCorrectionTarget[]> {
+  const params = new URLSearchParams({ q: query })
+  const response = await api(`/api/v1/maintenance/content-verification/${fileId}/correction/targets?${params.toString()}`)
+  if (!response.ok) {
+    let message = 'content_verification_correction_targets_failed'
+    try {
+      const body = (await response.json()) as { message?: string | string[] }
+      if (typeof body.message === 'string') message = body.message
+      else if (Array.isArray(body.message)) message = body.message.join(', ')
+    } catch {
+      // Keep the stable fallback when the server does not return a JSON error body.
+    }
+    throw new Error(message)
+  }
+  return response.json() as Promise<ContentVerificationCorrectionTarget[]>
+}
+
+export async function previewContentVerificationCorrection(
+  fileId: number,
+  input: ContentVerificationCorrectionInput,
+): Promise<ContentVerificationCorrectionPreview> {
+  const response = await api(`/api/v1/maintenance/content-verification/${fileId}/correction/preview`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!response.ok) {
+    let message = 'content_verification_correction_preview_failed'
+    try {
+      const body = (await response.json()) as { message?: string | string[] }
+      if (typeof body.message === 'string') message = body.message
+      else if (Array.isArray(body.message)) message = body.message.join(', ')
+    } catch {
+      // Keep the stable fallback when the server does not return a JSON error body.
+    }
+    throw new Error(message)
+  }
+  return response.json() as Promise<ContentVerificationCorrectionPreview>
+}
+
+export async function executeContentVerificationCorrection(
+  fileId: number,
+  input: ContentVerificationCorrectionInput,
+): Promise<{
+  fileId: number
+  sourceBookId: number
+  destinationBookId: number
+  verificationEvidencePreserved: boolean
+  verificationRequiresRecheck: boolean
+  sourceCleanupPending: boolean
+}> {
+  const response = await api(`/api/v1/maintenance/content-verification/${fileId}/correction/execute`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!response.ok) {
+    let message = 'content_verification_correction_failed'
+    try {
+      const body = (await response.json()) as { message?: string | string[] }
+      if (typeof body.message === 'string') message = body.message
+      else if (Array.isArray(body.message)) message = body.message.join(', ')
+    } catch {
+      // Keep the stable fallback when the server does not return a JSON error body.
+    }
+    throw new Error(message)
+  }
+  return response.json()
+}
+
 export interface ContentVerificationPage {
   items: ContentVerificationEntry[]
   total: number
