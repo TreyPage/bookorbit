@@ -20,6 +20,7 @@ export const BOOK_REQUEST_AUTOMATION_SETTING_KEYS = {
   IMPORT_FORMATS: "book_request_import_formats",
   AUTO_SEARCH_ENABLED: "book_request_auto_search_enabled",
   AUTO_SEARCH_INTERVAL_HOURS: "book_request_auto_search_interval_hours",
+  AUTO_SEARCH_SWEEP_INTERVAL_MINUTES: "book_request_auto_search_sweep_interval_minutes",
   AUTO_SEARCH_MAX_AGE_DAYS: "book_request_auto_search_max_age_days",
   STALLED_DOWNLOAD_TIMEOUT_HOURS: "book_request_stalled_download_timeout_hours",
 } as const;
@@ -93,6 +94,8 @@ export interface BookRequestAutomationSettings {
    * tracker forever.
    */
   autoSearchIntervalHours: number;
+  /** How often the scheduler checks the request queue for requests whose own search interval is due. */
+  autoSearchSweepIntervalMinutes: number;
   /** How long a request keeps being searched for before it is left to a person. */
   autoSearchMaxAgeDays: number;
   /** Hours without byte progress before the watchdog marks an active download stalled. */
@@ -146,6 +149,7 @@ export const DEFAULT_BOOK_REQUEST_AUTOMATION_SETTINGS: BookRequestAutomationSett
   // when somebody asked for something, so it is a decision an operator makes rather than inherits.
   autoSearchEnabled: false,
   autoSearchIntervalHours: 24,
+  autoSearchSweepIntervalMinutes: 60,
   autoSearchMaxAgeDays: 60,
   stalledDownloadTimeoutHours: 12,
   verificationEnabled: true,
@@ -174,6 +178,8 @@ export const MAX_AUTO_GRAB_ATTEMPTS_LIMIT = 10;
  */
 export const MIN_AUTO_SEARCH_INTERVAL_HOURS = 1;
 export const MAX_AUTO_SEARCH_INTERVAL_HOURS = 168;
+export const MIN_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES = 5;
+export const MAX_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES = 1440;
 export const MIN_AUTO_SEARCH_MAX_AGE_DAYS = 1;
 export const MAX_AUTO_SEARCH_MAX_AGE_DAYS = 365;
 export const MIN_STALLED_DOWNLOAD_TIMEOUT_HOURS = 1;
