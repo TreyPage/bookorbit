@@ -59,7 +59,7 @@ export class ContentVerificationAiService {
               'A match requires the actual book title and author identity to agree with the expected bibliographic identity.',
               'A series name, series number, shared universe, narrator, or matching author alone is never enough to establish a match.',
               'Compare the specific title, not the series. A different title is a mismatch even when the series name matches.',
-              'Do not silently correct, normalize, or overlook meaningful word substitutions, homophones, OCR errors, or transcription differences in the title or author.',
+              'Do not silently correct or overlook meaningful word substitutions, homophones, OCR errors, or transcription differences in the title. For author names, tolerate a single-character spelling or transcription error in one name token when the remaining name tokens match; report larger or multiple differences as a mismatch or inconclusive.',
               'Account for punctuation, capitalization, clear subtitles, and spoken introductions, but do not treat a similar-sounding title or a one-word difference as the same work.',
               'If the title or author cannot be read or heard clearly enough to identify the work, return inconclusive rather than match.',
               'Do not infer a match from genre or author alone. If the evidence does not clearly identify the work, return inconclusive.',
