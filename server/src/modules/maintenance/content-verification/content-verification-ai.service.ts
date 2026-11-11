@@ -150,8 +150,8 @@ function sameBibliographicTitle(expected: string, detected: string): boolean {
   const expectedSubtitle = normalizeIdentity(expected.replace(/[:—–]/g, ' subtitle '));
   const detectedSubtitle = normalizeIdentity(detected.replace(/[:—–]/g, ' subtitle '));
   return (
-    detectedSubtitle.startsWith(\`\${expectedNormalized} subtitle \`) ||
-    expectedSubtitle.startsWith(\`\${detectedNormalized} subtitle \`)
+    detectedSubtitle.startsWith(expectedNormalized + ' subtitle ') ||
+    expectedSubtitle.startsWith(detectedNormalized + ' subtitle ')
   );
 }
 
