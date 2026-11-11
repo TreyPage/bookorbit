@@ -36,6 +36,29 @@ describe('ContentVerificationController', () => {
     expect(service.previewCorrection).toHaveBeenCalledWith(user, 44, dto);
   });
 
+
+
+  it('delegates correction destination search with the current user', async () => {
+    const targets = [{ bookId: 88, title: 'The New Book' }];
+    const service = { searchCorrectionTargets: vi.fn().mockResolvedValue(targets) };
+    const controller = new ContentVerificationController(service as never, {} as never);
+    const user = { id: 12 } as never;
+
+    await expect(controller.searchCorrectionTargets(44, 'new', user)).resolves.toEqual(targets);
+    expect(service.searchCorrectionTargets).toHaveBeenCalledWith(user, 44, 'new');
+  });
+
+  it('delegates approved file correction with the current user', async () => {
+    const result = { fileId: 44, destinationBookId: 88 };
+    const service = { executeCorrection: vi.fn().mockResolvedValue(result) };
+    const controller = new ContentVerificationController(service as never, {} as never);
+    const user = { id: 12 } as never;
+    const dto = { targetType: 'new_book' as const, title: 'The New Book', author: 'A. Writer' };
+
+    await expect(controller.executeCorrection(44, dto, user)).resolves.toEqual(result);
+    expect(service.executeCorrection).toHaveBeenCalledWith(user, 44, dto);
+  });
+
   it('delegates manual verification with the current user', async () => {
     const service = { verifyFile: vi.fn().mockResolvedValue({ status: 'inconclusive' }) };
     const controller = new ContentVerificationController(service as never, {} as never);

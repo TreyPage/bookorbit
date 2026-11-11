@@ -57,6 +57,16 @@ export class ContentVerificationController {
     return this.service.reviewFile(user, fileId, dto.reviewStatus, dto.reviewNote);
   }
 
+  @Get(':fileId/correction/targets')
+  @RequirePermission(Permission.LibraryDownload)
+  searchCorrectionTargets(
+    @Param('fileId', ParseIntPipe) fileId: number,
+    @Query('q') query: string | undefined,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.service.searchCorrectionTargets(user, fileId, query);
+  }
+
   @Post(':fileId/correction/preview')
   @RequirePermission(Permission.LibraryDownload)
   previewCorrection(
@@ -65,6 +75,16 @@ export class ContentVerificationController {
     @CurrentUser() user: RequestUser,
   ) {
     return this.service.previewCorrection(user, fileId, dto);
+  }
+
+  @Post(':fileId/correction/execute')
+  @RequirePermission(Permission.LibraryDownload)
+  executeCorrection(
+    @Param('fileId', ParseIntPipe) fileId: number,
+    @Body() dto: PreviewContentVerificationCorrectionDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.service.executeCorrection(user, fileId, dto);
   }
 
   @Post(':fileId/verify')

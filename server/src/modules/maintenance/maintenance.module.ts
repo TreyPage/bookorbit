@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 
+import { CommonModule } from '../../common/common.module';
+import { SelfWriteRegistryModule } from '../../common/self-write-registry.module';
+
 import { AppSettingsModule } from '../app-settings/app-settings.module';
 
 import { BookModule } from '../book/book.module';
@@ -22,7 +25,7 @@ import { ContentVerificationService } from './content-verification/content-verif
 import { ContentVerificationSchedulerService } from './content-verification/content-verification-scheduler.service';
 
 @Module({
-  imports: [AppSettingsModule, BookModule, BookCoverStoreModule, LibraryModule, ReadingAttemptEventsModule],
+  imports: [AppSettingsModule, CommonModule, SelfWriteRegistryModule, BookModule, BookCoverStoreModule, LibraryModule, ReadingAttemptEventsModule],
   controllers: [MissingResourcesController, LibraryIntegrityController, ContentVerificationController],
   exports: [ContentVerificationSchedulerService],
   providers: [
