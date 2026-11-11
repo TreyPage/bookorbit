@@ -143,6 +143,51 @@ describe('FileWriteService', () => {
     probeAudioDurationMsMock.mockReset();
   });
 
+  describe('writeMetadataToFile', () => {
+    it('writes only the selected content file and refreshes its stored hash', async () => {
+      const { service, fileWriteRepo, writer } = makeService();
+      const target = {
+        id: 7, absolutePath: '/books/Corrected.epub', format: 'epub', sizeBytes: 1024,
+        fileHash: 'old-hash', role: 'content', sortOrder: null, mediaOverlayAvailable: false, libraryId: 2,
+      };
+      const sibling = {
+        id: 8, absolutePath: '/books/Original.m4b', format: 'm4b', sizeBytes: 2048,
+        fileHash: 'sibling-hash', role: 'content', sortOrder: null, mediaOverlayAvailable: false, libraryId: 2,
+      };
+      fileWriteRepo.findFilesForBook.mockResolvedValue([target, sibling]);
+      fileWriteRepo.findPrimaryFileForBook.mockResolvedValue({ ...target, fileWriteAllFiles: false });
+      fileWriteRepo.loadPayload.mockResolvedValue({ title: 'Corrected title', authors: [{ name: 'Correct author', sortName: null }] });
+      writer.write.mockResolvedValue({ status: 'success', fieldsWritten: ['title', 'authors'], durationMs: 5 });
+      computeFileHashMock.mockResolvedValue('new-hash');
+
+      const result = await service.writeMetadataToFile(91, 7, 10);
+
+      expect(result).toMatchObject({ status: 'success', fieldsWritten: ['title', 'authors'] });
+      expect(writer.write).toHaveBeenCalledTimes(1);
+      expect(writer.write).toHaveBeenCalledWith(
+        '/books/Corrected.epub',
+        expect.objectContaining({ title: 'Corrected title', coverBytes: null }),
+        expect.objectContaining({ dryRun: false }),
+      );
+      expect(fileWriteRepo.updateFileStateAfterMetadataWrite).toHaveBeenCalledWith(
+        91, 7, 'old-hash', expect.objectContaining({ fileHash: 'new-hash' }),
+      );
+      expect(fileWriteRepo.setLastWrittenAt).toHaveBeenCalledWith(91, expect.any(Date));
+    });
+
+    it('does not write when file metadata write-back is disabled for the library', async () => {
+      const { service, fileWriteRepo, writer } = makeService();
+      fileWriteRepo.findFilesForBook.mockResolvedValue([{
+        id: 7, absolutePath: '/books/Corrected.epub', format: 'epub', sizeBytes: 1024,
+        fileHash: 'old-hash', role: 'content', sortOrder: null, mediaOverlayAvailable: false, libraryId: 2,
+      }]);
+      fileWriteRepo.findLibraryFileWriteConfig.mockResolvedValue({ ...DEFAULT_LIB_CONFIG, fileWriteEnabled: false });
+
+      await expect(service.writeMetadataToFile(91, 7, 10)).resolves.toMatchObject({ status: 'skipped', reason: 'disabled' });
+      expect(writer.write).not.toHaveBeenCalled();
+    });
+  });
+
   describe('resolveBookFileWriteStatus', () => {
     it('returns enabled for a writable primary file', () => {
       const { service } = makeService();

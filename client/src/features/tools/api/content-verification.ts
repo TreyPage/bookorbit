@@ -114,6 +114,7 @@ export async function executeContentVerificationCorrection(
   verificationEvidencePreserved: boolean
   verificationRequiresRecheck: boolean
   sourceCleanupPending: boolean
+  embeddedMetadataWrite: { status: 'success' | 'skipped' | 'failed'; fieldsWritten: string[]; durationMs: number; reason?: string }
 }> {
   const response = await api(`/api/v1/maintenance/content-verification/${fileId}/correction/execute`, {
     method: 'POST',

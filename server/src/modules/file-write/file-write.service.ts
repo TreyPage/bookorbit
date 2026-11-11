@@ -170,6 +170,66 @@ export class FileWriteService implements OnModuleDestroy {
     this.debounceMap.clear();
   }
 
+  /** Writes the current book metadata to one selected file without touching its sibling formats. */
+  async writeMetadataToFile(bookId: number, bookFileId: number, userId: number): Promise<WriteResult> {
+    return this.lockService.withLock(bookOperationLockKey(bookId), async () => {
+      await this.acquireWriteSlot();
+      const startedAt = Date.now();
+      try {
+        const files = await this.fileWriteRepo.findFilesForBook(bookId);
+        const file = files.find((candidate) => candidate.id === bookFileId);
+        if (!file || file.role !== 'content') {
+          return { status: 'skipped', fieldsWritten: [], durationMs: Date.now() - startedAt, reason: 'content file not found' };
+        }
+
+        const format = normalizeWriteFormat(file.format);
+        if (!format || !this.registry.supports(format)) {
+          return { status: 'skipped', fieldsWritten: [], durationMs: Date.now() - startedAt, reason: WRITE_TARGET_SKIP_REASON.formatNotSupported };
+        }
+
+        const libraryConfig = await this.fileWriteRepo.findLibraryFileWriteConfig(file.libraryId);
+        if (!libraryConfig) {
+          return { status: 'skipped', fieldsWritten: [], durationMs: Date.now() - startedAt, reason: 'library not found' };
+        }
+        if (!libraryConfig.fileWriteEnabled) {
+          return { status: 'skipped', fieldsWritten: [], durationMs: Date.now() - startedAt, reason: 'disabled' };
+        }
+
+        const [sizedFile] = await this.withSizesOnDisk([file]);
+        const skipReason = resolveWriteTargetSkip(sizedFile!, libraryConfig, this.supports);
+        if (skipReason) {
+          return { status: 'skipped', fieldsWritten: [], durationMs: Date.now() - startedAt, reason: skipReason };
+        }
+
+        const payload = await this.fileWriteRepo.loadPayload(bookId);
+        if (!payload) {
+          return { status: 'skipped', fieldsWritten: [], durationMs: Date.now() - startedAt, reason: 'no metadata' };
+        }
+
+        const primaryFile = await this.fileWriteRepo.findPrimaryFileForBook(bookId);
+        const sizedFiles = await this.withSizesOnDisk(files);
+        const audioTrackContexts = resolveAudioTrackContexts(sizedFiles, primaryFile);
+        const suppressPaths = [sizedFile!.absolutePath];
+        this.selfWriteRegistry.begin(suppressPaths);
+        try {
+          const result = await this.writeTarget(
+            bookId,
+            sizedFile!,
+            { ...payload, coverBytes: null },
+            { triggeredBy: 'sync', userId, dryRun: false, suppressNotification: true, startedAt },
+            audioTrackContexts.get(bookFileId),
+          );
+          if (result.status === 'success') await this.fileWriteRepo.setLastWrittenAt(bookId, new Date());
+          return result;
+        } finally {
+          this.selfWriteRegistry.end(suppressPaths);
+        }
+      } finally {
+        this.releaseWriteSlot();
+      }
+    });
+  }
+
   async writeToFile(
     bookId: number,
     triggeredBy: 'auto' | 'sync',

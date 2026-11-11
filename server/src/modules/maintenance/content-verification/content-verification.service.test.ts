@@ -52,6 +52,7 @@ describe('ContentVerificationService', () => {
   const config = { get: vi.fn().mockReturnValue('qwen3.5:4b') };
   const fileLock = { withLock: vi.fn((_key: string, operation: () => Promise<unknown>) => operation()) };
   const selfWriteRegistry = { track: vi.fn((_paths: string[], operation: () => Promise<unknown>) => operation()) };
+  const fileWriteService = { writeMetadataToFile: vi.fn().mockResolvedValue({ status: 'success', fieldsWritten: ['title', 'authors'], durationMs: 5 }) };
   let service: ContentVerificationService;
 
   beforeEach(() => {
@@ -74,6 +75,7 @@ describe('ContentVerificationService', () => {
       config as never,
       fileLock as never,
       selfWriteRegistry as never,
+      fileWriteService as never,
     );
     repository.findFileForVerification.mockResolvedValue(file);
     vi.mocked(extractEpubContentEvidence).mockResolvedValue({
@@ -332,6 +334,7 @@ describe('ContentVerificationService', () => {
       destinationPath: '/tmp/bookorbit-root/Correct Book.epub',
     }));
     expect(result).toMatchObject({ destinationBookId: 9, sourceCleanupPending: false });
+    expect(fileWriteService.writeMetadataToFile).toHaveBeenCalledWith(9, 7, 10);
   });
   it('moves a confirmed mismatched file into an existing book in the same library folder', async () => {
     repository.findCorrectionContext.mockResolvedValue({
@@ -437,6 +440,8 @@ describe('ContentVerificationService', () => {
     expect(unlink).toHaveBeenCalledWith(stagingPath);
     expect(unlink).toHaveBeenCalledWith('/tmp/bookorbit-correction-test/Original Book/Original.epub');
     expect(result).toMatchObject({ destinationBookId: 91, sourceCleanupPending: false });
+    expect(fileWriteService.writeMetadataToFile).toHaveBeenCalledWith(91, 7, 10);
+    expect(result.embeddedMetadataWrite).toMatchObject({ status: 'success', fieldsWritten: ['title', 'authors'] });
   });
   it('keeps the original path when the database reassignment fails', async () => {
     repository.findCorrectionContext.mockResolvedValue({

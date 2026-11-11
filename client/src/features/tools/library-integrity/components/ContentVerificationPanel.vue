@@ -50,6 +50,7 @@ const searchingCorrectionTargets = ref(false)
 const previewingCorrection = ref(false)
 const executingCorrection = ref(false)
 const correctionSuccess = ref('')
+const correctionMetadataNotice = ref('')
 let correctionSearchTimer: ReturnType<typeof setTimeout> | undefined
 let correctionSearchGeneration = 0
 let statusRefresh: ReturnType<typeof setInterval> | undefined
@@ -142,6 +143,7 @@ function openCorrection(item: ContentVerificationEntry): void {
   selectedTargetTitle.value = ''
   correctionPreview.value = null
   correctionSuccess.value = ''
+  correctionMetadataNotice.value = ''
   error.value = false
   errorMessage.value = ''
 }
@@ -252,6 +254,17 @@ async function applyCorrection(item: ContentVerificationEntry): Promise<void> {
     correctionSuccess.value = result.sourceCleanupPending
       ? t('tools.libraryIntegrity.contentVerification.correction.cleanupPending')
       : t('tools.libraryIntegrity.contentVerification.correction.success')
+    if (result.embeddedMetadataWrite.status === 'success') {
+      correctionMetadataNotice.value = t('tools.libraryIntegrity.contentVerification.correction.metadataWritten')
+    } else if (result.embeddedMetadataWrite.status === 'skipped') {
+      correctionMetadataNotice.value = t('tools.libraryIntegrity.contentVerification.correction.metadataSkipped', {
+        reason: result.embeddedMetadataWrite.reason || 'not available',
+      })
+    } else {
+      correctionMetadataNotice.value = t('tools.libraryIntegrity.contentVerification.correction.metadataFailed', {
+        reason: result.embeddedMetadataWrite.reason || 'unknown error',
+      })
+    }
     closeCorrection()
     await load()
   } catch (cause) {
@@ -365,6 +378,9 @@ onUnmounted(() => {
     </p>
     <p v-if="correctionSuccess" role="status" aria-live="polite" class="text-sm font-medium text-emerald-600">
       {{ correctionSuccess }}
+    </p>
+    <p v-if="correctionMetadataNotice" role="status" aria-live="polite" class="text-sm text-amber-600">
+      {{ correctionMetadataNotice }}
     </p>
     <p v-if="error" role="alert" class="text-sm text-destructive">
       {{ errorMessage || t('tools.libraryIntegrity.contentVerification.failed') }}
