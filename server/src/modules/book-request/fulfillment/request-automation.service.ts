@@ -87,6 +87,7 @@ export class RequestAutomationService implements OnModuleInit {
   private readonly logger = new Logger(RequestAutomationService.name);
   /** A sweep can outlast an hour on a slow tracker, and two of them would search everything twice. */
   private sweeping = false;
+  private lastPeriodicSweepAt = 0;
 
   constructor(
     private readonly settings: RequestAutomationSettingsService,
@@ -139,16 +140,38 @@ export class RequestAutomationService implements OnModuleInit {
    * conditionally and is safe to re-enter, so a request an approver acts on mid-sweep is left
    * alone by the pass that reaches it.
    */
-  @SystemCron(CronExpression.EVERY_HOUR)
+  @SystemCron(CronExpression.EVERY_MINUTE)
   async sweepUnfulfilled(): Promise<boolean> {
     if (this.sweeping) return false;
-    const startedAt = Date.now();
+
+    let settings: BookRequestAutomationSettings;
+    try {
+      settings = await this.settings.get();
+    } catch (error: unknown) {
+      const message = sanitizeLogValue(error instanceof Error ? error.message : String(error));
+      this.logger.warn(`[book_request.auto_search] [fail] error="${message}" - could not read scheduler settings`);
+      return false;
+    }
+    if (this.sweeping) return false;
+
+    // The scheduler polls once a minute so an operator can choose its actual cadence without
+    // requiring a restart or rebuilding a Nest cron expression. The per-request due interval is
+    // still a separate setting and is evaluated by the repository query below.
+    if (!settings.autoSearchEnabled || !settings.autoGrabEnabled) {
+      this.lastPeriodicSweepAt = 0;
+      return false;
+    }
+    const now = Date.now();
+    if (this.lastPeriodicSweepAt > 0 && now - this.lastPeriodicSweepAt < settings.autoSearchSweepIntervalMinutes * 60_000) {
+      return false;
+    }
+    this.lastPeriodicSweepAt = now;
+
+    const startedAt = now;
     this.sweeping = true;
     let status: 'completed' | 'failed' | 'skipped' = 'completed';
     try {
-      const settings = await this.settings.get();
-      if (!settings.autoSearchEnabled || !settings.autoGrabEnabled) status = 'skipped';
-      await this.researchDueRequests();
+      await this.researchDueRequests(settings);
     } catch (error: unknown) {
       status = 'failed';
       const message = sanitizeLogValue(error instanceof Error ? error.message : String(error));
@@ -169,8 +192,7 @@ export class RequestAutomationService implements OnModuleInit {
     return true;
   }
 
-  private async researchDueRequests(): Promise<void> {
-    const settings = await this.settings.get();
+  private async researchDueRequests(settings: BookRequestAutomationSettings): Promise<void> {
     // Both, because an unattended search has nothing to do with what it finds while auto-grab is
     // off: every request it touched would be handed straight back, having cost a real search.
     if (!settings.autoSearchEnabled || !settings.autoGrabEnabled) return;

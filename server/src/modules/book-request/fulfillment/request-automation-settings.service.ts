@@ -13,12 +13,14 @@ import {
   emptyRequestDestinationDefaults,
   MAX_AUTO_GRAB_ATTEMPTS_LIMIT,
   MAX_AUTO_SEARCH_INTERVAL_HOURS,
+  MAX_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES,
   MAX_AUTO_SEARCH_MAX_AGE_DAYS,
   MAX_STALLED_DOWNLOAD_TIMEOUT_HOURS,
   MAX_RELEASE_TIER_NAME_LENGTH,
   MAX_RELEASE_TIERS,
   MIN_AUTO_GRAB_SCORE_FLOOR,
   MIN_AUTO_SEARCH_INTERVAL_HOURS,
+  MIN_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES,
   MIN_AUTO_SEARCH_MAX_AGE_DAYS,
   MIN_STALLED_DOWNLOAD_TIMEOUT_HOURS,
 } from '@bookorbit/types';
@@ -71,6 +73,12 @@ export class RequestAutomationSettingsService {
         defaults.autoSearchIntervalHours,
         MIN_AUTO_SEARCH_INTERVAL_HOURS,
         MAX_AUTO_SEARCH_INTERVAL_HOURS,
+      ),
+      autoSearchSweepIntervalMinutes: parseInteger(
+        values.get(KEYS.AUTO_SEARCH_SWEEP_INTERVAL_MINUTES),
+        defaults.autoSearchSweepIntervalMinutes,
+        MIN_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES,
+        MAX_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES,
       ),
       autoSearchMaxAgeDays: parseInteger(
         values.get(KEYS.AUTO_SEARCH_MAX_AGE_DAYS),
@@ -137,6 +145,15 @@ export class RequestAutomationSettingsService {
     if (payload.autoSearchIntervalHours !== undefined) {
       assertRange('The re-search interval', payload.autoSearchIntervalHours, MIN_AUTO_SEARCH_INTERVAL_HOURS, MAX_AUTO_SEARCH_INTERVAL_HOURS);
       writes.push(this.appSettings.setValue(KEYS.AUTO_SEARCH_INTERVAL_HOURS, String(payload.autoSearchIntervalHours)));
+    }
+    if (payload.autoSearchSweepIntervalMinutes !== undefined) {
+      assertRange(
+        'The re-search scheduler interval',
+        payload.autoSearchSweepIntervalMinutes,
+        MIN_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES,
+        MAX_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES,
+      );
+      writes.push(this.appSettings.setValue(KEYS.AUTO_SEARCH_SWEEP_INTERVAL_MINUTES, String(payload.autoSearchSweepIntervalMinutes)));
     }
     if (payload.stalledDownloadTimeoutHours !== undefined) {
       assertRange(

@@ -9,10 +9,12 @@ import {
   MAX_AUTO_GRAB_ATTEMPTS_LIMIT,
   MAX_AUTO_SEARCH_INTERVAL_HOURS,
   MAX_AUTO_SEARCH_MAX_AGE_DAYS,
+  MAX_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES,
   MAX_STALLED_DOWNLOAD_TIMEOUT_HOURS,
   MIN_AUTO_GRAB_SCORE_FLOOR,
   MIN_AUTO_SEARCH_INTERVAL_HOURS,
   MIN_AUTO_SEARCH_MAX_AGE_DAYS,
+  MIN_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES,
   MIN_STALLED_DOWNLOAD_TIMEOUT_HOURS,
 } from '@bookorbit/types'
 import type {
@@ -75,6 +77,7 @@ const minScore = ref(settings.value.autoGrabMinScore)
 const attempts = ref(settings.value.maxAutoGrabAttempts)
 const threshold = ref(settings.value.verificationThreshold)
 const searchInterval = ref(settings.value.autoSearchIntervalHours)
+const searchSweepInterval = ref(settings.value.autoSearchSweepIntervalMinutes)
 const searchMaxAge = ref(settings.value.autoSearchMaxAgeDays)
 const stalledTimeout = ref(settings.value.stalledDownloadTimeoutHours)
 
@@ -84,6 +87,7 @@ let adopted = {
   maxAutoGrabAttempts: settings.value.maxAutoGrabAttempts,
   verificationThreshold: settings.value.verificationThreshold,
   autoSearchIntervalHours: settings.value.autoSearchIntervalHours,
+  autoSearchSweepIntervalMinutes: settings.value.autoSearchSweepIntervalMinutes,
   autoSearchMaxAgeDays: settings.value.autoSearchMaxAgeDays,
   stalledDownloadTimeoutHours: settings.value.stalledDownloadTimeoutHours,
 }
@@ -102,6 +106,7 @@ watch(settings, (next) => {
   if (next.maxAutoGrabAttempts !== adopted.maxAutoGrabAttempts) attempts.value = next.maxAutoGrabAttempts
   if (next.verificationThreshold !== adopted.verificationThreshold) threshold.value = next.verificationThreshold
   if (next.autoSearchIntervalHours !== adopted.autoSearchIntervalHours) searchInterval.value = next.autoSearchIntervalHours
+  if (next.autoSearchSweepIntervalMinutes !== adopted.autoSearchSweepIntervalMinutes) searchSweepInterval.value = next.autoSearchSweepIntervalMinutes
   if (next.autoSearchMaxAgeDays !== adopted.autoSearchMaxAgeDays) searchMaxAge.value = next.autoSearchMaxAgeDays
   if (next.stalledDownloadTimeoutHours !== adopted.stalledDownloadTimeoutHours) stalledTimeout.value = next.stalledDownloadTimeoutHours
 
@@ -110,6 +115,7 @@ watch(settings, (next) => {
     maxAutoGrabAttempts: next.maxAutoGrabAttempts,
     verificationThreshold: next.verificationThreshold,
     autoSearchIntervalHours: next.autoSearchIntervalHours,
+    autoSearchSweepIntervalMinutes: next.autoSearchSweepIntervalMinutes,
     autoSearchMaxAgeDays: next.autoSearchMaxAgeDays,
     stalledDownloadTimeoutHours: next.stalledDownloadTimeoutHours,
   }
@@ -272,6 +278,19 @@ function handleSearchIntervalChange() {
   void persist({ autoSearchIntervalHours: next }, 'settings.system.requests.automation.saved')
 }
 
+function handleSearchSweepIntervalChange() {
+  const next = Number(searchSweepInterval.value)
+  if (
+    !Number.isInteger(next) ||
+    next < MIN_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES ||
+    next > MAX_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES
+  ) {
+    searchSweepInterval.value = settings.value.autoSearchSweepIntervalMinutes
+    return
+  }
+  void persist({ autoSearchSweepIntervalMinutes: next }, 'settings.system.requests.automation.saved')
+}
+
 function handleSearchMaxAgeChange() {
   const next = Number(searchMaxAge.value)
   if (!Number.isInteger(next) || next < MIN_AUTO_SEARCH_MAX_AGE_DAYS || next > MAX_AUTO_SEARCH_MAX_AGE_DAYS) {
@@ -421,6 +440,28 @@ function handleVerificationChange(enabled: boolean) {
             :aria-label="t('settings.system.requests.automation.autoSearch')"
             @update:model-value="handleAutoSearchChange"
           />
+        </SettingsRow>
+
+        <SettingsRow
+          class="pl-6 md:pl-8"
+          control-id="auto-search-sweep-interval"
+          :label="t('settings.system.requests.automation.autoSearchSweepInterval')"
+          :hint="t('settings.system.requests.automation.autoSearchSweepIntervalShort')"
+        >
+          <div class="flex items-center gap-2">
+            <input
+              id="auto-search-sweep-interval"
+              v-model.number="searchSweepInterval"
+              type="number"
+              inputmode="numeric"
+              :min="MIN_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES"
+              :max="MAX_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES"
+              step="1"
+              class="input-field w-20"
+              @change="handleSearchSweepIntervalChange"
+            />
+            <span class="text-xs text-muted-foreground">{{ t('settings.system.requests.automation.autoSearchSweepIntervalUnit') }}</span>
+          </div>
         </SettingsRow>
 
         <template v-if="settings.autoSearchEnabled">

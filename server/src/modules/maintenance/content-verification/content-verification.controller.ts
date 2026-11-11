@@ -1,11 +1,12 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Put, Query } from '@nestjs/common';
 import { Permission } from '@bookorbit/types';
 
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
+import { RequireAnyPermission } from '../../../common/decorators/require-any-permission.decorator';
 import type { RequestUser } from '../../../common/types/request-user';
 import { ContentVerificationService } from './content-verification.service';
-import { ContentVerificationSchedulerService } from './content-verification-scheduler.service';
+import { ContentVerificationSchedulerService, type ContentVerificationSchedule } from './content-verification-scheduler.service';
 import { ListContentVerificationDto } from './dto/list-content-verification.dto';
 import { ReviewContentVerificationDto } from './dto/review-content-verification.dto';
 import { PreviewContentVerificationCorrectionDto } from './dto/preview-content-verification-correction.dto';
@@ -21,6 +22,18 @@ export class ContentVerificationController {
   @Get('background/status')
   getBackgroundStatus() {
     return this.scheduler.getStatus();
+  }
+
+  @Get('background/settings')
+  @RequireAnyPermission(Permission.ManageLibraries, Permission.ManageAppSettings, Permission.LibraryDownload)
+  getBackgroundSettings() {
+    return this.scheduler.getSchedule();
+  }
+
+  @Put('background/settings')
+  @RequireAnyPermission(Permission.ManageLibraries, Permission.ManageAppSettings, Permission.LibraryDownload)
+  updateBackgroundSettings(@Body() body: Partial<ContentVerificationSchedule>) {
+    return this.scheduler.updateSchedule(body);
   }
 
   @Post('background/run')

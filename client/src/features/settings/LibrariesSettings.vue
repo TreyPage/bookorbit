@@ -27,6 +27,7 @@ import { useLibraryDetail } from './libraries/composables/useLibraryDetail'
 import { formatSchedule } from './libraries/lib/library-schedule'
 import type { AutomationToggle } from './libraries/components/LibraryAutomationList.vue'
 import { useLibraryOverview } from './libraries/composables/useLibraryOverview'
+import ContentVerificationSchedulePanel from './ContentVerificationSchedulePanel.vue'
 import { matchesLibraryQuery, sortLibraries, type LibrarySortField } from './libraries/lib/library-sort'
 
 const HEADER_ACTIONS_TARGET = '#settings-header-actions'
@@ -549,6 +550,8 @@ async function confirmDelete() {
         </Button>
       </div>
     </div>
+
+    <ContentVerificationSchedulePanel />
 
     <LibraryCreatorModal
       v-if="creatorOpen"
