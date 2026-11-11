@@ -123,8 +123,8 @@ export class ContentVerificationService {
         destinationFolderPath = join(dirname(source.bookFolderPath), `${stem} - ${authorSegment}`);
         destinationPath = join(destinationFolderPath, `${stem}${extension}`);
       } else {
-        destinationFolderPath = dirname(source.absolutePath);
-        destinationPath = join(destinationFolderPath, `${stem} - ${authorSegment}${extension}`);
+        destinationPath = join(dirname(source.absolutePath), `${stem} - ${authorSegment}${extension}`);
+        destinationFolderPath = destinationPath;
       }
       destinationTitle = title;
     }
