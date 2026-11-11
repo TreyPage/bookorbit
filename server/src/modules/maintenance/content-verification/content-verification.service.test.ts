@@ -94,10 +94,7 @@ describe('ContentVerificationService', () => {
       reviewStatus: 'confirmed_mismatch',
     });
 
-    expect(repository.updateReview).toHaveBeenLastCalledWith(
-      7,
-      expect.objectContaining({ reviewStatus: 'confirmed_mismatch', reviewedBy: 10 }),
-    );
+    expect(repository.updateReview).toHaveBeenLastCalledWith(7, expect.objectContaining({ reviewStatus: 'confirmed_mismatch', reviewedBy: 10 }));
 
     repository.updateReview.mockResolvedValue({ fileHash: 'abc123', reviewStatus: 'false_positive' });
     await expect(service.reviewFile({ id: 10 } as never, 7, 'false_positive')).resolves.toMatchObject({

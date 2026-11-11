@@ -102,10 +102,7 @@ export class ContentVerificationAiService {
  * A model must not call a result a match when the bibliographic identity it extracted
  * contradicts the expected title or author. Series names are supporting context, not identity.
  */
-function enforceBibliographicIdentity(
-  input: ContentVerificationInput,
-  comparison: ContentVerificationComparison,
-): ContentVerificationComparison {
+function enforceBibliographicIdentity(input: ContentVerificationInput, comparison: ContentVerificationComparison): ContentVerificationComparison {
   if (comparison.status !== 'match') return comparison;
 
   const titleMatches = comparison.detectedTitle ? sameBibliographicTitle(input.expectedTitle, comparison.detectedTitle) : true;
@@ -149,10 +146,7 @@ function sameBibliographicTitle(expected: string, detected: string): boolean {
 
   const expectedSubtitle = normalizeIdentity(expected.replace(/[:—–]/g, ' subtitle '));
   const detectedSubtitle = normalizeIdentity(detected.replace(/[:—–]/g, ' subtitle '));
-  return (
-    detectedSubtitle.startsWith(expectedNormalized + ' subtitle ') ||
-    expectedSubtitle.startsWith(detectedNormalized + ' subtitle ')
-  );
+  return detectedSubtitle.startsWith(expectedNormalized + ' subtitle ') || expectedSubtitle.startsWith(detectedNormalized + ' subtitle ');
 }
 
 function sameAuthor(expected: string, detected: string): boolean {
