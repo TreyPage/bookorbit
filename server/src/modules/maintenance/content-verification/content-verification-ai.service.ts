@@ -103,15 +103,32 @@ export class ContentVerificationAiService {
  * contradicts the expected title or author. Series names are supporting context, not identity.
  */
 function enforceBibliographicIdentity(input: ContentVerificationInput, comparison: ContentVerificationComparison): ContentVerificationComparison {
-  if (comparison.status !== 'match') return comparison;
-
   const titleMatches = comparison.detectedTitle ? sameBibliographicTitle(input.expectedTitle, comparison.detectedTitle) : true;
-  const authorMatches =
+  const exactAuthorMatch =
     !comparison.detectedAuthor || input.expectedAuthors.length === 0
       ? true
       : input.expectedAuthors.some((author) => sameAuthor(author, comparison.detectedAuthor!));
+  const typoTolerantAuthorMatch =
+    !comparison.detectedAuthor || input.expectedAuthors.length === 0
+      ? true
+      : input.expectedAuthors.some((author) => sameAuthorWithMinorTypo(author, comparison.detectedAuthor!));
+  const authorMatches = exactAuthorMatch || typoTolerantAuthorMatch;
 
-  if (titleMatches && authorMatches) return comparison;
+  // Speech recognition and OCR commonly make a one-character error in an author's name.
+  // When the title is an exact bibliographic match and the author differs by only one
+  // character in one name token, treat that as a transcription variation, not a mismatch.
+  if (titleMatches && authorMatches) {
+    if (comparison.status === 'mismatch' && !exactAuthorMatch) {
+      return {
+        ...comparison,
+        status: 'match',
+        explanation: `The detected title matches the expected title, and the author name differs only by a minor spelling/transcription variation ("${comparison.detectedAuthor}" vs. "${input.expectedAuthors.join(', ')}"). This is treated as the same author rather than a bibliographic mismatch.`,
+      };
+    }
+    return comparison;
+  }
+
+  if (comparison.status !== 'match') return comparison;
 
   const differences: string[] = [];
   if (!titleMatches && comparison.detectedTitle) {
@@ -151,8 +168,57 @@ function sameBibliographicTitle(expected: string, detected: string): boolean {
 
 function sameAuthor(expected: string, detected: string): boolean {
   const expectedNormalized = normalizeIdentity(expected);
-  const detectedAuthors = detected.split(/[,;&]|\band\b/i).map(normalizeIdentity);
+  const detectedAuthors = detected.split(/[,;&]|\\band\\b/i).map(normalizeIdentity);
   return detectedAuthors.includes(expectedNormalized);
+}
+
+/** Accept at most one single-character edit across otherwise matching name tokens. */
+function sameAuthorWithMinorTypo(expected: string, detected: string): boolean {
+  const expectedTokens = normalizeIdentity(expected).split(' ').filter(Boolean);
+  const detectedAuthors = detected.split(/[,;&]|\\band\\b/i);
+
+  return detectedAuthors.some((candidate) => {
+    const detectedTokens = normalizeIdentity(candidate).split(' ').filter(Boolean);
+    if (expectedTokens.length !== detectedTokens.length) return false;
+
+    let editedTokenCount = 0;
+    for (let index = 0; index < expectedTokens.length; index += 1) {
+      const expectedToken = expectedTokens[index];
+      const detectedToken = detectedTokens[index];
+      if (expectedToken === detectedToken) continue;
+      if (expectedToken.length < 4 || detectedToken.length < 4 || editedTokenCount > 0) return false;
+      if (singleEditDistance(expectedToken, detectedToken) !== 1) return false;
+      editedTokenCount += 1;
+    }
+    return editedTokenCount === 1;
+  });
+}
+
+/** Returns 0, 1, or 2 (where 2 means more than one edit is required). */
+function singleEditDistance(left: string, right: string): number {
+  if (left === right) return 0;
+  if (Math.abs(left.length - right.length) > 1) return 2;
+
+  let leftIndex = 0;
+  let rightIndex = 0;
+  let edits = 0;
+  while (leftIndex < left.length && rightIndex < right.length) {
+    if (left[leftIndex] === right[rightIndex]) {
+      leftIndex += 1;
+      rightIndex += 1;
+      continue;
+    }
+    edits += 1;
+    if (edits > 1) return 2;
+    if (left.length > right.length) leftIndex += 1;
+    else if (right.length > left.length) rightIndex += 1;
+    else {
+      leftIndex += 1;
+      rightIndex += 1;
+    }
+  }
+  if (leftIndex < left.length || rightIndex < right.length) edits += 1;
+  return edits > 1 ? 2 : edits;
 }
 
 function parseComparison(content: string): ContentVerificationComparison {
