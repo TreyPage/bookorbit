@@ -14331,7 +14331,6 @@
       "contentVerification": {
         "title": "Content Verification",
         "description": "Compare ebook title pages and audiobook opening narration against BookOrbit metadata. Verification is read-only.",
-        "backToIntegrity": "Back to Library Integrity",
         "refresh": "Refresh",
         "loading": "Loading supported book files…",
         "empty": "No EPUB ebooks or supported audiobook files were found in accessible libraries.",
@@ -14370,11 +14369,6 @@
           "confirmMismatch": "Confirm mismatch",
           "falsePositive": "False positive",
           "needsRecheck": "Needs another check",
-          "success": {
-            "confirmed_mismatch": "Mismatch confirmed. The finding is now available in Reviewed.",
-            "false_positive": "Marked as a false positive. The finding is now available in Reviewed.",
-            "needs_recheck": "Verification queued for another check."
-          },
           "status": {
             "confirmed_mismatch": "Confirmed mismatch",
             "false_positive": "False positive",
