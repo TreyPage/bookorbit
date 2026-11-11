@@ -88,16 +88,21 @@ describe('ContentVerificationService', () => {
 
   it('allows a human to resolve an inconclusive result as a mismatch or false positive', async () => {
     repository.findResultForFile.mockResolvedValue({ fileHash: 'abc123', status: 'inconclusive' });
-    repository.updateReview.mockResolvedValue({ fileHash: 'abc123', reviewStatus: 'false_positive' });
+    repository.updateReview.mockResolvedValue({ fileHash: 'abc123', reviewStatus: 'confirmed_mismatch' });
 
+    await expect(service.reviewFile({ id: 10 } as never, 7, 'confirmed_mismatch')).resolves.toMatchObject({
+      reviewStatus: 'confirmed_mismatch',
+    });
+
+    expect(repository.updateReview).toHaveBeenLastCalledWith(
+      7,
+      expect.objectContaining({ reviewStatus: 'confirmed_mismatch', reviewedBy: 10 }),
+    );
+
+    repository.updateReview.mockResolvedValue({ fileHash: 'abc123', reviewStatus: 'false_positive' });
     await expect(service.reviewFile({ id: 10 } as never, 7, 'false_positive')).resolves.toMatchObject({
       reviewStatus: 'false_positive',
     });
-
-    expect(repository.updateReview).toHaveBeenCalledWith(
-      7,
-      expect.objectContaining({ reviewStatus: 'false_positive', reviewedBy: 10 }),
-    );
   });
 
   it('does not allow review when the verification result does not exist', async () => {
