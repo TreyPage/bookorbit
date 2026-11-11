@@ -684,6 +684,12 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: () => t('titles.libraryIntegrity') },
           },
           {
+            path: 'library-integrity/content-verification',
+            name: 'tools-library-integrity-content-verification',
+            component: () => import('@/features/tools/library-integrity/views/ContentVerificationView.vue'),
+            meta: { title: () => t('tools.libraryIntegrity.contentVerification.title') },
+          },
+          {
             path: 'library-integrity/series-cleanup',
             name: 'tools-library-integrity-series-cleanup',
             component: () => import('@/features/tools/library-integrity/views/SeriesCleanupView.vue'),

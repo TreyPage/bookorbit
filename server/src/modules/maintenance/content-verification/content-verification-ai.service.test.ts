@@ -70,6 +70,67 @@ describe('ContentVerificationAiService', () => {
     timeoutSpy.mockRestore();
   });
 
+  it('overrides a model match when the extracted title and author contradict the expected identity', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                status: 'match',
+                detectedTitle: 'An End to All Tales',
+                detectedAuthor: 'Andrew Cyple',
+                confidence: 0.98,
+                evidence: 'An End to All Tales by Andrew Cyple',
+                explanation: 'The series name matches.',
+              }),
+            },
+          }],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await expect(service.compare({
+      expectedTitle: 'An End to All Tails',
+      expectedAuthors: ['Andrew Seiple'],
+      source: 'ebook',
+      evidence: [{ label: 'title page', text: 'An End to All Tales by Andrew Cyple' }],
+    })).resolves.toMatchObject({
+      status: 'mismatch',
+      explanation: expect.stringContaining('Bibliographic identity mismatch'),
+    });
+  });
+
+  it('does not treat a shared series label as a substitute for the expected book title', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                status: 'match',
+                detectedTitle: 'Air of Novron',
+                detectedAuthor: 'Michael J. Sullivan',
+                confidence: 0.98,
+                evidence: 'Air of Novron by Michael J. Sullivan',
+                explanation: 'The series name matches.',
+              }),
+            },
+          }],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await expect(service.compare({
+      expectedTitle: 'Heir of Novron',
+      expectedAuthors: ['Michael J. Sullivan'],
+      source: 'audiobook',
+      evidence: [{ label: 'opening audio', text: 'Air of Novron by Michael J. Sullivan' }],
+    })).resolves.toMatchObject({ status: 'mismatch' });
+  });
+
   it('rejects malformed or out-of-range model confidence', async () => {
     fetchMock.mockResolvedValue(
       new Response(
