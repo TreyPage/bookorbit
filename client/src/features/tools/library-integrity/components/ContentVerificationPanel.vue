@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,8 @@ const pageSize = 25
 const filter = ref<ContentVerificationFilter>('needs_review')
 const loading = ref(false)
 const error = ref(false)
+const errorMessage = ref('')
+const reviewSuccess = ref('')
 const verifyingFileId = ref<number | null>(null)
 const jobStatus = ref<ContentVerificationJobStatus | null>(null)
 const startingBatch = ref(false)
@@ -75,11 +78,13 @@ async function startBatch(): Promise<void> {
 async function verify(item: ContentVerificationEntry): Promise<void> {
   verifyingFileId.value = item.fileId
   error.value = false
+  errorMessage.value = ''
   try {
     await verifyBookFileContent(item.fileId)
     await load()
-  } catch {
+  } catch (cause) {
     error.value = true
+    errorMessage.value = cause instanceof Error ? cause.message : t('tools.libraryIntegrity.contentVerification.failed')
   } finally {
     verifyingFileId.value = null
   }
@@ -88,11 +93,15 @@ async function verify(item: ContentVerificationEntry): Promise<void> {
 async function review(item: ContentVerificationEntry, decision: ContentVerificationReviewStatus): Promise<void> {
   reviewingFileId.value = item.fileId
   error.value = false
+  errorMessage.value = ''
+  reviewSuccess.value = ''
   try {
     await reviewBookFileContent(item.fileId, decision, reviewNotes.value[item.fileId])
+    reviewSuccess.value = t(`tools.libraryIntegrity.contentVerification.review.success.${decision}`)
     await load()
-  } catch {
+  } catch (cause) {
     error.value = true
+    errorMessage.value = cause instanceof Error ? cause.message : t('tools.libraryIntegrity.contentVerification.failed')
   } finally {
     reviewingFileId.value = null
   }
@@ -188,8 +197,11 @@ onUnmounted(() => {
       <p v-if="jobStatus.lastError" class="text-destructive">{{ jobStatus.lastError }}</p>
     </div>
 
-    <p v-if="error" class="text-sm text-destructive">
-      {{ t('tools.libraryIntegrity.contentVerification.failed') }}
+    <p v-if="reviewSuccess" role="status" aria-live="polite" class="text-sm font-medium text-emerald-600">
+      {{ reviewSuccess }}
+    </p>
+    <p v-if="error" role="alert" class="text-sm text-destructive">
+      {{ errorMessage || t('tools.libraryIntegrity.contentVerification.failed') }}
     </p>
     <p v-else-if="loading && items.length === 0" class="text-sm text-muted-foreground">
       {{ t('tools.libraryIntegrity.contentVerification.loading') }}
@@ -206,7 +218,12 @@ onUnmounted(() => {
       <div v-for="item in items" :key="item.fileId" class="flex flex-wrap items-center justify-between gap-3 py-3">
         <div class="min-w-0 flex-1 space-y-1">
           <p class="truncate text-sm font-medium text-foreground">
-            {{ item.title || t('tools.libraryIntegrity.contentVerification.untitled') }}
+            <RouterLink
+              :to="{ name: 'book-detail', params: { bookId: item.bookId } }"
+              class="underline decoration-muted-foreground/40 underline-offset-2 hover:text-primary"
+            >
+              {{ item.title || t('tools.libraryIntegrity.contentVerification.untitled') }}
+            </RouterLink>
           </p>
           <p class="text-xs text-muted-foreground">
             {{ (item.format || '').toUpperCase() }} · {{ statusLabel(item) }}
@@ -244,7 +261,7 @@ onUnmounted(() => {
               class="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs"
             />
             <div class="flex flex-wrap gap-2">
-              <template v-if="item.status === 'mismatch'">
+              <template v-if="item.status === 'mismatch' || item.status === 'inconclusive'">
                 <Button size="sm" variant="outline" :disabled="item.stale || reviewingFileId !== null" @click="review(item, 'confirmed_mismatch')">
                   {{ t('tools.libraryIntegrity.contentVerification.review.confirmMismatch') }}
                 </Button>
