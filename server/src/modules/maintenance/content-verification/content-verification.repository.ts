@@ -225,6 +225,7 @@ export class ContentVerificationRepository {
         fileHash: bookFiles.fileHash,
         title: bookMetadata.title,
         verificationStatus: bookContentVerifications.status,
+        verificationFileHash: bookContentVerifications.fileHash,
         reviewStatus: bookContentVerifications.reviewStatus,
       })
       .from(bookFiles)
