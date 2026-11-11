@@ -462,11 +462,7 @@ export class ContentVerificationService {
     // format using the destination book's metadata; never rewrite the destination's sibling files.
     let embeddedMetadataWrite: Awaited<ReturnType<FileWriteService['writeMetadataToFile']>>;
     try {
-      embeddedMetadataWrite = await this.fileWriteService.writeMetadataToFile(
-        correctionResult.destinationBookId,
-        fileId,
-        user.id,
-      );
+      embeddedMetadataWrite = await this.fileWriteService.writeMetadataToFile(correctionResult.destinationBookId, fileId, user.id);
     } catch (error) {
       embeddedMetadataWrite = {
         status: 'failed',

@@ -52,7 +52,9 @@ describe('ContentVerificationService', () => {
   const config = { get: vi.fn().mockReturnValue('qwen3.5:4b') };
   const fileLock = { withLock: vi.fn((_key: string, operation: () => Promise<unknown>) => operation()) };
   const selfWriteRegistry = { track: vi.fn((_paths: string[], operation: () => Promise<unknown>) => operation()) };
-  const fileWriteService = { writeMetadataToFile: vi.fn().mockResolvedValue({ status: 'success', fieldsWritten: ['title', 'authors'], durationMs: 5 }) };
+  const fileWriteService = {
+    writeMetadataToFile: vi.fn().mockResolvedValue({ status: 'success', fieldsWritten: ['title', 'authors'], durationMs: 5 }),
+  };
   let service: ContentVerificationService;
 
   beforeEach(() => {

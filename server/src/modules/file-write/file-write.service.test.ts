@@ -147,12 +147,26 @@ describe('FileWriteService', () => {
     it('writes only the selected content file and refreshes its stored hash', async () => {
       const { service, fileWriteRepo, writer } = makeService();
       const target = {
-        id: 7, absolutePath: '/books/Corrected.epub', format: 'epub', sizeBytes: 1024,
-        fileHash: 'old-hash', role: 'content', sortOrder: null, mediaOverlayAvailable: false, libraryId: 2,
+        id: 7,
+        absolutePath: '/books/Corrected.epub',
+        format: 'epub',
+        sizeBytes: 1024,
+        fileHash: 'old-hash',
+        role: 'content',
+        sortOrder: null,
+        mediaOverlayAvailable: false,
+        libraryId: 2,
       };
       const sibling = {
-        id: 8, absolutePath: '/books/Original.m4b', format: 'm4b', sizeBytes: 2048,
-        fileHash: 'sibling-hash', role: 'content', sortOrder: null, mediaOverlayAvailable: false, libraryId: 2,
+        id: 8,
+        absolutePath: '/books/Original.m4b',
+        format: 'm4b',
+        sizeBytes: 2048,
+        fileHash: 'sibling-hash',
+        role: 'content',
+        sortOrder: null,
+        mediaOverlayAvailable: false,
+        libraryId: 2,
       };
       fileWriteRepo.findFilesForBook.mockResolvedValue([target, sibling]);
       fileWriteRepo.findPrimaryFileForBook.mockResolvedValue({ ...target, fileWriteAllFiles: false });
@@ -183,10 +197,19 @@ describe('FileWriteService', () => {
 
     it('does not write when file metadata write-back is disabled for the library', async () => {
       const { service, fileWriteRepo, writer } = makeService();
-      fileWriteRepo.findFilesForBook.mockResolvedValue([{
-        id: 7, absolutePath: '/books/Corrected.epub', format: 'epub', sizeBytes: 1024,
-        fileHash: 'old-hash', role: 'content', sortOrder: null, mediaOverlayAvailable: false, libraryId: 2,
-      }]);
+      fileWriteRepo.findFilesForBook.mockResolvedValue([
+        {
+          id: 7,
+          absolutePath: '/books/Corrected.epub',
+          format: 'epub',
+          sizeBytes: 1024,
+          fileHash: 'old-hash',
+          role: 'content',
+          sortOrder: null,
+          mediaOverlayAvailable: false,
+          libraryId: 2,
+        },
+      ]);
       fileWriteRepo.findLibraryFileWriteConfig.mockResolvedValue({ ...DEFAULT_LIB_CONFIG, fileWriteEnabled: false });
 
       await expect(service.writeMetadataToFile(91, 7, 10)).resolves.toMatchObject({ status: 'skipped', reason: 'disabled' });
