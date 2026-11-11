@@ -197,6 +197,7 @@ describe('ContentVerificationService', () => {
         role: 'content',
         reviewStatus: 'confirmed_mismatch',
         fileHash: 'abc123',
+        verificationFileHash: 'abc123',
         absolutePath: '/tmp/bookorbit-correction-test/Original/Part 1.m4b',
         format: 'm4b',
         organizationMode: 'book_per_folder',
