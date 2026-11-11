@@ -128,7 +128,6 @@ async function review(item: ContentVerificationEntry, decision: ContentVerificat
   }
 }
 
-
 function openCorrection(item: ContentVerificationEntry): void {
   correctionSearchGeneration += 1
   searchingCorrectionTargets.value = false
@@ -177,9 +176,10 @@ async function searchCorrectionTargets(fileId: number, query: string): Promise<v
   } catch (cause) {
     if (generation === correctionSearchGeneration) {
       error.value = true
-      errorMessage.value = cause instanceof Error && !cause.message.startsWith('content_verification_correction_')
-        ? cause.message
-        : t('tools.libraryIntegrity.contentVerification.correction.searchFailed')
+      errorMessage.value =
+        cause instanceof Error && !cause.message.startsWith('content_verification_correction_')
+          ? cause.message
+          : t('tools.libraryIntegrity.contentVerification.correction.searchFailed')
     }
   } finally {
     if (generation === correctionSearchGeneration) searchingCorrectionTargets.value = false
@@ -232,9 +232,10 @@ async function previewCorrection(item: ContentVerificationEntry): Promise<void> 
     correctionPreview.value = await previewContentVerificationCorrection(item.fileId, input)
   } catch (cause) {
     error.value = true
-    errorMessage.value = cause instanceof Error && !cause.message.startsWith('content_verification_correction_')
-      ? cause.message
-      : t('tools.libraryIntegrity.contentVerification.correction.previewFailed')
+    errorMessage.value =
+      cause instanceof Error && !cause.message.startsWith('content_verification_correction_')
+        ? cause.message
+        : t('tools.libraryIntegrity.contentVerification.correction.previewFailed')
   } finally {
     previewingCorrection.value = false
   }
@@ -256,9 +257,10 @@ async function applyCorrection(item: ContentVerificationEntry): Promise<void> {
     await load()
   } catch (cause) {
     error.value = true
-    errorMessage.value = cause instanceof Error && !cause.message.startsWith('content_verification_correction_')
-      ? cause.message
-      : t('tools.libraryIntegrity.contentVerification.correction.failed')
+    errorMessage.value =
+      cause instanceof Error && !cause.message.startsWith('content_verification_correction_')
+        ? cause.message
+        : t('tools.libraryIntegrity.contentVerification.correction.failed')
   } finally {
     executingCorrection.value = false
   }
@@ -561,7 +563,8 @@ onUnmounted(() => {
                 {{ t('tools.libraryIntegrity.contentVerification.correction.previewReady', { title: correctionPreview.destinationTitle }) }}
               </p>
               <p class="text-xs text-muted-foreground">
-                {{ correctionPreview.sourceBookTitle || t('tools.libraryIntegrity.contentVerification.untitled') }} → {{ correctionPreview.destinationTitle }}
+                {{ correctionPreview.sourceBookTitle || t('tools.libraryIntegrity.contentVerification.untitled') }} →
+                {{ correctionPreview.destinationTitle }}
               </p>
               <div class="space-y-1 text-xs">
                 <p class="text-muted-foreground">{{ t('tools.libraryIntegrity.contentVerification.correction.from') }}</p>

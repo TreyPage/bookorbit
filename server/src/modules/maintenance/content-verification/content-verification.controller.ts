@@ -59,11 +59,7 @@ export class ContentVerificationController {
 
   @Get(':fileId/correction/targets')
   @RequirePermission(Permission.LibraryDownload)
-  searchCorrectionTargets(
-    @Param('fileId', ParseIntPipe) fileId: number,
-    @Query('q') query: string | undefined,
-    @CurrentUser() user: RequestUser,
-  ) {
+  searchCorrectionTargets(@Param('fileId', ParseIntPipe) fileId: number, @Query('q') query: string | undefined, @CurrentUser() user: RequestUser) {
     return this.service.searchCorrectionTargets(user, fileId, query);
   }
 

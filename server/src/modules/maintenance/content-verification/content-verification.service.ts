@@ -78,7 +78,6 @@ export class ContentVerificationService {
     });
   }
 
-
   async previewCorrection(
     user: RequestUser,
     fileId: number,
@@ -108,10 +107,11 @@ export class ContentVerificationService {
       const normalized = value
         .normalize('NFKC')
         .replace(/[/:*?"<>|]/g, '-')
-        .replace(/\\\\/g, '-')
-        .replace(/\\p{Cc}/gu, '-')
+        .replace(/\\/g, '-')
+        .replace(/\p{Cc}/gu, '-')
         .replace(/[. ]+$/g, '')
         .trim();
+
       let sanitized = '';
       for (const character of normalized) {
         if (Buffer.byteLength(sanitized + character, 'utf8') > maxBytes) break;
@@ -218,8 +218,6 @@ export class ContentVerificationService {
     };
   }
 
-
-
   async searchCorrectionTargets(user: RequestUser, fileId: number, query = '') {
     const libraryIds = await this.libraryService.findEditableLibraryIds(user);
     const targets = await this.repository.findCorrectionTargets(fileId, libraryIds, query.slice(0, 200));
@@ -246,204 +244,216 @@ export class ContentVerificationService {
     };
 
     return withBookLocks(0, () =>
-      withPathLocks(0, () => this.fileLock.withLock(`content-verification-file:${fileId}`, async () => {
-        const preview = await this.previewCorrection(user, fileId, input);
-        if (preview.sourceBookId !== initialPreview.sourceBookId || preview.destinationPath !== initialPreview.destinationPath) {
-          throw new BadRequestException('The source book changed while preparing this correction; preview it again');
-        }
-        const libraryIds = await this.libraryService.findEditableLibraryIds(user);
-        const context = await this.repository.findCorrectionContext(fileId, libraryIds, input.targetBookId);
-        if (!context || context.source.absolutePath !== preview.sourcePath) {
-          throw new BadRequestException('The source file changed while preparing this correction; preview it again');
-        }
-        const rootRealPath = await realpath(context.source.libraryFolderPath);
-        const sourceRealPath = await realpath(preview.sourcePath);
-        const destinationParentPath =
-          input.targetType === 'new_book' && context.source.organizationMode === 'book_per_folder'
-            ? dirname(preview.destinationFolderPath)
-            : dirname(preview.destinationPath);
-        const destinationParentRealPath = await realpath(destinationParentPath);
-        const isInsideLibrary = (candidate: string) => {
-          const relativePath = relative(rootRealPath, candidate);
-          return relativePath === '' || (relativePath !== '..' && !relativePath.startsWith(`..${sep}`) && !isAbsolute(relativePath));
-        };
-        if (!isInsideLibrary(sourceRealPath) || !isInsideLibrary(destinationParentRealPath)) {
-          throw new BadRequestException('The source or destination resolves outside the library folder');
-        }
-        const sourceHash = await computeFileHash(preview.sourcePath);
-        if (sourceHash !== context.source.fileHash || sourceHash !== context.source.verificationFileHash) {
-          throw new BadRequestException('The source file changed after verification; run content verification again');
-        }
-
-        const sourcePath = preview.sourcePath;
-        const destinationPath = preview.destinationPath;
-        const samePath = resolve(sourcePath) === resolve(destinationPath);
-        const stagingPath = samePath ? null : join(dirname(destinationPath), `.bookorbit-correction-${fileId}-${randomUUID()}.tmp`);
-        const watchedPaths = [sourcePath, destinationPath, ...(stagingPath ? [stagingPath] : []), dirname(sourcePath), dirname(destinationPath)];
-        return this.selfWriteRegistry.track(watchedPaths, async () => {
-          let createdDestinationFolder = false;
-          if (samePath) {
-            // The file is already named and located correctly; only its book association changes.
-          } else if (input.targetType === 'new_book' && context.source.organizationMode === 'book_per_folder') {
-            await mkdir(preview.destinationFolderPath);
-            createdDestinationFolder = true;
-          } else {
-            await mkdir(dirname(destinationPath), { recursive: true });
+      withPathLocks(0, () =>
+        this.fileLock.withLock(`content-verification-file:${fileId}`, async () => {
+          const preview = await this.previewCorrection(user, fileId, input);
+          if (preview.sourceBookId !== initialPreview.sourceBookId || preview.destinationPath !== initialPreview.destinationPath) {
+            throw new BadRequestException('The source book changed while preparing this correction; preview it again');
           }
-          let stagingCreated = false;
-          let destinationCreated = false;
-          let databaseCommitted = false;
-          let preserveStagedFile = false;
-          const fallbackLinkErrors = new Set(['EXDEV', 'EPERM', 'EACCES', 'ENOTSUP', 'EOPNOTSUPP']);
+          const libraryIds = await this.libraryService.findEditableLibraryIds(user);
+          const context = await this.repository.findCorrectionContext(fileId, libraryIds, input.targetBookId);
+          if (!context || context.source.absolutePath !== preview.sourcePath) {
+            throw new BadRequestException('The source file changed while preparing this correction; preview it again');
+          }
+          const rootRealPath = await realpath(context.source.libraryFolderPath);
+          const sourceRealPath = await realpath(preview.sourcePath);
+          const destinationParentPath =
+            input.targetType === 'new_book' && context.source.organizationMode === 'book_per_folder'
+              ? dirname(preview.destinationFolderPath)
+              : dirname(preview.destinationPath);
+          const destinationParentRealPath = await realpath(destinationParentPath);
+          const isInsideLibrary = (candidate: string) => {
+            const relativePath = relative(rootRealPath, candidate);
+            return relativePath === '' || (relativePath !== '..' && !relativePath.startsWith(`..${sep}`) && !isAbsolute(relativePath));
+          };
+          if (!isInsideLibrary(sourceRealPath) || !isInsideLibrary(destinationParentRealPath)) {
+            throw new BadRequestException('The source or destination resolves outside the library folder');
+          }
+          const sourceHash = await computeFileHash(preview.sourcePath);
+          if (sourceHash !== context.source.fileHash || sourceHash !== context.source.verificationFileHash) {
+            throw new BadRequestException('The source file changed after verification; run content verification again');
+          }
 
-          try {
-            if (!samePath && stagingPath) {
-              try {
-                await link(sourcePath, stagingPath);
-                stagingCreated = true;
-              } catch (error) {
-                const code = (error as NodeJS.ErrnoException).code;
-                if (!code || !fallbackLinkErrors.has(code)) throw error;
-                await copyFile(sourcePath, stagingPath, fsConstants.COPYFILE_EXCL);
-                stagingCreated = true;
-              }
-
-              const stagedHash = await computeFileHash(stagingPath);
-              if (stagedHash !== sourceHash) throw new Error('The staged file did not retain its verified content hash');
-
-              try {
-                await link(stagingPath, destinationPath);
-                destinationCreated = true;
-              } catch (error) {
-                const code = (error as NodeJS.ErrnoException).code;
-                if (!code || !fallbackLinkErrors.has(code)) throw error;
-                await copyFile(stagingPath, destinationPath, fsConstants.COPYFILE_EXCL);
-                destinationCreated = true;
-              }
-
-              await unlink(stagingPath);
-              stagingCreated = false;
+          const sourcePath = preview.sourcePath;
+          const destinationPath = preview.destinationPath;
+          const samePath = resolve(sourcePath) === resolve(destinationPath);
+          const stagingPath = samePath ? null : join(dirname(destinationPath), `.bookorbit-correction-${fileId}-${randomUUID()}.tmp`);
+          const watchedPaths = [sourcePath, destinationPath, ...(stagingPath ? [stagingPath] : []), dirname(sourcePath), dirname(destinationPath)];
+          return this.selfWriteRegistry.track(watchedPaths, async () => {
+            let createdDestinationFolder = false;
+            if (samePath) {
+              // The file is already named and located correctly; only its book association changes.
+            } else if (input.targetType === 'new_book' && context.source.organizationMode === 'book_per_folder') {
+              await mkdir(preview.destinationFolderPath);
+              createdDestinationFolder = true;
+            } else {
+              await mkdir(dirname(destinationPath), { recursive: true });
             }
+            let stagingCreated = false;
+            let destinationCreated = false;
+            let databaseCommitted = false;
+            let preserveStagedFile = false;
+            const fallbackLinkErrors = new Set(['EXDEV', 'EPERM', 'EACCES', 'ENOTSUP', 'EOPNOTSUPP']);
 
-            const destinationStats = await stat(destinationPath, { bigint: true });
-            const destinationHash = await computeFileHash(destinationPath);
-            if (destinationHash !== sourceHash) throw new Error('The moved file did not retain its verified content hash');
-
-            let result: {
-              fileId: number;
-              sourceBookId: number;
-              destinationBookId: number;
-              targetType: 'existing_book' | 'new_book';
-            };
             try {
-              result = await this.repository.applyFileCorrection({
-                fileId,
-                sourceBookId: preview.sourceBookId,
-                targetBookId: preview.destinationBookId ?? undefined,
-                targetType: input.targetType,
-                destinationPath,
-                destinationFolderPath: preview.destinationFolderPath,
-                targetBookFolderPath: context.target?.folderPath,
-                destinationRelPath: relative(context.source.libraryFolderPath, destinationPath),
-                sourcePath,
-                sourceHash,
-                format: preview.fileFormat,
-                reviewedBy: user.id,
-                fileStats: {
-                  ino: destinationStats.ino,
-                  sizeBytes: Number(destinationStats.size),
-                  mtime: destinationStats.mtime,
-                },
-                title: input.title,
-                author: input.author,
-              });
-              databaseCommitted = true;
-            } catch (databaseError) {
-              let persistedLocation: Awaited<ReturnType<ContentVerificationRepository['findCorrectionFileLocation']>>;
-              try {
-                persistedLocation = await this.repository.findCorrectionFileLocation(fileId);
-              } catch {
-                preserveStagedFile = true;
-                throw new Error(
-                  'The database outcome is uncertain. Both the original file "' + sourcePath + '" and staged file "' + destinationPath + '" have been retained for safety.',
-                  { cause: databaseError },
-                );
+              if (!samePath && stagingPath) {
+                try {
+                  await link(sourcePath, stagingPath);
+                  stagingCreated = true;
+                } catch (error) {
+                  const code = (error as NodeJS.ErrnoException).code;
+                  if (!code || !fallbackLinkErrors.has(code)) throw error;
+                  await copyFile(sourcePath, stagingPath, fsConstants.COPYFILE_EXCL);
+                  stagingCreated = true;
+                }
+
+                const stagedHash = await computeFileHash(stagingPath);
+                if (stagedHash !== sourceHash) throw new Error('The staged file did not retain its verified content hash');
+
+                try {
+                  await link(stagingPath, destinationPath);
+                  destinationCreated = true;
+                } catch (error) {
+                  const code = (error as NodeJS.ErrnoException).code;
+                  if (!code || !fallbackLinkErrors.has(code)) throw error;
+                  await copyFile(stagingPath, destinationPath, fsConstants.COPYFILE_EXCL);
+                  destinationCreated = true;
+                }
+
+                await unlink(stagingPath);
+                stagingCreated = false;
               }
 
-              const persistedAtDestination = Boolean(
-                persistedLocation &&
+              const destinationStats = await stat(destinationPath, { bigint: true });
+              const destinationHash = await computeFileHash(destinationPath);
+              if (destinationHash !== sourceHash) throw new Error('The moved file did not retain its verified content hash');
+
+              let result: {
+                fileId: number;
+                sourceBookId: number;
+                destinationBookId: number;
+                targetType: 'existing_book' | 'new_book';
+              };
+              try {
+                result = await this.repository.applyFileCorrection({
+                  fileId,
+                  sourceBookId: preview.sourceBookId,
+                  targetBookId: preview.destinationBookId ?? undefined,
+                  targetType: input.targetType,
+                  destinationPath,
+                  destinationFolderPath: preview.destinationFolderPath,
+                  targetBookFolderPath: context.target?.folderPath,
+                  destinationRelPath: relative(context.source.libraryFolderPath, destinationPath),
+                  sourcePath,
+                  sourceHash,
+                  format: preview.fileFormat,
+                  reviewedBy: user.id,
+                  fileStats: {
+                    ino: destinationStats.ino,
+                    sizeBytes: Number(destinationStats.size),
+                    mtime: destinationStats.mtime,
+                  },
+                  title: input.title,
+                  author: input.author,
+                });
+                databaseCommitted = true;
+              } catch (databaseError) {
+                let persistedLocation: Awaited<ReturnType<ContentVerificationRepository['findCorrectionFileLocation']>>;
+                try {
+                  persistedLocation = await this.repository.findCorrectionFileLocation(fileId);
+                } catch {
+                  preserveStagedFile = true;
+                  throw new Error(
+                    'The database outcome is uncertain. Both the original file "' +
+                      sourcePath +
+                      '" and staged file "' +
+                      destinationPath +
+                      '" have been retained for safety.',
+                    { cause: databaseError },
+                  );
+                }
+
+                const persistedAtDestination = Boolean(
+                  persistedLocation &&
                   persistedLocation.absolutePath === destinationPath &&
                   (input.targetType === 'new_book'
                     ? persistedLocation.bookId !== preview.sourceBookId
                     : persistedLocation.bookId === preview.destinationBookId),
-              );
-              if (persistedAtDestination) {
-                databaseCommitted = true;
-                result = {
-                  fileId,
-                  sourceBookId: preview.sourceBookId,
-                  destinationBookId: persistedLocation.bookId,
-                  targetType: input.targetType,
-                };
-              } else if (persistedLocation && persistedLocation.absolutePath === sourcePath && persistedLocation.bookId === preview.sourceBookId) {
-                throw databaseError;
-              } else {
-                preserveStagedFile = true;
-                throw new Error(
-                  'The database outcome is uncertain. Both the original file "' + sourcePath + '" and staged file "' + destinationPath + '" have been retained for safety.',
-                  { cause: databaseError },
                 );
-              }
-            }
-
-            let sourceCleanupPending = false;
-            if (!samePath) {
-              try {
-                await unlink(sourcePath);
-              } catch (cleanupError) {
-                if ((cleanupError as NodeJS.ErrnoException).code !== 'ENOENT') sourceCleanupPending = true;
-              }
-            }
-
-            return {
-              ...result,
-              previousPath: sourcePath,
-              currentPath: destinationPath,
-              verificationEvidencePreserved: true,
-              verificationRequiresRecheck: true,
-              sourceCleanupPending,
-              requiresRescan: false,
-            };
-          } catch (error) {
-            if (!databaseCommitted && !preserveStagedFile && stagingCreated && stagingPath) {
-              try {
-                await unlink(stagingPath);
-              } catch (cleanupError) {
-                if ((cleanupError as NodeJS.ErrnoException).code !== 'ENOENT') preserveStagedFile = true;
-              }
-            }
-            if (destinationCreated && !databaseCommitted && !preserveStagedFile) {
-              try {
-                await unlink(destinationPath);
-              } catch (cleanupError) {
-                if ((cleanupError as NodeJS.ErrnoException).code !== 'ENOENT') {
+                if (persistedAtDestination) {
+                  databaseCommitted = true;
+                  result = {
+                    fileId,
+                    sourceBookId: preview.sourceBookId,
+                    destinationBookId: persistedLocation.bookId,
+                    targetType: input.targetType,
+                  };
+                } else if (persistedLocation && persistedLocation.absolutePath === sourcePath && persistedLocation.bookId === preview.sourceBookId) {
+                  throw databaseError;
+                } else {
                   preserveStagedFile = true;
+                  throw new Error(
+                    'The database outcome is uncertain. Both the original file "' +
+                      sourcePath +
+                      '" and staged file "' +
+                      destinationPath +
+                      '" have been retained for safety.',
+                    { cause: databaseError },
+                  );
                 }
               }
+
+              let sourceCleanupPending = false;
+              if (!samePath) {
+                try {
+                  await unlink(sourcePath);
+                } catch (cleanupError) {
+                  if ((cleanupError as NodeJS.ErrnoException).code !== 'ENOENT') sourceCleanupPending = true;
+                }
+              }
+
+              return {
+                ...result,
+                previousPath: sourcePath,
+                currentPath: destinationPath,
+                verificationEvidencePreserved: true,
+                verificationRequiresRecheck: true,
+                sourceCleanupPending,
+                requiresRescan: false,
+              };
+            } catch (error) {
+              if (!databaseCommitted && !preserveStagedFile && stagingCreated && stagingPath) {
+                try {
+                  await unlink(stagingPath);
+                } catch (cleanupError) {
+                  if ((cleanupError as NodeJS.ErrnoException).code !== 'ENOENT') preserveStagedFile = true;
+                }
+              }
+              if (destinationCreated && !databaseCommitted && !preserveStagedFile) {
+                try {
+                  await unlink(destinationPath);
+                } catch (cleanupError) {
+                  if ((cleanupError as NodeJS.ErrnoException).code !== 'ENOENT') {
+                    preserveStagedFile = true;
+                  }
+                }
+              }
+              if (createdDestinationFolder && !preserveStagedFile) {
+                await rmdir(preview.destinationFolderPath).catch(() => undefined);
+              }
+              if (preserveStagedFile) {
+                throw new Error(
+                  'Correction did not complete cleanly. The original file remains at "' +
+                    sourcePath +
+                    '" and a temporary or destination file may remain. Inspect the destination folder before retrying.',
+                  { cause: error },
+                );
+              }
+              throw error;
             }
-            if (createdDestinationFolder && !preserveStagedFile) {
-              await rmdir(preview.destinationFolderPath).catch(() => undefined);
-            }
-            if (preserveStagedFile) {
-              throw new Error(
-                'Correction did not complete cleanly. The original file remains at "' + sourcePath + '" and a temporary or destination file may remain. Inspect the destination folder before retrying.',
-                { cause: error },
-              );
-            }
-            throw error;
-          }
-        });
-      })),
+          });
+        }),
+      ),
     );
   }
 

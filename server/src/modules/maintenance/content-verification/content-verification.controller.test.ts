@@ -36,8 +36,6 @@ describe('ContentVerificationController', () => {
     expect(service.previewCorrection).toHaveBeenCalledWith(user, 44, dto);
   });
 
-
-
   it('delegates correction destination search with the current user', async () => {
     const targets = [{ bookId: 88, title: 'The New Book' }];
     const service = { searchCorrectionTargets: vi.fn().mockResolvedValue(targets) };

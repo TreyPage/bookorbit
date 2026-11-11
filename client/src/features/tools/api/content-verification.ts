@@ -30,7 +30,6 @@ export interface ContentVerificationEntry {
   stale: boolean
 }
 
-
 export interface ContentVerificationCorrectionTarget {
   bookId: number
   title: string | null
@@ -61,10 +60,7 @@ export interface ContentVerificationCorrectionPreview {
   executionAvailable: boolean
 }
 
-export async function searchContentVerificationCorrectionTargets(
-  fileId: number,
-  query: string,
-): Promise<ContentVerificationCorrectionTarget[]> {
+export async function searchContentVerificationCorrectionTargets(fileId: number, query: string): Promise<ContentVerificationCorrectionTarget[]> {
   const params = new URLSearchParams({ q: query })
   const response = await api(`/api/v1/maintenance/content-verification/${fileId}/correction/targets?${params.toString()}`)
   if (!response.ok) {

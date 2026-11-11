@@ -246,10 +246,19 @@ export class ContentVerificationRepository {
       .where(eq(bookFiles.bookId, source.bookId));
     const contentFileCount = sourceFiles.filter((file) => file.role === 'content').length;
     const audioContentCount = sourceFiles.filter(
-      (file) => file.role === 'content' && ['m4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav'].includes((file.format || extname(file.absolutePath).slice(1)).toLowerCase()),
+      (file) =>
+        file.role === 'content' &&
+        ['m4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav'].includes((file.format || extname(file.absolutePath).slice(1)).toLowerCase()),
     ).length;
 
-    let target: null | { bookId: number; libraryId: number; libraryFolderId: number; folderPath: string; destinationFolderPath: string; title: string | null } = null;
+    let target: null | {
+      bookId: number;
+      libraryId: number;
+      libraryFolderId: number;
+      folderPath: string;
+      destinationFolderPath: string;
+      title: string | null;
+    } = null;
     let targetFormatCount = 0;
     const sourceFormat = (source.format || extname(source.absolutePath).slice(1)).toLowerCase();
     if (targetBookId !== undefined) {
@@ -284,9 +293,6 @@ export class ContentVerificationRepository {
 
     return { source, contentFileCount, audioContentCount, target, targetFormatCount };
   }
-
-
-
 
   async isBookFolderPathTaken(libraryId: number, folderPath: string): Promise<boolean> {
     const [existing] = await this.db
@@ -330,7 +336,6 @@ export class ContentVerificationRepository {
       .orderBy(asc(bookMetadata.title), asc(books.id))
       .limit(20);
   }
-
 
   async findCorrectionFileLocation(fileId: number) {
     const [file] = await this.db
@@ -382,16 +387,27 @@ export class ContentVerificationRepository {
       if (!source || source.status !== 'present') throw new Error('Source book no longer exists or is no longer present');
 
       const [file] = await tx
-        .select({ id: bookFiles.id, bookId: bookFiles.bookId, libraryFolderId: bookFiles.libraryFolderId, role: bookFiles.role, format: bookFiles.format, absolutePath: bookFiles.absolutePath, fileHash: bookFiles.fileHash })
+        .select({
+          id: bookFiles.id,
+          bookId: bookFiles.bookId,
+          libraryFolderId: bookFiles.libraryFolderId,
+          role: bookFiles.role,
+          format: bookFiles.format,
+          absolutePath: bookFiles.absolutePath,
+          fileHash: bookFiles.fileHash,
+        })
         .from(bookFiles)
         .where(eq(bookFiles.id, input.fileId))
         .for('update')
         .limit(1);
-      if (!file || file.bookId !== source.id ||
+      if (
+        !file ||
+        file.bookId !== source.id ||
         file.libraryFolderId !== source.libraryFolderId ||
         file.role !== 'content' ||
         file.absolutePath !== input.sourcePath ||
-        file.fileHash !== input.sourceHash) {
+        file.fileHash !== input.sourceHash
+      ) {
         throw new Error('Source file changed before correction could be applied');
       }
 
@@ -415,7 +431,14 @@ export class ContentVerificationRepository {
       }
 
       const sourceFilesBefore = await tx
-        .select({ id: bookFiles.id, absolutePath: bookFiles.absolutePath, format: bookFiles.format, role: bookFiles.role, sizeBytes: bookFiles.sizeBytes, mediaOverlayAvailable: bookFiles.mediaOverlayAvailable })
+        .select({
+          id: bookFiles.id,
+          absolutePath: bookFiles.absolutePath,
+          format: bookFiles.format,
+          role: bookFiles.role,
+          sizeBytes: bookFiles.sizeBytes,
+          mediaOverlayAvailable: bookFiles.mediaOverlayAvailable,
+        })
         .from(bookFiles)
         .where(eq(bookFiles.bookId, source.id));
       const remainingFiles = sourceFilesBefore.filter((candidate) => candidate.id !== input.fileId);
@@ -475,10 +498,17 @@ export class ContentVerificationRepository {
         destinationBookId = createdBook.id;
         await tx.insert(bookMetadata).values({ bookId: destinationBookId, title });
         await tx.insert(authors).values({ name: authorName }).onConflictDoNothing();
-        const [authorRow] = await tx.select({ id: authors.id, sortName: authors.sortName }).from(authors).where(sql`lower(${authors.name}) = ${authorName.toLowerCase()}`).limit(1);
+        const [authorRow] = await tx
+          .select({ id: authors.id, sortName: authors.sortName })
+          .from(authors)
+          .where(sql`lower(${authors.name}) = ${authorName.toLowerCase()}`)
+          .limit(1);
         if (!authorRow) throw new Error('Could not resolve the new book author');
         await tx.insert(bookAuthors).values({ bookId: destinationBookId, authorId: authorRow.id, displayOrder: 0 });
-        await tx.update(books).set({ primaryAuthorSortName: authorRow.sortName ?? authorName }).where(eq(books.id, destinationBookId));
+        await tx
+          .update(books)
+          .set({ primaryAuthorSortName: authorRow.sortName ?? authorName })
+          .where(eq(books.id, destinationBookId));
       }
 
       await tx
@@ -506,11 +536,7 @@ export class ContentVerificationRepository {
         })
         .where(eq(bookContentVerifications.bookFileId, input.fileId));
 
-      const [targetPrimary] = await tx
-        .select({ primaryFileId: books.primaryFileId })
-        .from(books)
-        .where(eq(books.id, destinationBookId))
-        .limit(1);
+      const [targetPrimary] = await tx.select({ primaryFileId: books.primaryFileId }).from(books).where(eq(books.id, destinationBookId)).limit(1);
       if (input.targetType === 'new_book') {
         await tx.update(books).set({ primaryFileId: input.fileId, updatedAt: new Date() }).where(eq(books.id, destinationBookId));
       } else if (targetPrimary?.primaryFileId == null) {
@@ -551,6 +577,4 @@ export class ContentVerificationRepository {
       return { fileId: input.fileId, sourceBookId: source.id, destinationBookId, targetType: input.targetType };
     });
   }
-
-
 }
