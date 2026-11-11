@@ -47,6 +47,7 @@ describe('RequestAutomationSettingsService.get', () => {
       [KEYS.IMPORT_FORMATS]: 'preferred',
       [KEYS.AUTO_SEARCH_ENABLED]: 'true',
       [KEYS.AUTO_SEARCH_INTERVAL_HOURS]: '12',
+      [KEYS.AUTO_SEARCH_SWEEP_INTERVAL_MINUTES]: '30',
       [KEYS.AUTO_SEARCH_MAX_AGE_DAYS]: '90',
       [KEYS.STALLED_DOWNLOAD_TIMEOUT_HOURS]: '6',
     });
@@ -58,7 +59,7 @@ describe('RequestAutomationSettingsService.get', () => {
       maxAutoGrabAttempts: 2,
       autoSearchEnabled: true,
       autoSearchIntervalHours: 12,
-      autoSearchSweepIntervalMinutes: 60,
+      autoSearchSweepIntervalMinutes: 30,
       autoSearchMaxAgeDays: 90,
       stalledDownloadTimeoutHours: 6,
       verificationEnabled: false,
