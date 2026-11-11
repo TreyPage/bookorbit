@@ -161,9 +161,6 @@ function sameAuthor(expected: string, detected: string): boolean {
   return detectedAuthors.includes(expectedNormalized);
 }
 
-function parseComparison(content: string): ContentVerificationComparison {');
-}
-
 function parseComparison(content: string): ContentVerificationComparison {
   let value: unknown;
   try {
