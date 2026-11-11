@@ -81,7 +81,9 @@ export class ContentVerificationService {
     if (source.reviewStatus !== 'confirmed_mismatch') {
       throw new BadRequestException('Confirm the content mismatch before preparing a file correction');
     }
-    if (!source.fileHash) throw new BadRequestException('The source file has no current hash; verify it again before correcting it');
+    if (!source.fileHash || source.verificationFileHash !== source.fileHash) {
+      throw new BadRequestException('The verification result is stale; verify the current file again before correcting it');
+    }
     const supported = new Set(['epub', 'm4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav']);
     const extension = extname(source.absolutePath).toLowerCase();
     if (!supported.has(extension.slice(1))) throw new BadRequestException('File correction currently supports EPUB and audiobook formats');
