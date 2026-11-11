@@ -76,7 +76,7 @@ onMounted(loadSchedule)
 
     <div v-if="loading" class="px-4 py-3 text-sm text-muted-foreground">Loading schedule…</div>
     <p v-else-if="loadError" role="alert" class="px-4 text-sm text-destructive">
-      Could not load the schedule. Check that you have library download permission, then refresh this page.
+      Could not load the schedule. Check that you have permission to manage libraries or app settings, then refresh this page.
     </p>
     <form v-else class="space-y-4 px-4 pb-4 md:px-5" @submit.prevent="saveSchedule">
       <label class="flex items-center justify-between gap-4">
