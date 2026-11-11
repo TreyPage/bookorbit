@@ -8,6 +8,7 @@ import { ContentVerificationService } from './content-verification.service';
 import { ContentVerificationSchedulerService } from './content-verification-scheduler.service';
 import { ListContentVerificationDto } from './dto/list-content-verification.dto';
 import { ReviewContentVerificationDto } from './dto/review-content-verification.dto';
+import { PreviewContentVerificationCorrectionDto } from './dto/preview-content-verification-correction.dto';
 
 @Controller('maintenance/content-verification')
 @RequirePermission(Permission.LibraryDownload)
@@ -41,6 +42,16 @@ export class ContentVerificationController {
   @RequirePermission(Permission.LibraryDownload)
   reviewFile(@Param('fileId', ParseIntPipe) fileId: number, @Body() dto: ReviewContentVerificationDto, @CurrentUser() user: RequestUser) {
     return this.service.reviewFile(user, fileId, dto.reviewStatus, dto.reviewNote);
+  }
+
+  @Post(':fileId/correction/preview')
+  @RequirePermission(Permission.LibraryDownload)
+  previewCorrection(
+    @Param('fileId', ParseIntPipe) fileId: number,
+    @Body() dto: PreviewContentVerificationCorrectionDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.service.previewCorrection(user, fileId, dto);
   }
 
   @Post(':fileId/verify')
