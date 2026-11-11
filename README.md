@@ -22,6 +22,44 @@
 
 The repository includes the web client and server. It does **not** contain native iOS, Android, or Apple Watch application source code, nor a managed-hosting service.
 
+## Roadmap and planned improvements
+
+The following items describe current development goals and areas we want to improve. They are plans, not claims that the functionality is already available; scope and priority may change as implementation and testing progress.
+
+### Reliability and data safety
+
+- Strengthen filesystem/database consistency for operations that move, replace, merge, or delete library files.
+- Add safer staged deletion with recovery or quarantine, clear previews of affected files, and safeguards against destructive cleanup.
+- Expand database-backed integration tests for filesystem operations, imports, merges, and failure recovery.
+- Improve merge audit history and make merge operations safe to retry without duplicating changes or damaging reading history.
+- Strengthen CI and release checks so migrations, upgrades, and destructive workflows are verified before release.
+
+### Metadata correction and provenance
+
+- Expand metadata write-back with previews, field-level change comparisons, individual and bulk operations, and visible success/failure results.
+- Protect richer or more trustworthy existing metadata from being overwritten by weaker matches.
+- Add bulk metadata correction and clearer metadata provenance so users can understand where values came from and why they were selected.
+- Improve provider matching, result quality, and caching.
+
+### Library Integrity and organization
+
+- Evolve Library Integrity with cross-record file identification, clearer keep/delete decisions, missing-file detection, scan history, and safer bulk cleanup.
+- Add quarantine and undo workflows for cleanup operations where recovery is possible.
+- Improve organization cleanup, including orphaned resources, empty folders, and inconsistent series names.
+- Make scans easier to review and repeat, including saved scan results and clearer progress reporting.
+
+### Requests, imports, and integrations
+
+- Continue automating the request-to-fulfillment lifecycle and make background work, status, and failures easier to inspect.
+- Improve Book Dock diagnostics and correction workflows so staged files can be identified, corrected, and imported with less manual filesystem work.
+- Improve import and rescan progress reporting.
+- Add better reconciliation and diagnostics for supported library and download integrations, including Audiobookshelf and Shelfmark workflows.
+
+### Interface improvements
+
+- Add request-table layout preferences: show or hide optional columns, reorder and resize columns, persist preferences, and restore the default layout.
+- Preserve existing sorting, selection, row actions, and the separate mobile-card experience when table customization is used.
+
 ## Screenshots
 
 ![BookOrbit dashboard](docs/images/dashboard-overview.png)
