@@ -134,12 +134,12 @@ function enforceBibliographicIdentity(
 function normalizeIdentity(value: string): string {
   return value
     .normalize('NFKD')
-    .replace(/[\\u0300-\\u036f]/g, '')
-    .toLocaleLowerCase()
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
     .replace(/&/g, ' and ')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim()
-    .replace(/\\s+/g, ' ');
+    .replace(/\s+/g, ' ');
 }
 
 function sameBibliographicTitle(expected: string, detected: string): boolean {
@@ -150,19 +150,18 @@ function sameBibliographicTitle(expected: string, detected: string): boolean {
   const expectedSubtitle = normalizeIdentity(expected.replace(/[:—–]/g, ' subtitle '));
   const detectedSubtitle = normalizeIdentity(detected.replace(/[:—–]/g, ' subtitle '));
   return (
-    detectedSubtitle.startsWith(`${expectedNormalized} subtitle `) ||
-    expectedSubtitle.startsWith(`${detectedNormalized} subtitle `)
+    detectedSubtitle.startsWith(\`\${expectedNormalized} subtitle \`) ||
+    expectedSubtitle.startsWith(\`\${detectedNormalized} subtitle \`)
   );
 }
 
 function sameAuthor(expected: string, detected: string): boolean {
   const expectedNormalized = normalizeIdentity(expected);
-  const detectedAuthors = detected.split(/[,;&]|\\band\\b/i).map(normalizeIdentity);
+  const detectedAuthors = detected.split(/[,;&]|\band\b/i).map(normalizeIdentity);
   return detectedAuthors.includes(expectedNormalized);
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\function parseComparison(content: string): ContentVerificationComparison {');
+function parseComparison(content: string): ContentVerificationComparison {');
 }
 
 function parseComparison(content: string): ContentVerificationComparison {
