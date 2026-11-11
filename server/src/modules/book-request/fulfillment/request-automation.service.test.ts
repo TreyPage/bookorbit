@@ -890,6 +890,20 @@ describe('RequestAutomationService.sweepUnfulfilled', () => {
     expect(releases.search).toHaveBeenCalledTimes(2);
   });
 
+  it('does not poll the request queue again before the configured scheduler interval', async () => {
+    const { service, requests, settings } = makeService({ settings: { ...searchable, autoSearchSweepIntervalMinutes: 60 } });
+
+    await service.sweepUnfulfilled();
+    settings.get.mockResolvedValue({
+      ...DEFAULT_BOOK_REQUEST_AUTOMATION_SETTINGS,
+      ...searchable,
+      autoSearchSweepIntervalMinutes: 120,
+    });
+    await service.sweepUnfulfilled();
+
+    expect(requests.findDueForResearch).toHaveBeenCalledTimes(1);
+  });
+
   it('grabs a release that has since appeared', async () => {
     const { service, fulfillment } = makeService({ settings: searchable, due: [{ id: 7 }] });
 
