@@ -89,8 +89,73 @@ export class ContentVerificationAiService {
     const content = payload.choices?.[0]?.message?.content;
     if (typeof content !== 'string') throw new ServiceUnavailableException('Content verification AI returned no comparison result');
 
-    return parseComparison(content);
+    return enforceBibliographicIdentity(input, parseComparison(content));
   }
+}
+
+/**
+ * A model must not call a result a match when the bibliographic identity it extracted
+ * contradicts the expected title or author. Series names are supporting context, not identity.
+ */
+function enforceBibliographicIdentity(
+  input: ContentVerificationInput,
+  comparison: ContentVerificationComparison,
+): ContentVerificationComparison {
+  if (comparison.status !== 'match') return comparison;
+
+  const titleMatches = comparison.detectedTitle ? sameBibliographicTitle(input.expectedTitle, comparison.detectedTitle) : true;
+  const authorMatches =
+    !comparison.detectedAuthor || input.expectedAuthors.length === 0
+      ? true
+      : input.expectedAuthors.some((author) => sameAuthor(author, comparison.detectedAuthor!));
+
+  if (titleMatches && authorMatches) return comparison;
+
+  const differences: string[] = [];
+  if (!titleMatches && comparison.detectedTitle) {
+    differences.push(`detected title "${comparison.detectedTitle}" differs from expected title "${input.expectedTitle}"`);
+  }
+  if (!authorMatches && comparison.detectedAuthor) {
+    differences.push(`detected author "${comparison.detectedAuthor}" does not match expected author(s) "${input.expectedAuthors.join(', ')}"`);
+  }
+
+  return {
+    ...comparison,
+    status: 'mismatch',
+    explanation: `Bibliographic identity mismatch: ${differences.join('; ')}. A matching series name or related context does not establish that this is the expected book.`,
+  };
+}
+
+function normalizeIdentity(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\\u0300-\\u036f]/g, '')
+    .toLocaleLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\\s+/g, ' ');
+}
+
+function sameBibliographicTitle(expected: string, detected: string): boolean {
+  const expectedNormalized = normalizeIdentity(expected);
+  const detectedNormalized = normalizeIdentity(detected);
+  if (expectedNormalized === detectedNormalized) return true;
+
+  // Allow a clearly delimited subtitle, but not a different following word/work title.
+  const expectedWithSubtitle = new RegExp(`^${escapeRegExp(expectedNormalized)} (?:the )?[^ ]`);
+  const detectedWithSubtitle = new RegExp(`^${escapeRegExp(detectedNormalized)} (?:the )?[^ ]`);
+  return expectedWithSubtitle.test(detectedNormalized) || detectedWithSubtitle.test(expectedNormalized);
+}
+
+function sameAuthor(expected: string, detected: string): boolean {
+  const expectedNormalized = normalizeIdentity(expected);
+  const detectedAuthors = detected.split(/[,;&]|\\band\\b/i).map(normalizeIdentity);
+  return detectedAuthors.includes(expectedNormalized);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\function parseComparison(content: string): ContentVerificationComparison {');
 }
 
 function parseComparison(content: string): ContentVerificationComparison {
