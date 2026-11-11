@@ -16,7 +16,6 @@ import {
   startLibraryIntegrityScan,
 } from '@/features/tools/api/library-integrity'
 import MissingResourcesView from '@/features/tools/missing-resources/views/MissingResourcesView.vue'
-import ContentVerificationPanel from '../components/ContentVerificationPanel.vue'
 
 import { Button } from '@/components/ui/button'
 
@@ -306,9 +305,7 @@ function openBookMerge(): void {
       <p class="max-w-3xl text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.description') }}</p>
     </header>
 
-    <ContentVerificationPanel />
-
-    <section class="rounded-xl border border-border bg-card p-5" aria-live="polite">
+        <section class="rounded-xl border border-border bg-card p-5" aria-live="polite">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="space-y-1">
           <h2 class="text-base font-semibold text-foreground">{{ t('tools.libraryIntegrity.scanStatus.title') }}</h2>
@@ -574,6 +571,22 @@ function openBookMerge(): void {
     </section>
 
     <section class="grid gap-4 md:grid-cols-2" :aria-label="t('tools.libraryIntegrity.checksLabel')">
+      <article class="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div class="grid size-10 place-items-center rounded-lg bg-muted text-foreground">
+            <ShieldCheck class="size-5" aria-hidden="true" />
+          </div>
+        </div>
+        <div class="space-y-1">
+          <h2 class="text-base font-semibold text-foreground">{{ t('tools.libraryIntegrity.contentVerification.title') }}</h2>
+          <p class="text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.contentVerification.description') }}</p>
+        </div>
+        <Button class="mt-auto self-start" variant="outline" size="sm" @click="router.push({ name: 'tools-library-integrity-content-verification' })">
+          {{ t('tools.libraryIntegrity.openCheck') }}
+          <ArrowRight class="size-4" aria-hidden="true" />
+        </Button>
+      </article>
+
       <article class="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
         <div class="flex items-start justify-between gap-3">
           <div class="grid size-10 place-items-center rounded-lg bg-muted text-foreground">
