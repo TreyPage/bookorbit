@@ -10,7 +10,11 @@ describe('ContentVerificationSchedulerService', () => {
   const schedule = { enabled: true, startTime: '01:00', endTime: '06:00', batchSize: 3, delaySeconds: 0 };
   const settings = { getValue: vi.fn().mockResolvedValue(JSON.stringify(schedule)), setValue: vi.fn().mockResolvedValue(undefined) };
 
-  function createService(repository: Record<string, unknown>, verification: Record<string, unknown>, transcription = { isConfigured: vi.fn().mockReturnValue(false) }) {
+  function createService(
+    repository: Record<string, unknown>,
+    verification: Record<string, unknown>,
+    transcription = { isConfigured: vi.fn().mockReturnValue(false) },
+  ) {
     return new ContentVerificationSchedulerService(repository as never, verification as never, transcription as never, settings as never);
   }
 
@@ -101,7 +105,11 @@ describe('ContentVerificationSchedulerService', () => {
   it('does not overlap concurrent batches', async () => {
     let finish!: (value: never) => void;
     const repository = {
-      listPendingCandidates: vi.fn().mockReturnValue(new Promise((resolve) => { finish = resolve; })),
+      listPendingCandidates: vi.fn().mockReturnValue(
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      ),
     };
     const verification = { isAiConfigured: vi.fn().mockReturnValue(true), verifyFileForSystem: vi.fn() };
     const service = createService(repository, verification);
@@ -116,7 +124,8 @@ describe('ContentVerificationSchedulerService', () => {
 
   it('resets the cursor after reaching the end of the pending queue', async () => {
     const repository = {
-      listPendingCandidates: vi.fn()
+      listPendingCandidates: vi
+        .fn()
         .mockResolvedValueOnce(candidates)
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([{ fileId: 1, format: 'epub' }]),
@@ -143,9 +152,6 @@ describe('ContentVerificationSchedulerService', () => {
       batchSize: 4,
       delaySeconds: 15,
     });
-    expect(settings.setValue).toHaveBeenCalledWith(
-      'content_verification_schedule',
-      JSON.stringify({ ...schedule, batchSize: 4, delaySeconds: 15 }),
-    );
+    expect(settings.setValue).toHaveBeenCalledWith('content_verification_schedule', JSON.stringify({ ...schedule, batchSize: 4, delaySeconds: 15 }));
   });
 });

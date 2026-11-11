@@ -136,11 +136,11 @@ describe('ContentVerificationService', () => {
       targetFormatCount: 0,
     });
 
-    const result = await service.previewCorrection(
-      { id: 10 } as never,
-      7,
-      { targetType: 'new_book', title: 'Corrected Novel', author: 'Jane Writer' },
-    );
+    const result = await service.previewCorrection({ id: 10 } as never, 7, {
+      targetType: 'new_book',
+      title: 'Corrected Novel',
+      author: 'Jane Writer',
+    });
 
     expect(result).toMatchObject({
       fileId: 7,

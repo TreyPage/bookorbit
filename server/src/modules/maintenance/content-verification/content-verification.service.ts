@@ -69,7 +69,6 @@ export class ContentVerificationService {
     return { ...result, stale: result.fileHash !== file.fileHash };
   }
 
-
   async previewCorrection(
     user: RequestUser,
     fileId: number,
@@ -119,7 +118,14 @@ export class ContentVerificationService {
       const author = input.author?.trim();
       if (!title || !author) throw new BadRequestException('Provide the detected book title and author');
       const safeSegment = (value: string) =>
-        value.normalize('NFKC').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/[. ]+$/g, '').trim().slice(0, 160) || 'Untitled';
+        value
+          .normalize('NFKC')
+          .replace(/[/:*?"<>|]/g, '-')
+          .replace(/\\/g, '-')
+          .replace(/\p{Cc}/gu, '-')
+          .replace(/[. ]+$/g, '')
+          .trim()
+          .slice(0, 160) || 'Untitled';
       const stem = safeSegment(title);
       const authorSegment = safeSegment(author);
       if (source.organizationMode === 'book_per_folder') {
@@ -136,7 +142,11 @@ export class ContentVerificationService {
     const destination = resolve(destinationPath);
     const folder = resolve(destinationFolderPath);
     const relativeDestination = relative(root, destination);
-    if (relativeDestination.startsWith('..') || isAbsolute(relativeDestination) || folder !== root && !folder.startsWith(root + '/') && !folder.startsWith(root + '\\\\')) {
+    if (
+      relativeDestination.startsWith('..') ||
+      isAbsolute(relativeDestination) ||
+      (folder !== root && !folder.startsWith(root + '/') && !folder.startsWith(root + '\\\\'))
+    ) {
       throw new BadRequestException('The proposed destination is outside the library folder');
     }
 

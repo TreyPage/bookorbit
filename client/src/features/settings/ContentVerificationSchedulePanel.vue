@@ -31,7 +31,7 @@ async function loadSchedule() {
   try {
     const response = await api('/api/v1/maintenance/content-verification/background/settings')
     if (!response.ok) throw new Error('Could not load content verification schedule')
-    schedule.value = { ...DEFAULT_SCHEDULE, ...(await response.json() as ContentVerificationSchedule) }
+    schedule.value = { ...DEFAULT_SCHEDULE, ...((await response.json()) as ContentVerificationSchedule) }
   } catch {
     loadError.value = true
   } finally {
@@ -48,11 +48,11 @@ async function saveSchedule() {
       body: JSON.stringify(schedule.value),
     })
     if (!response.ok) {
-      const body = await response.json().catch(() => null) as { message?: string | string[] } | null
+      const body = (await response.json().catch(() => null)) as { message?: string | string[] } | null
       const message = Array.isArray(body?.message) ? body.message.join(', ') : body?.message
       throw new Error(message || 'Could not save content verification schedule')
     }
-    schedule.value = await response.json() as ContentVerificationSchedule
+    schedule.value = (await response.json()) as ContentVerificationSchedule
     toast.success('Content verification schedule saved')
   } catch (error) {
     toast.error(error instanceof Error ? error.message : 'Could not save content verification schedule')
@@ -109,8 +109,8 @@ onMounted(loadSchedule)
       </div>
 
       <p class="settings-hint">
-        Times use the server's configured timezone. A batch stops starting new files when the window closes;
-        unfinished work resumes during the next window. Manual verification remains available on demand.
+        Times use the server's configured timezone. A batch stops starting new files when the window closes; unfinished work resumes during the next
+        window. Manual verification remains available on demand.
       </p>
 
       <div class="flex justify-end">

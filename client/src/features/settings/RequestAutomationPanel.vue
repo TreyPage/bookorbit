@@ -280,11 +280,7 @@ function handleSearchIntervalChange() {
 
 function handleSearchSweepIntervalChange() {
   const next = Number(searchSweepInterval.value)
-  if (
-    !Number.isInteger(next) ||
-    next < MIN_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES ||
-    next > MAX_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES
-  ) {
+  if (!Number.isInteger(next) || next < MIN_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES || next > MAX_AUTO_SEARCH_SWEEP_INTERVAL_MINUTES) {
     searchSweepInterval.value = settings.value.autoSearchSweepIntervalMinutes
     return
   }

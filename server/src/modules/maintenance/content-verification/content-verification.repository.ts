@@ -244,7 +244,8 @@ export class ContentVerificationRepository {
       .where(eq(bookFiles.bookId, source.bookId));
     const contentFileCount = sourceFiles.filter((file) => file.role === 'content').length;
     const audioContentCount = sourceFiles.filter(
-      (file) => file.role === 'content' && file.format && ['m4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav'].includes(file.format.toLowerCase()),
+      (file) =>
+        file.role === 'content' && file.format && ['m4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav'].includes(file.format.toLowerCase()),
     ).length;
 
     let target: null | { bookId: number; libraryId: number; libraryFolderId: number; folderPath: string; title: string | null } = null;
@@ -267,12 +268,17 @@ export class ContentVerificationRepository {
         const matching = await this.db
           .select({ id: bookFiles.id })
           .from(bookFiles)
-          .where(and(eq(bookFiles.bookId, targetBookId), eq(bookFiles.role, 'content'), sql`lower(${bookFiles.format}) = ${String(source.format ?? '').toLowerCase()}`));
+          .where(
+            and(
+              eq(bookFiles.bookId, targetBookId),
+              eq(bookFiles.role, 'content'),
+              sql`lower(${bookFiles.format}) = ${String(source.format ?? '').toLowerCase()}`,
+            ),
+          );
         targetFormatCount = matching.length;
       }
     }
 
     return { source, contentFileCount, audioContentCount, target, targetFormatCount };
   }
-
 }
