@@ -14,6 +14,9 @@ const AUDIO_EXTENSIONS = new Set(['.m4b', '.m4a', '.mp3', '.aac', '.flac', '.ogg
 
 @Injectable()
 export class ContentVerificationService {
+  /** Serializes every verification entry point so STT and comparison never overlap. */
+  private verificationTail: Promise<void> = Promise.resolve();
+
   constructor(
     private readonly repository: ContentVerificationRepository,
     private readonly libraryService: LibraryService,
@@ -66,6 +69,20 @@ export class ContentVerificationService {
   }
 
   async verifyFile(user: RequestUser, fileId: number) {
+    const previous = this.verificationTail;
+    let release!: () => void;
+    this.verificationTail = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await previous;
+    try {
+      return await this.verifyFileUnlocked(user, fileId);
+    } finally {
+      release();
+    }
+  }
+
+  private async verifyFileUnlocked(user: RequestUser, fileId: number) {
     const file = await this.getAccessibleFile(user, fileId);
     const title = file.title?.trim();
     if (!title) throw new BadRequestException('Book metadata must have a title before content can be verified');
