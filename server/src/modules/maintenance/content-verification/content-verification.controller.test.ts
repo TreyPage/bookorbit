@@ -25,6 +25,17 @@ describe('ContentVerificationController', () => {
     expect(service.reviewFile).toHaveBeenCalledWith(user, 44, 'confirmed_mismatch', 'Wrong title');
   });
 
+  it('delegates correction preview with the current user and validated destination', async () => {
+    const preview = { fileId: 44, destinationType: 'new_book', requiresApproval: true };
+    const service = { previewCorrection: vi.fn().mockResolvedValue(preview) };
+    const controller = new ContentVerificationController(service as never, {} as never);
+    const user = { id: 12 } as never;
+    const dto = { targetType: 'new_book' as const, title: 'The New Book', author: 'A. Writer' };
+
+    await expect(controller.previewCorrection(44, dto, user)).resolves.toEqual(preview);
+    expect(service.previewCorrection).toHaveBeenCalledWith(user, 44, dto);
+  });
+
   it('delegates manual verification with the current user', async () => {
     const service = { verifyFile: vi.fn().mockResolvedValue({ status: 'inconclusive' }) };
     const controller = new ContentVerificationController(service as never, {} as never);

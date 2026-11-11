@@ -4,7 +4,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { DB } from '../../../db';
 import * as schema from '../../../db/schema';
-import { authors, bookAuthors, bookContentVerifications, bookFiles, bookMetadata, books } from '../../../db/schema';
+import { authors, bookAuthors, bookContentVerifications, bookFiles, bookMetadata, books, libraries, libraryFolders } from '../../../db/schema';
 
 type Db = NodePgDatabase<typeof schema>;
 
@@ -205,4 +205,74 @@ export class ContentVerificationRepository {
       .returning();
     return result;
   }
+
+  async findCorrectionContext(fileId: number, libraryIds: number[], targetBookId?: number) {
+    if (libraryIds.length === 0) return null;
+    const [source] = await this.db
+      .select({
+        fileId: bookFiles.id,
+        bookId: books.id,
+        libraryId: books.libraryId,
+        libraryFolderId: books.libraryFolderId,
+        libraryFolderPath: libraryFolders.path,
+        organizationMode: libraries.organizationMode,
+        bookFolderPath: books.folderPath,
+        absolutePath: bookFiles.absolutePath,
+        relPath: bookFiles.relPath,
+        format: bookFiles.format,
+        role: bookFiles.role,
+        sortOrder: bookFiles.sortOrder,
+        fileHash: bookFiles.fileHash,
+        title: bookMetadata.title,
+        verificationStatus: bookContentVerifications.status,
+        verificationFileHash: bookContentVerifications.fileHash,
+        reviewStatus: bookContentVerifications.reviewStatus,
+      })
+      .from(bookFiles)
+      .innerJoin(books, eq(books.id, bookFiles.bookId))
+      .innerJoin(libraryFolders, eq(libraryFolders.id, books.libraryFolderId))
+      .innerJoin(libraries, eq(libraries.id, books.libraryId))
+      .leftJoin(bookMetadata, eq(bookMetadata.bookId, books.id))
+      .leftJoin(bookContentVerifications, eq(bookContentVerifications.bookFileId, bookFiles.id))
+      .where(and(eq(bookFiles.id, fileId), eq(books.status, 'present'), inArray(books.libraryId, libraryIds)))
+      .limit(1);
+    if (!source) return null;
+
+    const sourceFiles = await this.db
+      .select({ id: bookFiles.id, format: bookFiles.format, role: bookFiles.role })
+      .from(bookFiles)
+      .where(eq(bookFiles.bookId, source.bookId));
+    const contentFileCount = sourceFiles.filter((file) => file.role === 'content').length;
+    const audioContentCount = sourceFiles.filter(
+      (file) => file.role === 'content' && file.format && ['m4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav'].includes(file.format.toLowerCase()),
+    ).length;
+
+    let target: null | { bookId: number; libraryId: number; libraryFolderId: number; folderPath: string; title: string | null } = null;
+    let targetFormatCount = 0;
+    if (targetBookId !== undefined) {
+      const [targetRow] = await this.db
+        .select({
+          bookId: books.id,
+          libraryId: books.libraryId,
+          libraryFolderId: books.libraryFolderId,
+          folderPath: books.folderPath,
+          title: bookMetadata.title,
+        })
+        .from(books)
+        .leftJoin(bookMetadata, eq(bookMetadata.bookId, books.id))
+        .where(and(eq(books.id, targetBookId), eq(books.status, 'present')))
+        .limit(1);
+      if (targetRow) {
+        target = targetRow;
+        const matching = await this.db
+          .select({ id: bookFiles.id })
+          .from(bookFiles)
+          .where(and(eq(bookFiles.bookId, targetBookId), eq(bookFiles.role, 'content'), sql`lower(${bookFiles.format}) = ${String(source.format ?? '').toLowerCase()}`));
+        targetFormatCount = matching.length;
+      }
+    }
+
+    return { source, contentFileCount, audioContentCount, target, targetFormatCount };
+  }
+
 }

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { extname } from 'node:path';
+import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
+import { access } from 'node:fs/promises';
 
 import type { RequestUser } from '../../../common/types/request-user';
 import { LibraryService } from '../../library/library.service';
@@ -63,6 +64,112 @@ export class ContentVerificationService {
     });
     if (!result) throw new NotFoundException('Content verification result not found');
     return { ...result, stale: result.fileHash !== file.fileHash };
+  }
+
+
+  async previewCorrection(
+    user: RequestUser,
+    fileId: number,
+    input: { targetType: 'existing_book' | 'new_book'; targetBookId?: number; title?: string; author?: string },
+  ) {
+    const libraryIds = await this.libraryService.findEditableLibraryIds(user);
+    const context = await this.repository.findCorrectionContext(fileId, libraryIds, input.targetBookId);
+    if (!context) throw new NotFoundException('Book file not found or not editable');
+    const { source, contentFileCount, audioContentCount, target, targetFormatCount } = context;
+
+    if (source.role !== 'content') throw new BadRequestException('Only ebook or audiobook content files can be corrected');
+    if (source.reviewStatus !== 'confirmed_mismatch') {
+      throw new BadRequestException('Confirm the content mismatch before preparing a file correction');
+    }
+    if (!source.fileHash || source.verificationFileHash !== source.fileHash) {
+      throw new BadRequestException('The verification result is stale; verify the current file again before correcting it');
+    }
+    const supported = new Set(['epub', 'm4b', 'm4a', 'mp3', 'aac', 'flac', 'ogg', 'opus', 'wav']);
+    const extension = extname(source.absolutePath).toLowerCase();
+    if (!supported.has(extension.slice(1))) throw new BadRequestException('File correction currently supports EPUB and audiobook formats');
+    if (contentFileCount < 2) throw new BadRequestException('This is the only content file in the book; use the book move workflow instead');
+    if (audioContentCount > 1 && ['.m4b', '.m4a', '.mp3', '.aac', '.flac', '.ogg', '.opus', '.wav'].includes(extension)) {
+      throw new BadRequestException('This audiobook has multiple audio parts. Multipart audiobooks must be corrected as a complete unit');
+    }
+
+    let destinationBookId: number | null = null;
+    let destinationFolderPath: string;
+    let destinationPath: string;
+    let destinationTitle: string;
+
+    if (input.targetType === 'existing_book') {
+      if (!input.targetBookId || !target) throw new BadRequestException('Choose an existing destination book');
+      if (target.bookId === source.bookId) throw new BadRequestException('The destination must be a different book');
+      if (target.libraryId !== source.libraryId || target.libraryFolderId !== source.libraryFolderId) {
+        throw new BadRequestException('A file can only be moved to another book in the same library folder');
+      }
+      if (source.organizationMode !== 'book_per_folder') {
+        throw new BadRequestException('Joining another book is supported only in folder-organized libraries');
+      }
+      if (targetFormatCount > 0) throw new BadRequestException('The destination book already contains this format');
+      destinationBookId = target.bookId;
+      destinationFolderPath = target.folderPath;
+      destinationPath = join(destinationFolderPath, basename(source.absolutePath));
+      destinationTitle = target.title ?? 'Untitled book';
+    } else {
+      const title = input.title?.trim();
+      const author = input.author?.trim();
+      if (!title || !author) throw new BadRequestException('Provide the detected book title and author');
+      const safeSegment = (value: string) =>
+        value.normalize('NFKC').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/[. ]+$/g, '').trim().slice(0, 160) || 'Untitled';
+      const stem = safeSegment(title);
+      const authorSegment = safeSegment(author);
+      if (source.organizationMode === 'book_per_folder') {
+        destinationFolderPath = join(dirname(source.bookFolderPath), `${stem} - ${authorSegment}`);
+        destinationPath = join(destinationFolderPath, `${stem}${extension}`);
+      } else {
+        destinationPath = join(dirname(source.absolutePath), `${stem} - ${authorSegment}${extension}`);
+        destinationFolderPath = destinationPath;
+      }
+      destinationTitle = title;
+    }
+
+    const root = resolve(source.libraryFolderPath);
+    const destination = resolve(destinationPath);
+    const folder = resolve(destinationFolderPath);
+    const relativeDestination = relative(root, destination);
+    if (relativeDestination.startsWith('..') || isAbsolute(relativeDestination) || folder !== root && !folder.startsWith(root + '/') && !folder.startsWith(root + '\\\\')) {
+      throw new BadRequestException('The proposed destination is outside the library folder');
+    }
+
+    try {
+      await access(destination);
+      throw new BadRequestException('The proposed destination file already exists');
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+    if (input.targetType === 'new_book' && source.organizationMode === 'book_per_folder') {
+      try {
+        await access(destinationFolderPath);
+        throw new BadRequestException('A folder with the proposed book name already exists');
+      } catch (error) {
+        if (error instanceof BadRequestException) throw error;
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+    }
+
+    return {
+      fileId,
+      sourceBookId: source.bookId,
+      sourceBookTitle: source.title,
+      sourcePath: source.absolutePath,
+      destinationType: input.targetType,
+      destinationBookId,
+      destinationTitle,
+      destinationFolderPath,
+      destinationPath,
+      fileFormat: source.format,
+      verificationStatus: source.verificationStatus,
+      reviewStatus: source.reviewStatus,
+      requiresApproval: true,
+      executionAvailable: false,
+    };
   }
 
   async verifyFile(user: RequestUser, fileId: number) {
