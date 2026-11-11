@@ -58,6 +58,7 @@ describe('RequestAutomationSettingsService.get', () => {
       maxAutoGrabAttempts: 2,
       autoSearchEnabled: true,
       autoSearchIntervalHours: 12,
+      autoSearchSweepIntervalMinutes: 60,
       autoSearchMaxAgeDays: 90,
       stalledDownloadTimeoutHours: 6,
       verificationEnabled: false,
@@ -105,6 +106,16 @@ describe('RequestAutomationSettingsService.update', () => {
 
     await expect(service.update({ autoGrabMinScore: 5 })).rejects.toBeInstanceOf(BadRequestException);
     expect(appSettings.setValue).not.toHaveBeenCalled();
+  });
+
+  it('writes and validates the scheduler polling interval independently of each request interval', async () => {
+    const { service, appSettings } = makeService();
+
+    await service.update({ autoSearchSweepIntervalMinutes: 30 });
+
+    expect(appSettings.setValue).toHaveBeenCalledWith(KEYS.AUTO_SEARCH_SWEEP_INTERVAL_MINUTES, '30');
+    await expect(service.update({ autoSearchSweepIntervalMinutes: 1 })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.update({ autoSearchSweepIntervalMinutes: 1441 })).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('writes only the stalled timeout setting', async () => {
