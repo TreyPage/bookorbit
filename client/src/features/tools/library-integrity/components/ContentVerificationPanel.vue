@@ -97,7 +97,7 @@ async function review(item: ContentVerificationEntry, decision: ContentVerificat
   reviewSuccess.value = ''
   try {
     await reviewBookFileContent(item.fileId, decision, reviewNotes.value[item.fileId])
-    reviewSuccess.value = t(`tools.libraryIntegrity.contentVerification.review.success.${decision}`)
+    reviewSuccess.value = `${t('tools.libraryIntegrity.contentVerification.review.label')}: ${t(`tools.libraryIntegrity.contentVerification.review.status.${decision}`)}`
     await load()
   } catch (cause) {
     error.value = true
