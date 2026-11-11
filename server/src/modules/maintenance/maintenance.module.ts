@@ -8,6 +8,7 @@ import { AppSettingsModule } from '../app-settings/app-settings.module';
 import { BookModule } from '../book/book.module';
 import { BookCoverStoreModule } from '../book-cover-store/book-cover-store.module';
 import { ReadingAttemptEventsModule } from '../user-book-status/reading-attempt-events.module';
+import { FileWriteModule } from '../file-write/file-write.module';
 import { LibraryModule } from '../library/library.module';
 import { CoverSweepStore } from './cover-sweep.store';
 import { LibraryIntegrityController } from './library-integrity.controller';
@@ -25,7 +26,16 @@ import { ContentVerificationService } from './content-verification/content-verif
 import { ContentVerificationSchedulerService } from './content-verification/content-verification-scheduler.service';
 
 @Module({
-  imports: [AppSettingsModule, CommonModule, SelfWriteRegistryModule, BookModule, BookCoverStoreModule, LibraryModule, ReadingAttemptEventsModule],
+  imports: [
+    AppSettingsModule,
+    CommonModule,
+    SelfWriteRegistryModule,
+    BookModule,
+    BookCoverStoreModule,
+    LibraryModule,
+    ReadingAttemptEventsModule,
+    FileWriteModule,
+  ],
   controllers: [MissingResourcesController, LibraryIntegrityController, ContentVerificationController],
   exports: [ContentVerificationSchedulerService],
   providers: [

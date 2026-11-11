@@ -14410,6 +14410,9 @@
           "applying": "Applying correction…",
           "success": "File correction completed. The other format and its book record were left in place. The saved evidence is preserved, and this file is queued for verification against its new metadata.",
           "cleanupPending": "The correction was applied, but the original file path could not be cleaned up. The book now points to the new path; inspect the old path before deleting anything.",
+          "metadataWritten": "Embedded metadata was updated in the corrected file. Other formats were not rewritten.",
+          "metadataSkipped": "The file was corrected in BookOrbit, but embedded metadata was not written ({reason}). Check the library's file write-back settings or format limits.",
+          "metadataFailed": "The file was corrected in BookOrbit, but embedded metadata could not be updated: {reason}. The file remains assigned to the corrected book; retry file write-back after resolving the issue.",
           "failed": "The file correction could not be completed.",
           "previewFailed": "Could not prepare the correction preview.",
           "searchFailed": "Could not search for destination books."

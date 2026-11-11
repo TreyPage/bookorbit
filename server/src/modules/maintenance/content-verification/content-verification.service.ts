@@ -9,6 +9,7 @@ import type { RequestUser } from '../../../common/types/request-user';
 import { FileLockService, bookOperationLockKey } from '../../../common/services/file-lock.service';
 import { SelfWriteRegistry } from '../../../common/services/self-write-registry.service';
 import { computeFileHash } from '../../../common/utils/file-hash.utils';
+import { FileWriteService } from '../../file-write/file-write.service';
 import { LibraryService } from '../../library/library.service';
 import { AudiobookOpeningTranscriptionService } from './audiobook-opening-transcription.service';
 import { ContentVerificationAiService } from './content-verification-ai.service';
@@ -31,6 +32,7 @@ export class ContentVerificationService {
     private readonly config: ConfigService,
     private readonly fileLock: FileLockService,
     private readonly selfWriteRegistry: SelfWriteRegistry,
+    private readonly fileWriteService: FileWriteService,
   ) {}
 
   isAiConfigured(): boolean {
@@ -243,7 +245,7 @@ export class ContentVerificationService {
       return this.fileLock.withLock(lockKeys[index], () => withBookLocks(index + 1, operation));
     };
 
-    return withBookLocks(0, () =>
+    const correctionResult = await withBookLocks(0, () =>
       withPathLocks(0, () =>
         this.fileLock.withLock(`content-verification-file:${fileId}`, async () => {
           const preview = await this.previewCorrection(user, fileId, input);
@@ -455,6 +457,26 @@ export class ContentVerificationService {
         }),
       ),
     );
+
+    // The file has been reassigned and the book locks are released. Write only this corrected
+    // format using the destination book's metadata; never rewrite the destination's sibling files.
+    let embeddedMetadataWrite: Awaited<ReturnType<FileWriteService['writeMetadataToFile']>>;
+    try {
+      embeddedMetadataWrite = await this.fileWriteService.writeMetadataToFile(
+        correctionResult.destinationBookId,
+        fileId,
+        user.id,
+      );
+    } catch (error) {
+      embeddedMetadataWrite = {
+        status: 'failed',
+        fieldsWritten: [],
+        durationMs: 0,
+        reason: error instanceof Error ? error.message : 'embedded metadata write failed',
+      };
+    }
+
+    return { ...correctionResult, embeddedMetadataWrite };
   }
 
   async verifyFile(user: RequestUser, fileId: number) {
