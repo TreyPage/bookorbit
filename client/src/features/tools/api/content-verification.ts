@@ -64,7 +64,17 @@ export async function reviewBookFileContent(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ reviewStatus, reviewNote }),
   })
-  if (!response.ok) throw new Error('content_verification_review_failed')
+  if (!response.ok) {
+    let message = 'content_verification_review_failed'
+    try {
+      const body = (await response.json()) as { message?: string | string[] }
+      if (typeof body.message === 'string') message = body.message
+      else if (Array.isArray(body.message)) message = body.message.join(', ')
+    } catch {
+      // Keep the stable fallback when the server does not return a JSON error body.
+    }
+    throw new Error(message)
+  }
   return response.json() as Promise<ContentVerificationEntry>
 }
 
