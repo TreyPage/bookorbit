@@ -84,11 +84,10 @@ BookOrbit is a pnpm monorepo. The main components are a Vue 3 client, a NestJS/F
 From the repository root:
 
 ```bash
-pnpm install
 pnpm setup
 ```
 
-`pnpm setup` creates `server/.env` from `server/.env.example` if needed, starts the development PostgreSQL service, applies migrations, and seeds baseline data.
+`pnpm setup` installs workspace dependencies, creates `server/.env` from `server/.env.example` if needed, starts the development PostgreSQL service, applies migrations, and seeds baseline data.
 
 Start the client, server, and shared-types watcher:
 
