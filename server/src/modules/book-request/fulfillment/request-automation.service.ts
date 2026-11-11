@@ -152,6 +152,7 @@ export class RequestAutomationService implements OnModuleInit {
       this.logger.warn(`[book_request.auto_search] [fail] error="${message}" - could not read scheduler settings`);
       return false;
     }
+    if (this.sweeping) return false;
 
     // The scheduler polls once a minute so an operator can choose its actual cadence without
     // requiring a restart or rebuilding a Nest cron expression. The per-request due interval is
