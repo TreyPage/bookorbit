@@ -109,7 +109,6 @@ describe('ContentVerificationService', () => {
     expect(repository.updateReview).not.toHaveBeenCalled();
   });
 
-
   it('previews splitting a mismatched format into a new book without mutating the file', async () => {
     repository.findCorrectionContext.mockResolvedValue({
       source: {
@@ -128,7 +127,6 @@ describe('ContentVerificationService', () => {
         fileHash: 'abc123',
         title: 'Original Book',
         verificationStatus: 'mismatch',
-        verificationFileHash: 'abc123',
         verificationFileHash: 'abc123',
         reviewStatus: 'confirmed_mismatch',
       },
@@ -170,7 +168,6 @@ describe('ContentVerificationService', () => {
       service.previewCorrection({ id: 10 } as never, 7, { targetType: 'new_book', title: 'New Title', author: 'New Author' }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
-
 
   it('rejects correction when the saved evidence belongs to an older file hash', async () => {
     repository.findCorrectionContext.mockResolvedValue({
