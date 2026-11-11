@@ -205,6 +205,19 @@ describe('RequestAutomationPanel', () => {
       expect(wrapper.find('#auto-search-max-age').exists()).toBe(false)
     })
 
+    it('exposes the scheduler polling interval separately from each request interval', async () => {
+      const wrapper = await mountPanel(settings({ autoGrabEnabled: true, autoSearchEnabled: false, autoSearchSweepIntervalMinutes: 45 }))
+
+      const interval = wrapper.get('#auto-search-sweep-interval')
+      expect((interval.element as HTMLInputElement).value).toBe('45')
+      apiMock.mockClear()
+
+      await interval.setValue('30')
+      await flushPromises()
+
+      expect(lastBody()).toEqual({ autoSearchSweepIntervalMinutes: 30 })
+    })
+
     it('shows the schedule the instance is running', async () => {
       const wrapper = await mountPanel(
         settings({ autoGrabEnabled: true, autoSearchEnabled: true, autoSearchIntervalHours: 12, autoSearchMaxAgeDays: 90 }),
