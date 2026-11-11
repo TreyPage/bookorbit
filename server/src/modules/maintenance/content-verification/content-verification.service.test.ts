@@ -18,7 +18,7 @@ vi.mock('./epub-content-evidence', () => ({
 }));
 
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { access, copyFile, link, mkdir, realpath, stat, unlink } from 'node:fs/promises';
+import { access, copyFile, link, mkdir, realpath, rmdir, stat, unlink } from 'node:fs/promises';
 import { computeFileHash } from '../../../common/utils/file-hash.utils';
 
 import { extractEpubContentEvidence } from './epub-content-evidence';
@@ -52,6 +52,7 @@ describe('ContentVerificationService', () => {
   const config = { get: vi.fn().mockReturnValue('qwen3.5:4b') };
   const fileLock = { withLock: vi.fn((_key: string, operation: () => Promise<unknown>) => operation()) };
   const selfWriteRegistry = { track: vi.fn((_paths: string[], operation: () => Promise<unknown>) => operation()) };
+  const fileWriteService = { writeMetadataToFile: vi.fn().mockResolvedValue({ status: 'success', fieldsWritten: ['title', 'authors'], durationMs: 5 }) };
   let service: ContentVerificationService;
 
   beforeEach(() => {
@@ -60,6 +61,7 @@ describe('ContentVerificationService', () => {
     vi.mocked(link).mockResolvedValue(undefined);
     vi.mocked(copyFile).mockResolvedValue(undefined);
     vi.mocked(mkdir).mockResolvedValue(undefined);
+    vi.mocked(rmdir).mockResolvedValue(undefined);
     vi.mocked(realpath).mockImplementation((path) => Promise.resolve(String(path)));
     vi.mocked(unlink).mockResolvedValue(undefined);
     vi.mocked(stat).mockResolvedValue({ ino: 123n, size: 100n, mtime: new Date('2026-11-11T00:00:00Z') } as never);
@@ -74,6 +76,7 @@ describe('ContentVerificationService', () => {
       config as never,
       fileLock as never,
       selfWriteRegistry as never,
+      fileWriteService as never,
     );
     repository.findFileForVerification.mockResolvedValue(file);
     vi.mocked(extractEpubContentEvidence).mockResolvedValue({
@@ -225,7 +228,7 @@ describe('ContentVerificationService', () => {
 
     await expect(
       service.executeCorrection({ id: 10 } as never, 7, { targetType: 'new_book', title: 'Corrected Novel', author: 'Jane Writer' }),
-    ).rejects.toThrow('source book changed while preparing this correction');
+    ).rejects.toThrow('source file changed while preparing this correction');
 
     expect(link).not.toHaveBeenCalled();
     expect(repository.applyFileCorrection).not.toHaveBeenCalled();
@@ -352,6 +355,7 @@ describe('ContentVerificationService', () => {
       }),
     );
     expect(result).toMatchObject({ destinationBookId: 9, sourceCleanupPending: false });
+    expect(fileWriteService.writeMetadataToFile).toHaveBeenCalledWith(9, 7, 10);
   });
   it('moves a confirmed mismatched file into an existing book in the same library folder', async () => {
     repository.findCorrectionContext.mockResolvedValue({
@@ -458,6 +462,10 @@ describe('ContentVerificationService', () => {
     expect(unlink).toHaveBeenCalledWith(stagingPath);
     expect(unlink).toHaveBeenCalledWith('/tmp/bookorbit-correction-test/Original Book/Original.epub');
     expect(result).toMatchObject({ destinationBookId: 91, sourceCleanupPending: false });
+    expect(fileWriteService.writeMetadataToFile).toHaveBeenCalledWith(91, 7, 10);
+    expect(result.embeddedMetadataWrite).toMatchObject({ status: 'success', fieldsWritten: ['title', 'authors'] });
+    expect(fileWriteService.writeMetadataToFile).toHaveBeenCalledWith(91, 7, 10);
+    expect(result.embeddedMetadataWrite).toMatchObject({ status: 'success', fieldsWritten: ['title', 'authors'] });
   });
   it('keeps the original path when the database reassignment fails', async () => {
     repository.findCorrectionContext.mockResolvedValue({
