@@ -128,6 +128,8 @@ describe('ContentVerificationService', () => {
         fileHash: 'abc123',
         title: 'Original Book',
         verificationStatus: 'mismatch',
+        verificationFileHash: 'abc123',
+        verificationFileHash: 'abc123',
         reviewStatus: 'confirmed_mismatch',
       },
       contentFileCount: 2,
@@ -158,6 +160,26 @@ describe('ContentVerificationService', () => {
   it('requires a confirmed mismatch before offering a file correction', async () => {
     repository.findCorrectionContext.mockResolvedValue({
       source: { role: 'content', reviewStatus: null },
+      contentFileCount: 2,
+      audioContentCount: 0,
+      target: null,
+      targetFormatCount: 0,
+    });
+
+    await expect(
+      service.previewCorrection({ id: 10 } as never, 7, { targetType: 'new_book', title: 'New Title', author: 'New Author' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+
+  it('rejects correction when the saved evidence belongs to an older file hash', async () => {
+    repository.findCorrectionContext.mockResolvedValue({
+      source: {
+        role: 'content',
+        reviewStatus: 'confirmed_mismatch',
+        fileHash: 'new-hash',
+        verificationFileHash: 'old-hash',
+      },
       contentFileCount: 2,
       audioContentCount: 0,
       target: null,
