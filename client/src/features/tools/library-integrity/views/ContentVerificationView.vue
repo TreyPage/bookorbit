@@ -13,7 +13,7 @@ const { t } = useI18n()
       :to="{ name: 'tools-library-integrity' }"
       class="w-fit text-sm text-muted-foreground underline decoration-muted-foreground/40 underline-offset-2 hover:text-primary"
     >
-      {{ t('tools.libraryIntegrity.contentVerification.backToIntegrity') }}
+      {{ t('common.back') }}
     </RouterLink>
     <ContentVerificationPanel />
   </div>
