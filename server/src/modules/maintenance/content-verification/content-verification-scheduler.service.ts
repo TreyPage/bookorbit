@@ -74,6 +74,12 @@ export class ContentVerificationSchedulerService {
     return { ...this.status };
   }
 
+  private requeueCandidates(candidates: Array<{ fileId: number; format: string | null }>): void {
+    for (const candidate of candidates.reverse()) {
+      if (this.queuedFileIds.has(candidate.fileId)) this.pendingFileIds.unshift(candidate.fileId);
+    }
+  }
+
   async getSchedule(): Promise<ContentVerificationSchedule> {
     const raw = await this.appSettings.getValue(SETTINGS_KEY);
     if (!raw) return { ...DEFAULT_SCHEDULE };
@@ -145,11 +151,18 @@ export class ContentVerificationSchedulerService {
       }
 
       let processedInBatch = 0;
-      for (const candidate of candidates) {
-        if (!manual && (!schedule.enabled || !isWithinMaintenanceWindow(schedule))) break;
+      for (let index = 0; index < candidates.length; index++) {
+        const candidate = candidates[index];
+        if (!manual && (!schedule.enabled || !isWithinMaintenanceWindow(schedule))) {
+          if (queuedCandidates.length > 0) this.requeueCandidates(candidates.slice(index));
+          break;
+        }
         if (processedInBatch > 0 && schedule.delaySeconds > 0) {
           await delay(schedule.delaySeconds * 1000);
-          if (!manual && (!schedule.enabled || !isWithinMaintenanceWindow(schedule))) break;
+          if (!manual && (!schedule.enabled || !isWithinMaintenanceWindow(schedule))) {
+            if (queuedCandidates.length > 0) this.requeueCandidates(candidates.slice(index));
+            break;
+          }
         }
 
         this.afterFileId = Math.max(this.afterFileId, candidate.fileId);
