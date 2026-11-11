@@ -305,7 +305,7 @@ function openBookMerge(): void {
       <p class="max-w-3xl text-sm text-muted-foreground">{{ t('tools.libraryIntegrity.description') }}</p>
     </header>
 
-        <section class="rounded-xl border border-border bg-card p-5" aria-live="polite">
+    <section class="rounded-xl border border-border bg-card p-5" aria-live="polite">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="space-y-1">
           <h2 class="text-base font-semibold text-foreground">{{ t('tools.libraryIntegrity.scanStatus.title') }}</h2>
