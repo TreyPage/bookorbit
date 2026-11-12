@@ -487,7 +487,11 @@ export class ContentVerificationService {
     const files =
       eligibleFiles.length <= 3
         ? eligibleFiles
-        : [eligibleFiles[0]!, eligibleFiles[Math.floor((eligibleFiles.length - 1) / 2)]!, eligibleFiles[eligibleFiles.length - 1]!];
+        : [
+            eligibleFiles[0]!,
+            eligibleFiles[Math.floor((eligibleFiles.length - 1) / 2)]!,
+            eligibleFiles[eligibleFiles.length - 1]!,
+          ];
     if (files.length === 0) throw new BadRequestException('No supported content files were found in this Book Dock entry');
 
     const firstExtension = extname(files[0]!.path).toLowerCase();
