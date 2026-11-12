@@ -523,35 +523,35 @@ onMounted(() => {
           <section class="rounded-lg border border-border p-3 space-y-2">
             <div class="flex items-center justify-between gap-3">
               <div class="min-w-0">
-                <p class="text-sm font-medium">Content verification</p>
-                <p class="text-xs text-muted-foreground">Check the actual file contents against this metadata before importing.</p>
+                <p class="text-sm font-medium">{{ t('bookDock.sheet.contentVerification') }}</p>
+                <p class="text-xs text-muted-foreground">{{ t('bookDock.sheet.contentVerificationHint') }}</p>
               </div>
               <button
                 class="shrink-0 h-8 px-3 rounded-lg border border-primary/40 text-primary text-xs font-medium hover:bg-primary/10 disabled:opacity-50"
                 :disabled="verifyingContent || file.status !== 'ready' || !form.title.trim()"
                 @click="handleVerifyContent"
               >
-                {{ verifyingContent ? 'Verifying…' : 'Verify before import' }}
+                {{ verifyingContent ? t('bookDock.sheet.verifyingContent') : t('bookDock.sheet.verifyBeforeImport') }}
               </button>
             </div>
             <p v-if="contentVerificationError" class="text-xs text-red-500" role="alert">{{ contentVerificationError }}</p>
             <div v-if="contentVerification" class="rounded-md bg-muted/50 p-3 space-y-2">
               <div class="flex items-center justify-between gap-2">
                 <span class="text-xs font-semibold uppercase tracking-wide" :class="{ 'text-emerald-600': contentVerification.status === 'match', 'text-red-600': contentVerification.status === 'mismatch', 'text-amber-600': contentVerification.status === 'inconclusive' }">
-                  {{ contentVerification.status === 'match' ? 'Content matches' : contentVerification.status === 'mismatch' ? 'Content mismatch' : 'Inconclusive' }}
+                  {{ contentVerification.status === 'match' ? t('bookDock.sheet.contentMatches') : contentVerification.status === 'mismatch' ? t('bookDock.sheet.contentMismatch') : t('bookDock.sheet.inconclusive') }}
                 </span>
                 <span class="text-xs tabular-nums text-muted-foreground">{{ Math.round(contentVerification.confidence * 100) }}% confidence</span>
               </div>
-              <p class="text-sm"><span class="text-muted-foreground">Detected:</span> {{ contentVerification.detectedTitle || 'Unknown title' }}<span v-if="contentVerification.detectedAuthor"> — {{ contentVerification.detectedAuthor }}</span></p>
+              <p class="text-sm"><span class="text-muted-foreground">{{ t('bookDock.sheet.detected') }}:</span> {{ contentVerification.detectedTitle || t('bookDock.sheet.unknownDetectedTitle') }}<span v-if="contentVerification.detectedAuthor"> — {{ contentVerification.detectedAuthor }}</span></p>
               <p class="text-xs text-muted-foreground">{{ contentVerification.explanation }}</p>
               <details v-if="contentVerification.evidence.length" class="text-xs">
-                <summary class="cursor-pointer text-muted-foreground">View transcript / evidence</summary>
+                <summary class="cursor-pointer text-muted-foreground">{{ t('bookDock.sheet.viewEvidence') }}</summary>
                 <div v-for="item in contentVerification.evidence" :key="item.label" class="mt-2">
                   <p class="font-medium">{{ item.label }}</p>
                   <p class="mt-1 whitespace-pre-wrap">{{ item.text }}</p>
                 </div>
               </details>
-              <p class="text-[11px] text-muted-foreground">Pre-import check only. No library record was created and no verification history was saved.</p>
+              <p class="text-[11px] text-muted-foreground">{{ t('bookDock.sheet.preImportOnly') }}</p>
             </div>
           </section>
 
