@@ -552,7 +552,13 @@ onMounted(() => {
                     'text-amber-600': contentVerification.status === 'inconclusive',
                   }"
                 >
-                  {{ contentVerification.status === 'match' ? t('bookDock.sheet.contentMatches') : contentVerification.status === 'mismatch' ? t('bookDock.sheet.contentMismatch') : t('bookDock.sheet.inconclusive') }}
+                  {{
+                    contentVerification.status === 'match'
+                      ? t('bookDock.sheet.contentMatches')
+                      : contentVerification.status === 'mismatch'
+                        ? t('bookDock.sheet.contentMismatch')
+                        : t('bookDock.sheet.inconclusive')
+                  }}
                 </span>
                 <span class="text-xs tabular-nums text-muted-foreground">{{ Math.round(contentVerification.confidence * 100) }}% confidence</span>
               </div>

@@ -135,35 +135,35 @@ pnpm dev
 
 Default local endpoints:
 
-| Component | Address |
-| --- | --- |
-| Web client | http://localhost:6263 |
-| API server | http://localhost:6262/api |
+| Component                 | Address                        |
+| ------------------------- | ------------------------------ |
+| Web client                | http://localhost:6263          |
+| API server                | http://localhost:6262/api      |
 | Swagger UI (when enabled) | http://localhost:6262/api/docs |
-| Development PostgreSQL | localhost:5432 |
+| Development PostgreSQL    | localhost:5432                 |
 
 To enable Swagger locally, set `SWAGGER_ENABLED=true` in `server/.env`.
 
 ### Useful commands
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm dev` | Start client, server, and shared-types watcher |
-| `pnpm run db:up` | Start the development PostgreSQL container |
-| `pnpm run db:migrate` | Apply database migrations |
-| `pnpm run db:seed` | Seed baseline data |
-| `pnpm run test` | Run repository test suites |
-| `pnpm run test:server` | Run server unit tests |
-| `pnpm run test:client` | Run client unit tests |
-| `pnpm run test:worker` | Run read-aloud worker tests |
-| `pnpm run e2e:list` | List available E2E suites |
-| `pnpm run e2e:run -- <suite-id>` | Run one E2E suite |
-| `pnpm run e2e:all` | Run all E2E suites |
-| `pnpm run lint:check` | Run client and server lint checks |
-| `pnpm run typecheck` | Type-check server, client, and worker |
-| `pnpm run format:check` | Check formatting |
-| `pnpm run verify` | Run lint, type-check, and tests |
-| `pnpm run verify:strict` | Run formatting, lint, full type-check, and tests |
+| Command                          | Purpose                                          |
+| -------------------------------- | ------------------------------------------------ |
+| `pnpm dev`                       | Start client, server, and shared-types watcher   |
+| `pnpm run db:up`                 | Start the development PostgreSQL container       |
+| `pnpm run db:migrate`            | Apply database migrations                        |
+| `pnpm run db:seed`               | Seed baseline data                               |
+| `pnpm run test`                  | Run repository test suites                       |
+| `pnpm run test:server`           | Run server unit tests                            |
+| `pnpm run test:client`           | Run client unit tests                            |
+| `pnpm run test:worker`           | Run read-aloud worker tests                      |
+| `pnpm run e2e:list`              | List available E2E suites                        |
+| `pnpm run e2e:run -- <suite-id>` | Run one E2E suite                                |
+| `pnpm run e2e:all`               | Run all E2E suites                               |
+| `pnpm run lint:check`            | Run client and server lint checks                |
+| `pnpm run typecheck`             | Type-check server, client, and worker            |
+| `pnpm run format:check`          | Check formatting                                 |
+| `pnpm run verify`                | Run lint, type-check, and tests                  |
+| `pnpm run verify:strict`         | Run formatting, lint, full type-check, and tests |
 
 See [Development Guide](docs/DEVELOPMENT.md) for architecture, database workflows, environment configuration, and development conventions. See [Testing Guide](docs/TESTING.md) for unit and E2E test details.
 
