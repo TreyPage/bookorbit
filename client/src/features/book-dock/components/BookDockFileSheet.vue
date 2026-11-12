@@ -149,6 +149,8 @@ function buildMetadataPatchFromForm(): Partial<BookDockMetadata> {
 }
 
 function onFieldChange() {
+  contentVerification.value = null
+  contentVerificationError.value = null
   if (debounceTimer) clearTimeout(debounceTimer)
   if (seriesIndexError.value) return
   debounceTimer = setTimeout(async () => {
@@ -202,6 +204,7 @@ async function handleDone() {
 
 async function handleVerifyContent() {
   if (verifyingContent.value || props.file.status !== 'ready') return
+  const fileId = props.file.id
   verifyingContent.value = true
   contentVerificationError.value = null
   contentVerification.value = null
@@ -210,10 +213,11 @@ async function handleVerifyContent() {
       clearTimeout(debounceTimer)
       debounceTimer = null
     }
-    const updated = await saveMetadata(props.file.id, buildMetadataPatchFromForm())
-    if (!updated) return
+    const updated = await saveMetadata(fileId, buildMetadataPatchFromForm())
+    if (!updated || props.file.id !== fileId) return
     emit('updated', updated)
-    contentVerification.value = await verifyBookDockContent(props.file.id)
+    const result = await verifyBookDockContent(fileId)
+    if (props.file.id === fileId) contentVerification.value = result
   } catch (error) {
     contentVerificationError.value = error instanceof Error ? error.message : 'Content verification failed'
   } finally {
