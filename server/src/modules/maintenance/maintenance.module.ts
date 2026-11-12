@@ -37,7 +37,7 @@ import { ContentVerificationSchedulerService } from './content-verification/cont
     FileWriteModule,
   ],
   controllers: [MissingResourcesController, LibraryIntegrityController, ContentVerificationController],
-  exports: [ContentVerificationSchedulerService],
+  exports: [ContentVerificationSchedulerService, ContentVerificationService],
   providers: [
     MissingResourcesService,
     ContentVerificationAiService,
