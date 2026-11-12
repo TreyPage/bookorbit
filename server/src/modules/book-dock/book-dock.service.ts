@@ -16,6 +16,7 @@ import { normalizeBookDockMetadata, normalizeBookDockMetadataSources } from './b
 import { BookDockProcessingStateService } from './book-dock-processing-state.service';
 import { BookDockWatcherService } from './book-dock-watcher.service';
 import { inspectEpubMediaOverlayFields } from '../reader/epub/epub-media-overlay-capability';
+import { ContentVerificationService } from '../maintenance/content-verification/content-verification.service';
 import type { BookDockFileRow, BookDockUnitFileRow } from '../../db/schema';
 
 type Db = NodePgDatabase<typeof schema>;
@@ -34,6 +35,7 @@ export class BookDockService {
     private readonly watcherService: BookDockWatcherService,
     private readonly processingState: BookDockProcessingStateService,
     private readonly gateway: BookDockGateway,
+    private readonly contentVerification: ContentVerificationService,
   ) {}
 
   async listFiles(query: ListOptions): Promise<BookDockFilesPage> {
@@ -61,6 +63,32 @@ export class BookDockService {
       );
     });
     return { ...dto, readAlong: mediaOverlayAvailable };
+  }
+
+  async verifyContent(id: number, userId: number, canManageAll: boolean) {
+    const row = await this.findFileForUser(id, userId, canManageAll);
+    if (row.status !== 'ready') throw new BadRequestException('Book Dock file must finish processing before content can be verified');
+    const metadata = normalizeBookDockMetadata(row.selectedMetadata ?? row.embeddedMetadata);
+    const title = metadata?.title?.trim();
+    if (!title) throw new BadRequestException('Add or select a book title before running content verification');
+
+    const unitFiles = await this.repo.findUnitFiles(row.id);
+    const candidates = unitFiles.filter((file) => file.role === 'content').map((file) => ({
+      path: file.absolutePath,
+      format: file.format ?? '',
+      label: file.fileName,
+    }));
+    if (candidates.length === 0 && row.format) {
+      candidates.push({ path: row.absolutePath, format: row.format, label: row.fileName });
+    } else if (!candidates.some((file) => file.path === row.absolutePath) && row.format) {
+      candidates.unshift({ path: row.absolutePath, format: row.format, label: row.fileName });
+    }
+
+    return this.contentVerification.verifyStagedContent({
+      title,
+      authors: metadata?.authors ?? [],
+      files: candidates,
+    });
   }
 
   async getCoverPath(id: number, userId: number, canManageAll: boolean): Promise<string> {
