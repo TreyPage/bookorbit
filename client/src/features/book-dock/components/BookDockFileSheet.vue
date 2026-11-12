@@ -53,6 +53,9 @@ const sheetWidthClass = computed(() => (metaView.value === 'editor' ? 'sm:w-md l
 const persistedTargetLibraryId = ref<number | null>(null)
 const persistedTargetFolderId = ref<number | null>(null)
 const finishing = ref(false)
+const verifyingContent = ref(false)
+const contentVerification = ref<BookDockContentVerificationResult | null>(null)
+const contentVerificationError = ref<string | null>(null)
 
 const form = reactive({
   title: '',
@@ -98,6 +101,8 @@ watch(
     form.genres = m.genres?.join(', ') ?? ''
     selectedCoverUrl.value = m.coverUrl ?? ''
     metaView.value = 'editor'
+    contentVerification.value = null
+    contentVerificationError.value = null
 
     destination.reset(props.file.targetLibraryId, props.file.targetFolderId)
     persistedTargetLibraryId.value = props.file.targetLibraryId
@@ -192,6 +197,27 @@ async function handleDone() {
     emit('close')
   } finally {
     finishing.value = false
+  }
+}
+
+async function handleVerifyContent() {
+  if (verifyingContent.value || props.file.status !== 'ready') return
+  verifyingContent.value = true
+  contentVerificationError.value = null
+  contentVerification.value = null
+  try {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer)
+      debounceTimer = null
+    }
+    const updated = await saveMetadata(props.file.id, buildMetadataPatchFromForm())
+    if (!updated) return
+    emit('updated', updated)
+    contentVerification.value = await verifyBookDockContent(props.file.id)
+  } catch (error) {
+    contentVerificationError.value = error instanceof Error ? error.message : 'Content verification failed'
+  } finally {
+    verifyingContent.value = false
   }
 }
 
@@ -493,6 +519,41 @@ onMounted(() => {
       <template v-if="metaView === 'editor'">
         <div class="flex-1 overflow-y-auto px-4 py-4 space-y-3">
           <p v-if="file.errorMessage" class="text-xs text-red-500 bg-red-500/10 rounded-lg p-2">{{ file.errorMessage }}</p>
+
+          <section class="rounded-lg border border-border p-3 space-y-2">
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-sm font-medium">Content verification</p>
+                <p class="text-xs text-muted-foreground">Check the actual file contents against this metadata before importing.</p>
+              </div>
+              <button
+                class="shrink-0 h-8 px-3 rounded-lg border border-primary/40 text-primary text-xs font-medium hover:bg-primary/10 disabled:opacity-50"
+                :disabled="verifyingContent || file.status !== 'ready' || !form.title.trim()"
+                @click="handleVerifyContent"
+              >
+                {{ verifyingContent ? 'Verifying…' : 'Verify before import' }}
+              </button>
+            </div>
+            <p v-if="contentVerificationError" class="text-xs text-red-500" role="alert">{{ contentVerificationError }}</p>
+            <div v-if="contentVerification" class="rounded-md bg-muted/50 p-3 space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-semibold uppercase tracking-wide" :class="{ 'text-emerald-600': contentVerification.status === 'match', 'text-red-600': contentVerification.status === 'mismatch', 'text-amber-600': contentVerification.status === 'inconclusive' }">
+                  {{ contentVerification.status === 'match' ? 'Content matches' : contentVerification.status === 'mismatch' ? 'Content mismatch' : 'Inconclusive' }}
+                </span>
+                <span class="text-xs tabular-nums text-muted-foreground">{{ Math.round(contentVerification.confidence * 100) }}% confidence</span>
+              </div>
+              <p class="text-sm"><span class="text-muted-foreground">Detected:</span> {{ contentVerification.detectedTitle || 'Unknown title' }}<span v-if="contentVerification.detectedAuthor"> — {{ contentVerification.detectedAuthor }}</span></p>
+              <p class="text-xs text-muted-foreground">{{ contentVerification.explanation }}</p>
+              <details v-if="contentVerification.evidence.length" class="text-xs">
+                <summary class="cursor-pointer text-muted-foreground">View transcript / evidence</summary>
+                <div v-for="item in contentVerification.evidence" :key="item.label" class="mt-2">
+                  <p class="font-medium">{{ item.label }}</p>
+                  <p class="mt-1 whitespace-pre-wrap">{{ item.text }}</p>
+                </div>
+              </details>
+              <p class="text-[11px] text-muted-foreground">Pre-import check only. No library record was created and no verification history was saved.</p>
+            </div>
+          </section>
 
           <div v-if="saveError" class="flex items-center gap-2 p-2.5 rounded-lg border border-red-500/30 bg-red-500/5">
             <AlertCircle class="size-3.5 text-red-500 shrink-0" />
