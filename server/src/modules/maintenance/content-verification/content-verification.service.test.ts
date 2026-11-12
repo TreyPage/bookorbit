@@ -620,14 +620,14 @@ describe('ContentVerificationService', () => {
 
     expect(transcription.transcribe).toHaveBeenNthCalledWith(1, '/dock/11-25.mp3');
     expect(transcription.transcribe).toHaveBeenNthCalledWith(2, '/dock/226-52.mp3');
-    expect(ai.compare).toHaveBeenCalledWith(expect.objectContaining({
-      expectedTitle: 'Pimsleur Portuguese (Brazilian) Level 1 Lessons 21-25',
-      expectedAuthors: [],
-      source: 'audiobook',
-      evidence: expect.arrayContaining([
-        expect.objectContaining({ label: expect.stringContaining('11-25.mp3'), text: 'Inferno, by Dan Brown.' }),
-      ]),
-    }));
+    expect(ai.compare).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedTitle: 'Pimsleur Portuguese (Brazilian) Level 1 Lessons 21-25',
+        expectedAuthors: [],
+        source: 'audiobook',
+        evidence: expect.arrayContaining([expect.objectContaining({ label: expect.stringContaining('11-25.mp3'), text: 'Inferno, by Dan Brown.' })]),
+      }),
+    );
     expect(repository.saveResult).not.toHaveBeenCalled();
     expect(result).toMatchObject({ persisted: false, source: 'audiobook' });
   });
