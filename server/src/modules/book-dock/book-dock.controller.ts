@@ -151,6 +151,12 @@ export class BookDockController {
     return this.service.getFile(fileId, user.id, this.canManageAll(user));
   }
 
+  @Post('files/:id/verify-content')
+  @HttpCode(HttpStatus.OK)
+  verifyContent(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.service.verifyContent(id, user.id, this.canManageAll(user));
+  }
+
   @Patch('files/:id')
   updateFile(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateBookDockFileDto) {
     return this.service.updateFile(id, dto, user.id, this.canManageAll(user));

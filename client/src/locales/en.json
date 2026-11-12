@@ -8821,7 +8821,18 @@
       "review": "Review",
       "added": "Added {date}",
       "searchMetadata": "Search Metadata",
-      "results": "Results"
+      "results": "Results",
+      "contentVerification": "Content verification",
+      "contentVerificationHint": "Check the actual file contents against this metadata before importing.",
+      "verifyBeforeImport": "Verify before import",
+      "verifyingContent": "Verifying…",
+      "contentMatches": "Content matches",
+      "contentMismatch": "Content mismatch",
+      "inconclusive": "Inconclusive",
+      "detected": "Detected",
+      "unknownDetectedTitle": "Unknown title",
+      "viewEvidence": "View transcript / evidence",
+      "preImportOnly": "Pre-import check only. It does not block import, create a library record, or save verification history."
     },
     "bulkEdit": {
       "title": "{count, plural, =0 {Bulk Edit no files} one {Bulk Edit # file} other {Bulk Edit # files}}",

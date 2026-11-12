@@ -80,6 +80,7 @@ function makeService() {
   const gateway = {
     emitChanged: vi.fn(),
   };
+  const contentVerification = { verifyStagedContent: vi.fn().mockResolvedValue({ status: 'match' }) };
   const service = new BookDockService(
     db as never,
     repo as never,
@@ -88,11 +89,34 @@ function makeService() {
     watcherService as never,
     processingState as never,
     gateway as never,
+    contentVerification as never,
   );
-  return { service, db, repo, ingestService, finalizeService, watcherService, processingState, gateway };
+  return { service, db, repo, ingestService, finalizeService, watcherService, processingState, gateway, contentVerification };
 }
 
 describe('BookDockService', () => {
+  it('verifies the staged content files using selected metadata without importing them', async () => {
+    const { service, repo, contentVerification } = makeService();
+    repo.findById.mockResolvedValue(row({ fileName: 'part-1.mp3', format: 'mp3', absolutePath: '/dock/part-1.mp3', selectedMetadata: { title: 'Expected title', authors: ['Expected author'] } }));
+    repo.findUnitFiles.mockResolvedValue([
+      { absolutePath: '/dock/part-1.mp3', fileName: 'part-1.mp3', format: 'mp3', role: 'content' },
+      { absolutePath: '/dock/part-2.mp3', fileName: 'part-2.mp3', format: 'mp3', role: 'content' },
+      { absolutePath: '/dock/notes.txt', fileName: 'notes.txt', format: 'txt', role: 'extra' },
+    ]);
+    contentVerification.verifyStagedContent.mockResolvedValue({ status: 'mismatch' });
+
+    await expect(service.verifyContent(1, 1, false)).resolves.toEqual({ status: 'mismatch' });
+    expect(contentVerification.verifyStagedContent).toHaveBeenCalledWith({
+      title: 'Expected title',
+      authors: ['Expected author'],
+      files: [
+        { path: '/dock/part-1.mp3', format: 'mp3', label: 'part-1.mp3' },
+        { path: '/dock/part-2.mp3', format: 'mp3', label: 'part-2.mp3' },
+      ],
+    });
+  });
+
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
