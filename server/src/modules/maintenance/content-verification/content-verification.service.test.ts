@@ -602,10 +602,11 @@ describe('ContentVerificationService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('verifies a staged multipart audiobook using opening samples from its first two content parts without persisting', async () => {
+  it('verifies a staged multipart audiobook using distributed opening samples without persisting', async () => {
     transcription.transcribe
       .mockResolvedValueOnce({ transcript: 'Inferno, by Dan Brown.', sampleSeconds: 30, model: 'faster-whisper' })
-      .mockResolvedValueOnce({ transcript: 'Robert Langdon awoke in a hospital.', sampleSeconds: 30, model: 'faster-whisper' });
+      .mockResolvedValueOnce({ transcript: 'Robert Langdon awoke in a hospital.', sampleSeconds: 30, model: 'faster-whisper' })
+      .mockResolvedValueOnce({ transcript: 'The fourth file continues the story.', sampleSeconds: 30, model: 'faster-whisper' });
 
     const result = await service.verifyStagedContent({
       title: 'Pimsleur Portuguese (Brazilian) Level 1 Lessons 21-25',
@@ -620,12 +621,17 @@ describe('ContentVerificationService', () => {
 
     expect(transcription.transcribe).toHaveBeenNthCalledWith(1, '/dock/11-25.mp3');
     expect(transcription.transcribe).toHaveBeenNthCalledWith(2, '/dock/226-52.mp3');
+    expect(transcription.transcribe).toHaveBeenNthCalledWith(3, '/dock/475-104.mp3');
+    expect(transcription.transcribe).toHaveBeenCalledTimes(3);
     expect(ai.compare).toHaveBeenCalledWith(
       expect.objectContaining({
         expectedTitle: 'Pimsleur Portuguese (Brazilian) Level 1 Lessons 21-25',
         expectedAuthors: [],
         source: 'audiobook',
-        evidence: expect.arrayContaining([expect.objectContaining({ label: expect.stringContaining('11-25.mp3'), text: 'Inferno, by Dan Brown.' })]),
+        evidence: expect.arrayContaining([
+          expect.objectContaining({ label: expect.stringContaining('11-25.mp3'), text: 'Inferno, by Dan Brown.' }),
+          expect.objectContaining({ label: expect.stringContaining('475-104.mp3'), text: 'The fourth file continues the story.' }),
+        ]),
       }),
     );
     expect(repository.saveResult).not.toHaveBeenCalled();
