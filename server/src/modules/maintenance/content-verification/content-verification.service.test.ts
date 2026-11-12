@@ -602,6 +602,36 @@ describe('ContentVerificationService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('verifies a staged multipart audiobook using opening samples from its first two content parts without persisting', async () => {
+    transcription.transcribe
+      .mockResolvedValueOnce({ transcript: 'Inferno, by Dan Brown.', sampleSeconds: 30, model: 'faster-whisper' })
+      .mockResolvedValueOnce({ transcript: 'Robert Langdon awoke in a hospital.', sampleSeconds: 30, model: 'faster-whisper' });
+
+    const result = await service.verifyStagedContent({
+      title: 'Pimsleur Portuguese (Brazilian) Level 1 Lessons 21-25',
+      authors: [],
+      files: [
+        { path: '/dock/11-25.mp3', format: 'mp3', label: '11-25.mp3' },
+        { path: '/dock/226-52.mp3', format: 'mp3', label: '226-52.mp3' },
+        { path: '/dock/353-74.mp3', format: 'mp3', label: '353-74.mp3' },
+        { path: '/dock/475-104.mp3', format: 'mp3', label: '475-104.mp3' },
+      ],
+    });
+
+    expect(transcription.transcribe).toHaveBeenNthCalledWith(1, '/dock/11-25.mp3');
+    expect(transcription.transcribe).toHaveBeenNthCalledWith(2, '/dock/226-52.mp3');
+    expect(ai.compare).toHaveBeenCalledWith(expect.objectContaining({
+      expectedTitle: 'Pimsleur Portuguese (Brazilian) Level 1 Lessons 21-25',
+      expectedAuthors: [],
+      source: 'audiobook',
+      evidence: expect.arrayContaining([
+        expect.objectContaining({ label: expect.stringContaining('11-25.mp3'), text: 'Inferno, by Dan Brown.' }),
+      ]),
+    }));
+    expect(repository.saveResult).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ persisted: false, source: 'audiobook' });
+  });
+
   it('verifies EPUB evidence and stores a result without changing book metadata', async () => {
     const result = await service.verifyFile({ id: 10 } as never, 7);
 
