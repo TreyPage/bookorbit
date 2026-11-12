@@ -477,13 +477,17 @@ export class ContentVerificationService {
 
   /**
    * Verify a staged Book Dock unit without importing it or persisting a library verification row.
-   * For multipart audiobooks, sample the first two content parts so the check identifies the
-   * release as a whole without transcribing every chapter in a large unit.
+   * For multipart audiobooks, sample up to three evenly distributed content parts (first,
+   * middle, and last) without transcribing every chapter in a large unit.
    */
   async verifyStagedContent(input: { title: string; authors: string[]; files: Array<{ path: string; format: string; label: string }> }) {
     const title = input.title.trim();
     if (!title) throw new BadRequestException('Book Dock metadata must have a title before content can be verified');
-    const files = input.files.filter((file) => file.path && file.format).slice(0, 2);
+    const eligibleFiles = input.files.filter((file) => file.path && file.format);
+    const files =
+      eligibleFiles.length <= 3
+        ? eligibleFiles
+        : [eligibleFiles[0]!, eligibleFiles[Math.floor((eligibleFiles.length - 1) / 2)]!, eligibleFiles[eligibleFiles.length - 1]!];
     if (files.length === 0) throw new BadRequestException('No supported content files were found in this Book Dock entry');
 
     const firstExtension = extname(files[0]!.path).toLowerCase();
