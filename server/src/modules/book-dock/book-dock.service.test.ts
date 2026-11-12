@@ -97,7 +97,7 @@ function makeService() {
 describe('BookDockService', () => {
   it('verifies the staged content files using selected metadata without importing them', async () => {
     const { service, repo, contentVerification } = makeService();
-    repo.findById.mockResolvedValue(row({ selectedMetadata: { title: 'Expected title', authors: ['Expected author'] } }));
+    repo.findById.mockResolvedValue(row({ fileName: 'part-1.mp3', format: 'mp3', absolutePath: '/dock/part-1.mp3', selectedMetadata: { title: 'Expected title', authors: ['Expected author'] } }));
     repo.findUnitFiles.mockResolvedValue([
       { absolutePath: '/dock/part-1.mp3', fileName: 'part-1.mp3', format: 'mp3', role: 'content' },
       { absolutePath: '/dock/part-2.mp3', fileName: 'part-2.mp3', format: 'mp3', role: 'content' },
