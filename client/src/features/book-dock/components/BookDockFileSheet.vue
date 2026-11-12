@@ -27,6 +27,7 @@ import { useMetadataSearch } from '@/features/book/composables/useMetadataSearch
 import type { MetadataDiffApply } from '@/features/book/composables/useMetadataDiff'
 import { formatBytes } from '@/lib/formatting'
 import { toDisplayCoverUrl } from '@/features/book/lib/metadata-fetch'
+import { verifyBookDockContent, type BookDockContentVerificationResult } from '../api/book-dock.api'
 
 const { t } = useI18n()
 
@@ -543,12 +544,23 @@ onMounted(() => {
             <p v-if="contentVerificationError" class="text-xs text-red-500" role="alert">{{ contentVerificationError }}</p>
             <div v-if="contentVerification" class="rounded-md bg-muted/50 p-3 space-y-2">
               <div class="flex items-center justify-between gap-2">
-                <span class="text-xs font-semibold uppercase tracking-wide" :class="{ 'text-emerald-600': contentVerification.status === 'match', 'text-red-600': contentVerification.status === 'mismatch', 'text-amber-600': contentVerification.status === 'inconclusive' }">
+                <span
+                  class="text-xs font-semibold uppercase tracking-wide"
+                  :class="{
+                    'text-emerald-600': contentVerification.status === 'match',
+                    'text-red-600': contentVerification.status === 'mismatch',
+                    'text-amber-600': contentVerification.status === 'inconclusive',
+                  }"
+                >
                   {{ contentVerification.status === 'match' ? t('bookDock.sheet.contentMatches') : contentVerification.status === 'mismatch' ? t('bookDock.sheet.contentMismatch') : t('bookDock.sheet.inconclusive') }}
                 </span>
                 <span class="text-xs tabular-nums text-muted-foreground">{{ Math.round(contentVerification.confidence * 100) }}% confidence</span>
               </div>
-              <p class="text-sm"><span class="text-muted-foreground">{{ t('bookDock.sheet.detected') }}:</span> {{ contentVerification.detectedTitle || t('bookDock.sheet.unknownDetectedTitle') }}<span v-if="contentVerification.detectedAuthor"> — {{ contentVerification.detectedAuthor }}</span></p>
+              <p class="text-sm">
+                <span class="text-muted-foreground">{{ t('bookDock.sheet.detected') }}:</span>
+                {{ contentVerification.detectedTitle || t('bookDock.sheet.unknownDetectedTitle') }}
+                <span v-if="contentVerification.detectedAuthor"> — {{ contentVerification.detectedAuthor }}</span>
+              </p>
               <p class="text-xs text-muted-foreground">{{ contentVerification.explanation }}</p>
               <details v-if="contentVerification.evidence.length" class="text-xs">
                 <summary class="cursor-pointer text-muted-foreground">{{ t('bookDock.sheet.viewEvidence') }}</summary>
