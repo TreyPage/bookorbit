@@ -475,6 +475,59 @@ export class ContentVerificationService {
     return { ...correctionResult, embeddedMetadataWrite };
   }
 
+  /**
+   * Verify a staged Book Dock unit without importing it or persisting a library verification row.
+   * For multipart audiobooks, sample the first two content parts so the check identifies the
+   * release as a whole without transcribing every chapter in a large unit.
+   */
+  async verifyStagedContent(input: { title: string; authors: string[]; files: Array<{ path: string; format: string; label: string }> }) {
+    const title = input.title.trim();
+    if (!title) throw new BadRequestException('Book Dock metadata must have a title before content can be verified');
+    const files = input.files.filter((file) => file.path && file.format).slice(0, 2);
+    if (files.length === 0) throw new BadRequestException('No supported content files were found in this Book Dock entry');
+
+    const firstExtension = extname(files[0]!.path).toLowerCase();
+    let source: 'ebook' | 'audiobook';
+    let evidence: Array<{ label: string; text: string }> = [];
+    const transcriptionModels: string[] = [];
+
+    if (firstExtension === '.epub') {
+      source = 'ebook';
+      const inspection = await extractEpubContentEvidence(files[0]!.path);
+      evidence = inspection.documents.map((document) => ({
+        label: document.likelyTitlePage ? `Likely title page: ${document.path}` : document.path,
+        text: document.text,
+      }));
+      if (evidence.length === 0) throw new BadRequestException('No readable XHTML content was found in this EPUB');
+    } else if (files.every((file) => AUDIO_EXTENSIONS.has(extname(file.path).toLowerCase()))) {
+      source = 'audiobook';
+      for (const file of files) {
+        const transcript = await this.transcription.transcribe(file.path);
+        transcriptionModels.push(transcript.model);
+        evidence.push({ label: `Opening audio transcript: ${file.label} (${transcript.sampleSeconds} seconds)`, text: transcript.transcript });
+      }
+    } else {
+      throw new BadRequestException('Pre-import content verification supports EPUB ebooks and common audiobook formats');
+    }
+
+    const comparison = await this.ai.compare({ expectedTitle: title, expectedAuthors: input.authors, source, evidence });
+    const aiModel = this.config.get<string>('contentVerification.aiModel') || 'qwen3.5:4b';
+    return {
+      status: comparison.confidence < MIN_VERIFICATION_CONFIDENCE || !comparison.detectedTitle ? 'inconclusive' : comparison.status,
+      source,
+      expectedTitle: title,
+      expectedAuthors: input.authors,
+      detectedTitle: comparison.detectedTitle,
+      detectedAuthor: comparison.detectedAuthor,
+      confidence: comparison.confidence,
+      explanation: comparison.explanation,
+      evidence,
+      model: [...new Set(transcriptionModels)].concat(aiModel).join(' + '),
+      verifiedAt: new Date().toISOString(),
+      persisted: false,
+    };
+  }
+
   async verifyFile(user: RequestUser, fileId: number) {
     const previous = this.verificationTail;
     let release!: () => void;
