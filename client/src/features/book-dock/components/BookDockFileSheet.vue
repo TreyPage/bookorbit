@@ -376,6 +376,8 @@ function handleSearchFresh() {
 }
 
 async function handleApply(patch: MetadataDiffApply) {
+  contentVerification.value = null
+  contentVerificationError.value = null
   const p = patch.formPatch
   const bookDockPatch = { ...p }
   delete bookDockPatch.customMetadata
