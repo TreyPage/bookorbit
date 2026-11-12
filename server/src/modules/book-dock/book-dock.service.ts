@@ -73,11 +73,13 @@ export class BookDockService {
     if (!title) throw new BadRequestException('Add or select a book title before running content verification');
 
     const unitFiles = await this.repo.findUnitFiles(row.id);
-    const candidates = unitFiles.filter((file) => file.role === 'content').map((file) => ({
-      path: file.absolutePath,
-      format: file.format ?? '',
-      label: file.fileName,
-    }));
+    const candidates = unitFiles
+      .filter((file) => file.role === 'content')
+      .map((file) => ({
+        path: file.absolutePath,
+        format: file.format ?? '',
+        label: file.fileName,
+      }));
     if (candidates.length === 0 && row.format) {
       candidates.push({ path: row.absolutePath, format: row.format, label: row.fileName });
     } else if (!candidates.some((file) => file.path === row.absolutePath) && row.format) {
